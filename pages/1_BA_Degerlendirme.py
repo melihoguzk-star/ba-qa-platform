@@ -1,20 +1,23 @@
 """
-BA&QA Intelligence Platform — 🧪 Test Case Değerlendirme
+BA&QA Intelligence Platform — 📋 İş Analizi (BA) Değerlendirme
+JIRA → Google Docs → Gemini AI → Rapor pipeline
 """
 import streamlit as st
 import sys, os, time
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
-from utils.config import get_credentials, all_creds_available, TC_CRITERIA, emoji_score
-from integrations.jira_client import (jira_search, jira_get_issue, jira_add_label,
-                                       jira_update_labels, jira_add_comment)
-from integrations.google_docs import (fetch_google_doc_via_proxy, fetch_google_sheets_as_text,
-                                       extract_doc_id, extract_spreadsheet_id, find_linked_ba_key)
-from agents.agent_definitions import create_tc_agents
-from agents.prompts import build_tc_evaluation_prompt, parse_json_response, format_tc_report
+from components.sidebar import render_custom_sidebar
+from utils.config import get_credentials, all_creds_available, BA_CRITERIA, emoji_score
+from integrations.jira_client import jira_search, jira_add_label, jira_update_labels, jira_add_comment
+from integrations.google_docs import fetch_google_doc_via_proxy, extract_doc_id
+from agents.agent_definitions import create_ba_agents
+from agents.prompts import build_ba_evaluation_prompt, parse_json_response, format_ba_report
 from data.database import save_analysis
 
-st.set_page_config(page_title="TC Değerlendirme — BA&QA", page_icon="🧪", layout="wide")
+st.set_page_config(page_title="BA Değerlendirme — BA&QA", page_icon="📋", layout="wide")
+
+# Custom sidebar
+render_custom_sidebar(active_page="ba")
 
 st.markdown("""
 <style>
@@ -28,11 +31,13 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-st.markdown("## 🧪 Test Case (TC) Kalite Değerlendirme")
-st.markdown("**4 Agent Pipeline:** JIRA & Sheet Tarayıcı → Doküman Birleştirici → TC Değerlendirici → Raporcu")
+st.markdown("## 📋 İş Analizi (BA) Kalite Değerlendirme")
+st.markdown("**4 Agent Pipeline:** JIRA Tarayıcı → Doküman Okuyucu → Kalite Değerlendirici → Raporcu")
 
 gemini_key, jira_email, jira_token = get_credentials()
-if not all_creds_available():
+all_creds = all_creds_available()
+
+if not all_creds:
     st.warning("⚠️ Ana sayfadan Gemini API Key ve JIRA bilgilerini gir.")
     st.stop()
 
@@ -49,6 +54,7 @@ def render_score_dashboard(data, criteria):
              font-family: 'JetBrains Mono', monospace;">{genel_puan}/100</div>
         <div style="font-size: 1.3rem; margin-top: 0.3rem; color: #e0e0e0;">{status_text}</div>
     </div>""", unsafe_allow_html=True)
+
     st.markdown("#### 📈 Kriter Puanları")
     cols = st.columns(3)
     for i, (key, label) in enumerate(criteria):
@@ -65,24 +71,26 @@ def render_score_dashboard(data, criteria):
             </div>""", unsafe_allow_html=True)
             if skor and skor.get("aciklama"):
                 st.caption(skor["aciklama"][:150])
+
     col_l, col_r = st.columns(2)
     with col_l:
         if data.get("guclu_yanlar"):
             st.markdown("#### ✅ Güçlü Yanlar")
-            for item in data["guclu_yanlar"]: st.markdown(f"- {item}")
+            for item in data["guclu_yanlar"]:
+                st.markdown(f"- {item}")
     with col_r:
         if data.get("kritik_eksikler"):
             st.markdown("#### ❌ Kritik Eksikler")
-            for item in data["kritik_eksikler"]: st.markdown(f"- {item}")
+            for item in data["kritik_eksikler"]:
+                st.markdown(f"- {item}")
     if data.get("iyilestirme_onerileri"):
         st.markdown("#### 💡 İyileştirme Önerileri")
-        for i, item in enumerate(data["iyilestirme_onerileri"], 1): st.markdown(f"{i}. {item}")
+        for i, item in enumerate(data["iyilestirme_onerileri"], 1):
+            st.markdown(f"{i}. {item}")
 
 
-def fetch_tc_queue():
-    jql = ("project = BAQA AND component = Test AND "
-           "(labels not in (tc-qa-tamamlandi, tc-qa-devam-ediyor) OR labels is EMPTY) "
-           "AND created >= startOfYear() AND status NOT IN (Cancelled,Done) ORDER BY updated DESC")
+def fetch_ba_queue():
+    jql = "project = BAQA AND labels != qa-tamamlandi AND labels != qa-devam-ediyor AND status NOT IN (Cancelled,Done) AND created >= startOfYear() ORDER BY updated DESC"
     try:
         issues = jira_search(jira_email, jira_token, jql, max_results=20)
     except Exception:
@@ -90,74 +98,68 @@ def fetch_tc_queue():
     queue = []
     for issue in issues:
         labels = issue.get("fields", {}).get("labels", [])
-        if "tc-qa-tamamlandi" in labels or "tc-qa-devam-ediyor" in labels:
+        if "qa-tamamlandi" in labels or "qa-devam-ediyor" in labels:
             continue
         desc = issue.get("fields", {}).get("description", "")
-        tc_doc_id, tc_url = extract_spreadsheet_id(desc)
-        if not tc_doc_id:
-            tc_doc_id, tc_url = extract_doc_id(desc)
-        if tc_doc_id:
-            ba_key = find_linked_ba_key(issue)
+        doc_id, doc_url = extract_doc_id(desc)
+        if doc_id:
             queue.append({
                 "key": issue["key"],
                 "summary": issue["fields"].get("summary", ""),
                 "assignee": (issue["fields"].get("assignee") or {}).get("displayName", ""),
-                "tc_doc_id": tc_doc_id, "tc_url": tc_url,
-                "linked_ba_key": ba_key,
+                "doc_id": doc_id, "doc_url": doc_url,
             })
     return queue
 
 
-def run_tc_pipeline(selected_task: dict = None):
-    _, _, agent3, _ = create_tc_agents(gemini_key)
+def run_ba_pipeline(selected_task: dict = None):
+    _, _, agent3, _ = create_ba_agents(gemini_key)
     status_container = st.container()
     result_container = st.container()
 
     with status_container:
         progress_bar = st.progress(0, text="🤖 Pipeline başlatılıyor...")
 
-        with st.status("🔍 Adım 1: JIRA & Sheet Tarayıcı", expanded=True) as step1:
-            selected = selected_task or (fetch_tc_queue() or [None])[0]
+        with st.status("🔍 Adım 1: JIRA Tarayıcı", expanded=True) as step1:
+            if selected_task:
+                selected = selected_task
+            else:
+                queue = fetch_ba_queue()
+                selected = queue[0] if queue else None
             if not selected:
-                st.warning("Uygun TC task bulunamadı.")
+                st.warning("Uygun task bulunamadı.")
+                step1.update(label="❌ Task bulunamadı", state="error")
                 return None
-            jira_add_label(jira_email, jira_token, selected["key"], "tc-qa-devam-ediyor")
-            ba_text, has_ba = "", False
-            if selected.get("linked_ba_key"):
-                try:
-                    ba_issue = jira_get_issue(jira_email, jira_token, selected["linked_ba_key"])
-                    ba_doc_id, _ = extract_doc_id(ba_issue.get("fields", {}).get("description", ""))
-                    if ba_doc_id:
-                        ba_text = fetch_google_doc_via_proxy(ba_doc_id)
-                        has_ba = True
-                except Exception:
-                    pass
-            st.write(f"✅ **{selected['key']}** — BA: {'✅' if has_ba else '❌ Yok'}")
+            jira_add_label(jira_email, jira_token, selected["key"], "qa-devam-ediyor")
+            st.write(f"✅ **{selected['key']}** — {selected['summary']}")
             step1.update(label=f"✅ Adım 1: {selected['key']}", state="complete", expanded=False)
-        progress_bar.progress(25, text="🔄 Adım 2/4 — Sheet'ler okunuyor...")
+        progress_bar.progress(25, text="🔄 Adım 2/4 — Doküman okunuyor...")
 
-        with st.status("📄 Adım 2: Doküman Birleştirici", expanded=True) as step2:
+        with st.status("📄 Adım 2: Doküman Okuyucu", expanded=True) as step2:
             try:
-                tc_text = fetch_google_sheets_as_text(selected["tc_doc_id"])
+                ba_text = fetch_google_doc_via_proxy(selected["doc_id"])
             except Exception as e:
-                st.error(f"Sheets hatası: {e}")
+                st.error(f"Google Docs hatası: {e}")
+                step2.update(label="❌ Doküman okunamadı", state="error")
                 return None
-            if len(tc_text.strip()) < 50:
-                st.error("TC dokümanı boş.")
+            if len(ba_text.strip()) < 100:
+                st.error("Doküman çok kısa veya boş.")
                 return None
-            st.write(f"✅ **{len(tc_text):,}** karakter okundu")
-            step2.update(label=f"✅ Adım 2: {len(tc_text):,} karakter", state="complete", expanded=False)
+            st.write(f"✅ **{len(ba_text):,}** karakter okundu")
+            step2.update(label=f"✅ Adım 2: {len(ba_text):,} karakter", state="complete", expanded=False)
         progress_bar.progress(50, text="🔄 Adım 3/4 — AI değerlendiriyor...")
 
-        with st.status("🧠 Adım 3: TC Kalite Değerlendirici", expanded=True) as step3:
-            eval_prompt = build_tc_evaluation_prompt(tc_text, ba_text, has_ba)
+        with st.status("🧠 Adım 3: Kalite Değerlendirici", expanded=True) as step3:
+            eval_prompt = build_ba_evaluation_prompt(ba_text)
             eval_data = None
             for attempt in range(3):
                 try:
-                    resp = agent3.run(eval_prompt)
-                    content = resp.content if resp else ""
+                    eval_response = agent3.run(eval_prompt)
+                    content = eval_response.content if eval_response else ""
                     if "429" in content or "RESOURCE_EXHAUSTED" in content:
-                        time.sleep(30 * (attempt + 1))
+                        wait = 30 * (attempt + 1)
+                        st.warning(f"⏳ Rate limit — {wait}s bekleniyor...")
+                        time.sleep(wait)
                         continue
                     eval_data = parse_json_response(content)
                     if eval_data and eval_data.get("skorlar"):
@@ -177,52 +179,60 @@ def run_tc_pipeline(selected_task: dict = None):
             step3.update(label=f"✅ Adım 3: {puan}/100", state="complete", expanded=False)
         progress_bar.progress(75, text="🔄 Adım 4/4 — JIRA güncelleniyor...")
 
-        with st.status("📝 Adım 4: TC Raporcu", expanded=True) as step4:
-            report_text = format_tc_report(eval_data)
+        with st.status("📝 Adım 4: Raporcu", expanded=True) as step4:
+            report_text = format_ba_report(eval_data)
             jira_add_comment(jira_email, jira_token, selected["key"], report_text)
-            new_label = "tc-qa-gecti" if gecti else "tc-qa-gecmedi"
+            new_label = "qa-gecti" if gecti else "qa-gecmedi"
             jira_update_labels(jira_email, jira_token, selected["key"],
-                               ["tc-qa-devam-ediyor"], ["tc-qa-tamamlandi", new_label])
-            save_analysis(selected["key"], "tc", puan, gecti, eval_data, report_text)
+                               ["qa-devam-ediyor"], ["qa-tamamlandi", new_label])
+            # DB'ye kaydet
+            save_analysis(selected["key"], "ba", puan, gecti, eval_data, report_text)
             st.write(f"✅ JIRA güncellendi — Label: **{new_label}**")
             step4.update(label="✅ Adım 4: JIRA güncellendi", state="complete", expanded=False)
         progress_bar.progress(100, text="✅ Pipeline tamamlandı!")
 
     with result_container:
         st.markdown("---")
-        st.markdown(f"### 🧪 Sonuç: {selected['key']} - {selected['summary']}")
-        render_score_dashboard(eval_data, TC_CRITERIA)
+        st.markdown(f"### 📋 Sonuç: {selected['key']} - {selected['summary']}")
+        render_score_dashboard(eval_data, BA_CRITERIA)
         with st.expander("📄 JIRA Comment (Ham Rapor)"):
             st.text(report_text)
+
     return eval_data
 
 
 # ── Task Kuyruğu ──
-if st.button("🔍 TC Kuyruğunu Tara", use_container_width=True):
+if st.button("🔍 BA Kuyruğunu Tara", use_container_width=True):
     with st.spinner("JIRA taranıyor..."):
-        st.session_state["tc_queue"] = fetch_tc_queue()
+        st.session_state["ba_queue"] = fetch_ba_queue()
 
-if "tc_queue" in st.session_state and st.session_state["tc_queue"]:
-    tc_queue = st.session_state["tc_queue"]
-    st.markdown(f"**🧪 Kuyrukta {len(tc_queue)} task var:**")
-    for task in tc_queue:
+if "ba_queue" in st.session_state and st.session_state["ba_queue"]:
+    ba_queue = st.session_state["ba_queue"]
+    st.markdown(f"**📋 Kuyrukta {len(ba_queue)} task var:**")
+    for task in ba_queue:
         c1, c2, c3, c4 = st.columns([1.5, 4, 2, 1.5])
-        with c1: st.markdown(f"**{task['key']}**")
-        with c2: st.caption(task["summary"][:60])
-        with c3: st.caption(f"BA: {task.get('linked_ba_key', '—')}")
+        with c1:
+            st.markdown(f"**{task['key']}**")
+        with c2:
+            st.caption(task["summary"][:60])
+        with c3:
+            st.caption(task.get("assignee", "—"))
         with c4:
-            if st.button("▶️", key=f"tc_run_{task['key']}"):
-                st.session_state["tc_selected_task"] = task
+            if st.button("▶️", key=f"ba_run_{task['key']}"):
+                st.session_state["ba_selected_task"] = task
+    st.markdown("---")
+elif "ba_queue" in st.session_state:
+    st.info("Kuyrukta değerlendirilecek BA task bulunamadı.")
 
-if "tc_selected_task" in st.session_state and st.session_state["tc_selected_task"]:
-    task = st.session_state.pop("tc_selected_task")
+if "ba_selected_task" in st.session_state and st.session_state["ba_selected_task"]:
+    task = st.session_state.pop("ba_selected_task")
     start = time.time()
-    result = run_tc_pipeline(selected_task=task)
+    result = run_ba_pipeline(selected_task=task)
     if result:
         st.success(f"✅ {task['key']} tamamlandı! ({time.time()-start:.1f}s)")
 
 if st.button("⚡ Sıradakini Otomatik Değerlendir", type="primary", use_container_width=True):
     start = time.time()
-    result = run_tc_pipeline()
+    result = run_ba_pipeline()
     if result:
         st.success(f"✅ Tamamlandı! ({time.time()-start:.1f}s)")

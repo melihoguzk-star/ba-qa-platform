@@ -5,10 +5,14 @@ import streamlit as st
 import sys, os, json
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
+from components.sidebar import render_custom_sidebar
 from data.database import get_stats, get_recent_analyses
 from utils.config import emoji_score
 
 st.set_page_config(page_title="Raporlar — BA&QA", page_icon="📈", layout="wide")
+
+# Custom sidebar
+render_custom_sidebar(active_page="reports")
 
 st.markdown("""
 <style>

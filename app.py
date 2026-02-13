@@ -9,9 +9,12 @@ import sys
 # Proje kök dizinini path'e ekle
 sys.path.insert(0, os.path.dirname(__file__))
 
+# Custom sidebar import
+from components.sidebar import render_custom_sidebar
+
 st.set_page_config(
-    page_title="BA&QA Intelligence Platform",
-    page_icon="🧠",
+    page_title="Anasayfa — BA&QA Platform",
+    page_icon="🏠",
     layout="wide",
     initial_sidebar_state="expanded",
 )
@@ -24,6 +27,7 @@ st.markdown("""
         font-family: 'Outfit', sans-serif;
         background: linear-gradient(160deg, #0f1117 0%, #1a1d2e 40%, #0f1117 100%);
     }
+
     .platform-title {
         font-family: 'JetBrains Mono', monospace;
         font-size: 2rem; font-weight: 700;
@@ -60,51 +64,31 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# ── Sidebar: Credentials (secrets.toml'dan okunur) ──
-with st.sidebar:
-    st.markdown("### 🧠 BA&QA Platform")
-    st.markdown("---")
+# ── Credentials'ları yükle (secrets.toml'dan okunur) ──
+_gemini_key = ""
+_jira_email = ""
+_jira_token = ""
+try:
+    _gemini_key = st.secrets.get("GEMINI_API_KEY", "")
+except Exception:
+    _gemini_key = os.environ.get("GEMINI_API_KEY", "")
+try:
+    _jira_email = st.secrets.get("JIRA_EMAIL", "")
+    _jira_token = st.secrets.get("JIRA_API_TOKEN", "")
+except Exception:
+    _jira_email = os.environ.get("JIRA_EMAIL", "")
+    _jira_token = os.environ.get("JIRA_API_TOKEN", "")
 
-    # Credentials'ları secrets.toml / environment'tan oku
-    _gemini_key = ""
-    _jira_email = ""
-    _jira_token = ""
-    try:
-        _gemini_key = st.secrets.get("GEMINI_API_KEY", "")
-    except Exception:
-        _gemini_key = os.environ.get("GEMINI_API_KEY", "")
-    try:
-        _jira_email = st.secrets.get("JIRA_EMAIL", "")
-        _jira_token = st.secrets.get("JIRA_API_TOKEN", "")
-    except Exception:
-        _jira_email = os.environ.get("JIRA_EMAIL", "")
-        _jira_token = os.environ.get("JIRA_API_TOKEN", "")
+# Session state'e yaz
+if _gemini_key:
+    st.session_state["gemini_key"] = _gemini_key
+if _jira_email:
+    st.session_state["jira_email"] = _jira_email
+if _jira_token:
+    st.session_state["jira_token"] = _jira_token
 
-    # Session state'e yaz
-    if _gemini_key:
-        st.session_state["gemini_key"] = _gemini_key
-    if _jira_email:
-        st.session_state["jira_email"] = _jira_email
-    if _jira_token:
-        st.session_state["jira_token"] = _jira_token
-
-    # Sadece durum göster
-    st.markdown("#### 🔌 Bağlantı Durumu")
-    if _gemini_key:
-        st.success("Gemini API aktif ✅")
-    else:
-        st.error("Gemini API Key eksik ❌")
-        st.caption("`.streamlit/secrets.toml` dosyasına ekle")
-
-    if _jira_email and _jira_token:
-        st.success("JIRA bağlantısı aktif ✅")
-    else:
-        st.error("JIRA bilgileri eksik ❌")
-        st.caption("`.streamlit/secrets.toml` dosyasına ekle")
-
-    st.markdown("---")
-    st.caption("BA&QA Intelligence Platform v1.0")
-    st.caption("Loodos BA&QA Ekibi")
+# ── Custom Sidebar ──
+render_custom_sidebar(active_page="home")
 
 
 # ── Ana Sayfa ──

@@ -6,6 +6,7 @@ import streamlit as st
 import sys, os, tempfile, datetime
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
+from components.sidebar import render_custom_sidebar
 from pathlib import Path
 from agno.media import Image as AgnoImage
 from utils.config import get_credentials, gemini_available
@@ -14,6 +15,9 @@ from agents.agent_definitions import create_design_agents
 from data.database import save_analysis
 
 st.set_page_config(page_title="Design Compliance — BA&QA", page_icon="🎨", layout="wide")
+
+# Custom sidebar
+render_custom_sidebar(active_page="design")
 
 st.markdown("""
 <style>
