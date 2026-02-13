@@ -57,9 +57,9 @@ st.markdown("""
     /* Platform Title */
     .platform-title {
         font-family: 'Space Grotesk', sans-serif;
-        font-size: 48px;
+        font-size: 42px;
         font-weight: 700;
-        background: linear-gradient(135deg, #f1f5f9 0%, #94a3b8 100%);
+        background: linear-gradient(135deg, #8b5cf6 0%, #ec4899 50%, #f59e0b 100%);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
         margin-bottom: 12px;
@@ -67,9 +67,12 @@ st.markdown("""
     }
     .platform-subtitle {
         color: #94a3b8;
-        font-size: 18px;
+        font-size: 16px;
         line-height: 1.6;
-        margin-bottom: 2rem;
+        margin-bottom: 1.5rem;
+        max-width: 700px;
+        margin-left: auto;
+        margin-right: auto;
     }
 
     /* Layer Cards */
@@ -77,8 +80,8 @@ st.markdown("""
         background: #1a2236;
         border: 1px solid #2a3654;
         border-radius: 16px;
-        padding: 28px;
-        margin-bottom: 20px;
+        padding: 20px;
+        margin-bottom: 16px;
         position: relative;
         overflow: hidden;
         transition: all 0.3s ease;
@@ -136,8 +139,8 @@ st.markdown("""
         background: rgba(255,255,255,0.02);
         border: 1px solid rgba(255,255,255,0.06);
         border-radius: 10px;
-        padding: 16px;
-        margin-bottom: 12px;
+        padding: 14px;
+        margin-bottom: 10px;
         transition: all 0.2s ease;
     }
     .component-card:hover {
@@ -174,8 +177,8 @@ st.markdown("""
         background: #1a2236;
         border: 1px solid #2a3654;
         border-radius: 16px;
-        padding: 32px;
-        margin-bottom: 24px;
+        padding: 24px;
+        margin-bottom: 20px;
     }
     .flow-label {
         font-family: 'JetBrains Mono', monospace;
@@ -236,8 +239,8 @@ st.markdown("""
         background: #1a2236;
         border: 1px solid #2a3654;
         border-radius: 14px;
-        padding: 28px;
-        margin-bottom: 16px;
+        padding: 20px;
+        margin-bottom: 14px;
         position: relative;
         transition: all 0.3s;
     }
@@ -290,11 +293,11 @@ st.markdown("""
         background: #1a2236;
         border: 1px solid #2a3654;
         border-radius: 12px;
-        padding: 24px;
+        padding: 18px;
         display: flex;
         align-items: flex-start;
-        gap: 16px;
-        margin-bottom: 16px;
+        gap: 14px;
+        margin-bottom: 12px;
     }
     .tech-card-icon {
         width: 40px; height: 40px;
@@ -324,8 +327,8 @@ st.markdown("""
         background: #1a2236;
         border: 1px solid #2a3654;
         border-radius: 12px;
-        padding: 24px;
-        margin-bottom: 16px;
+        padding: 18px;
+        margin-bottom: 14px;
     }
     .db-table-name {
         font-family: 'JetBrains Mono', monospace;
@@ -366,7 +369,7 @@ st.markdown("""
         background: #1a2236;
         border: 1px solid #2a3654;
         border-radius: 16px;
-        padding: 32px;
+        padding: 24px;
     }
     .file-tree .folder { color: #06b6d4; }
     .file-tree .file { color: #f59e0b; }
@@ -550,41 +553,39 @@ st.markdown("""
 <div class="breadcrumb">
     <a href="/">🏠 Ana Sayfa</a>
     <span class="separator">›</span>
-    <a href="/Dashboard">📊 Dashboard</a>
-    <span class="separator">›</span>
     <span class="current">🏗️ Mimari</span>
 </div>
 """, unsafe_allow_html=True)
 
 # ── Header ──
 st.markdown("""
-<div style="text-align: center; margin-bottom: 40px;">
+<div style="text-align: center; margin-bottom: 32px;">
     <div class="header-badge">
         <span class="dot"></span>
         Architecture Document
     </div>
-    <div class="platform-title">BA&QA Intelligence Platform</div>
-    <div class="platform-subtitle">Birleşik BA değerlendirme, QA test analizi, design compliance ve JIRA otomasyon platformu. BA ve QA ekibinin tüm kalite süreçlerini tek çatı altında toplayan Streamlit dashboard.</div>
+    <div class="platform-title">🏗️ Platform Mimarisi</div>
+    <div class="platform-subtitle">Birleşik BA değerlendirme, QA test analizi, design compliance ve JIRA otomasyon platformu</div>
 </div>
 """, unsafe_allow_html=True)
 
 
 # ── Quick Stats ──
 st.markdown("""
-<div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 32px;">
-    <div style="background: #1a2236; border: 1px solid #2a3654; border-radius: 12px; padding: 20px; text-align: center;">
+<div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 24px;">
+    <div style="background: #1a2236; border: 1px solid #2a3654; border-radius: 12px; padding: 18px; text-align: center;">
         <div style="font-family: 'Space Grotesk', sans-serif; font-size: 32px; font-weight: 700; color: #3b82f6; margin-bottom: 4px;">4</div>
         <div style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #64748b; text-transform: uppercase;">Katman</div>
     </div>
-    <div style="background: #1a2236; border: 1px solid #2a3654; border-radius: 12px; padding: 20px; text-align: center;">
+    <div style="background: #1a2236; border: 1px solid #2a3654; border-radius: 12px; padding: 18px; text-align: center;">
         <div style="font-family: 'Space Grotesk', sans-serif; font-size: 32px; font-weight: 700; color: #8b5cf6; margin-bottom: 4px;">6+</div>
         <div style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #64748b; text-transform: uppercase;">Agent</div>
     </div>
-    <div style="background: #1a2236; border: 1px solid #2a3654; border-radius: 12px; padding: 20px; text-align: center;">
+    <div style="background: #1a2236; border: 1px solid #2a3654; border-radius: 12px; padding: 18px; text-align: center;">
         <div style="font-family: 'Space Grotesk', sans-serif; font-size: 32px; font-weight: 700; color: #10b981; margin-bottom: 4px;">6</div>
         <div style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #64748b; text-transform: uppercase;">Sayfa</div>
     </div>
-    <div style="background: #1a2236; border: 1px solid #2a3654; border-radius: 12px; padding: 20px; text-align: center;">
+    <div style="background: #1a2236; border: 1px solid #2a3654; border-radius: 12px; padding: 18px; text-align: center;">
         <div style="font-family: 'Space Grotesk', sans-serif; font-size: 32px; font-weight: 700; color: #f59e0b; margin-bottom: 4px;">5+</div>
         <div style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #64748b; text-transform: uppercase;">Entegrasyon</div>
     </div>
@@ -598,7 +599,7 @@ tab1, tab2, tab3, tab4, tab5 = st.tabs(["🏗️ Mimari", "🔄 Veri Akışı", 
 # TAB 1: ARCHITECTURE OVERVIEW
 # ═══════════════════════════════════════════════════════════
 with tab1:
-    st.markdown("### Katmanlı Mimari")
+    st.markdown('<div style="font-family: \'Space Grotesk\', sans-serif; font-size: 22px; font-weight: 600; color: #f1f5f9; margin-bottom: 20px;">Katmanlı Mimari</div>', unsafe_allow_html=True)
 
     # Layer 1: Presentation
     st.markdown("""
@@ -806,7 +807,7 @@ with tab1:
 # TAB 2: DATA FLOW
 # ═══════════════════════════════════════════════════════════
 with tab2:
-    st.markdown("### QA Değerlendirme Akışı")
+    st.markdown('<div style="font-family: \'Space Grotesk\', sans-serif; font-size: 22px; font-weight: 600; color: #f1f5f9; margin-bottom: 20px;">Veri Akışları</div>', unsafe_allow_html=True)
 
     # Flow 1
     st.markdown("""
@@ -916,7 +917,7 @@ with tab2:
 # TAB 3: PAGE STRUCTURE
 # ═══════════════════════════════════════════════════════════
 with tab3:
-    st.markdown("### Streamlit Sayfa Yapısı")
+    st.markdown('<div style="font-family: \'Space Grotesk\', sans-serif; font-size: 22px; font-weight: 600; color: #f1f5f9; margin-bottom: 20px;">Sayfa Yapısı</div>', unsafe_allow_html=True)
 
     col1, col2, col3 = st.columns(3)
 
@@ -1047,7 +1048,7 @@ with tab3:
 # TAB 4: TECH STACK
 # ═══════════════════════════════════════════════════════════
 with tab4:
-    st.markdown("### Teknoloji Yığını")
+    st.markdown('<div style="font-family: \'Space Grotesk\', sans-serif; font-size: 22px; font-weight: 600; color: #f1f5f9; margin-bottom: 20px;">Teknoloji Stack</div>', unsafe_allow_html=True)
 
     col1, col2, col3 = st.columns(3)
 
@@ -1109,7 +1110,7 @@ with tab4:
 # TAB 5: DATA MODEL
 # ═══════════════════════════════════════════════════════════
 with tab5:
-    st.markdown("### Veri Modeli (SQLite)")
+    st.markdown('<div style="font-family: \'Space Grotesk\', sans-serif; font-size: 22px; font-weight: 600; color: #f1f5f9; margin-bottom: 20px;">Veri Modeli (SQLite)</div>', unsafe_allow_html=True)
 
     col1, col2 = st.columns(2)
 

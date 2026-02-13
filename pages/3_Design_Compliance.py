@@ -32,6 +32,13 @@ st.markdown("""
         max-width: 1400px;
     }
 
+    /* Section Headers */
+    h2 {
+        margin-top: 1.5rem !important;
+        margin-bottom: 1rem !important;
+        font-family: 'Space Grotesk', sans-serif;
+    }
+
     /* Breadcrumb */
     .breadcrumb {
         display: flex;
@@ -98,8 +105,8 @@ st.markdown("""
         background: #1a2236;
         border: 1px solid #2a3654;
         border-radius: 16px;
-        padding: 24px;
-        margin-bottom: 20px;
+        padding: 16px;
+        margin-bottom: 12px;
         position: relative;
         overflow: hidden;
         transition: all 0.3s;
@@ -124,10 +131,10 @@ st.markdown("""
 
     .input-card-title {
         font-family: 'Space Grotesk', sans-serif;
-        font-size: 18px;
+        font-size: 16px;
         font-weight: 600;
         color: #f1f5f9;
-        margin-bottom: 16px;
+        margin-bottom: 12px;
         display: flex;
         align-items: center;
         gap: 8px;
@@ -251,6 +258,14 @@ st.markdown("""
         transform: scale(1.02);
     }
 
+    /* Reduce Streamlit default spacing */
+    .stTextInput, .stTextArea, .stMultiSelect {
+        margin-bottom: 0.5rem !important;
+    }
+    .element-container {
+        margin-bottom: 0.5rem !important;
+    }
+
     @media (max-width: 768px) {
         .step-indicator {
             flex-direction: column;
@@ -329,7 +344,7 @@ with col_doc:
 
     doc_url = st.text_input("Google Docs URL", placeholder="https://docs.google.com/document/d/...", label_visibility="collapsed")
     st.caption("veya")
-    doc_text_override = st.text_area("Doküman metnini yapıştır", height=150, label_visibility="collapsed", placeholder="İş analizi dokümanı metnini buraya yapıştırın...")
+    doc_text_override = st.text_area("Doküman metnini yapıştır", height=100, label_visibility="collapsed", placeholder="İş analizi dokümanı metnini buraya yapıştırın...")
 
     if doc_url or doc_text_override:
         with st.expander("📋 Doküman Önizleme"):
@@ -367,7 +382,6 @@ with col_design:
     st.markdown('</div>', unsafe_allow_html=True)
 
 # ── Configuration ──
-st.markdown("---")
 st.markdown("## ⚙️ Kontrol Ayarları")
 
 col_cfg1, col_cfg2 = st.columns(2)
@@ -398,12 +412,11 @@ with col_cfg2:
     st.markdown('<div class="input-card-title">📝 Proje Bilgileri</div>', unsafe_allow_html=True)
 
     project_name = st.text_input("Proje Adı", placeholder="Örn: Enliq Tenant Management", label_visibility="collapsed")
-    extra_context = st.text_area("Ek Bağlam (Opsiyonel)", height=80, label_visibility="collapsed", placeholder="Ek notlar veya özel talimatlar...")
+    extra_context = st.text_area("Ek Bağlam (Opsiyonel)", height=60, label_visibility="collapsed", placeholder="Ek notlar veya özel talimatlar...")
 
     st.markdown('</div>', unsafe_allow_html=True)
 
 # ── Run Button ──
-st.markdown("<br>", unsafe_allow_html=True)
 if st.button("🚀 Uyumluluk Kontrolünü Başlat", type="primary", use_container_width=True):
     # Validate inputs
     doc_content = doc_text_override or st.session_state.get("doc_content")
