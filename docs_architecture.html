@@ -1,0 +1,1075 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BA&QA Intelligence Platform - Architecture</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=Space+Grotesk:wght@300;400;500;600;700&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-primary: #0a0e17;
+    --bg-secondary: #111827;
+    --bg-card: #1a2236;
+    --bg-card-hover: #1f2a42;
+    --border: #2a3654;
+    --border-glow: #3b82f6;
+    --text-primary: #f1f5f9;
+    --text-secondary: #94a3b8;
+    --text-muted: #64748b;
+    --accent-blue: #3b82f6;
+    --accent-cyan: #06b6d4;
+    --accent-purple: #8b5cf6;
+    --accent-green: #10b981;
+    --accent-orange: #f59e0b;
+    --accent-red: #ef4444;
+    --accent-pink: #ec4899;
+    --gradient-blue: linear-gradient(135deg, #3b82f6, #06b6d4);
+    --gradient-purple: linear-gradient(135deg, #8b5cf6, #ec4899);
+    --gradient-green: linear-gradient(135deg, #10b981, #06b6d4);
+    --gradient-orange: linear-gradient(135deg, #f59e0b, #ef4444);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  .bg-grid {
+    position: fixed;
+    inset: 0;
+    background-image: 
+      linear-gradient(rgba(59,130,246,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(59,130,246,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .bg-glow {
+    position: fixed;
+    width: 600px;
+    height: 600px;
+    border-radius: 50%;
+    filter: blur(150px);
+    opacity: 0.08;
+    pointer-events: none;
+    z-index: 0;
+  }
+  .bg-glow-1 { top: -200px; left: -200px; background: var(--accent-blue); }
+  .bg-glow-2 { bottom: -200px; right: -200px; background: var(--accent-purple); }
+
+  .container {
+    position: relative;
+    z-index: 1;
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 40px 24px;
+  }
+
+  /* Header */
+  .header {
+    text-align: center;
+    margin-bottom: 60px;
+    animation: fadeInDown 0.8s ease-out;
+  }
+  .header-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(59,130,246,0.1);
+    border: 1px solid rgba(59,130,246,0.2);
+    border-radius: 100px;
+    padding: 6px 16px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--accent-cyan);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-bottom: 20px;
+  }
+  .header-badge .dot {
+    width: 6px; height: 6px;
+    background: var(--accent-green);
+    border-radius: 50%;
+    animation: pulse 2s infinite;
+  }
+  .header h1 {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 48px;
+    font-weight: 700;
+    background: linear-gradient(135deg, #f1f5f9 0%, #94a3b8 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 12px;
+    letter-spacing: -1px;
+  }
+  .header p {
+    color: var(--text-secondary);
+    font-size: 18px;
+    max-width: 700px;
+    margin: 0 auto;
+    line-height: 1.6;
+  }
+
+  /* Section titles */
+  .section-title {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 24px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .section-title::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(to right, var(--border), transparent);
+  }
+
+  /* Architecture Overview */
+  .arch-overview {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 32px;
+    margin-bottom: 60px;
+  }
+
+  /* Layer Cards */
+  .layer {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 32px;
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s ease;
+    animation: fadeInUp 0.6s ease-out backwards;
+  }
+  .layer:hover {
+    border-color: rgba(59,130,246,0.3);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+  }
+  .layer::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    border-radius: 16px 16px 0 0;
+  }
+  .layer:nth-child(1)::before { background: var(--gradient-blue); animation-delay: 0.1s; }
+  .layer:nth-child(2)::before { background: var(--gradient-purple); animation-delay: 0.2s; }
+  .layer:nth-child(3)::before { background: var(--gradient-green); animation-delay: 0.3s; }
+  .layer:nth-child(4)::before { background: var(--gradient-orange); animation-delay: 0.4s; }
+
+  .layer-header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+  .layer-icon {
+    width: 48px; height: 48px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    flex-shrink: 0;
+  }
+  .layer-icon.blue { background: rgba(59,130,246,0.15); border: 1px solid rgba(59,130,246,0.2); }
+  .layer-icon.purple { background: rgba(139,92,246,0.15); border: 1px solid rgba(139,92,246,0.2); }
+  .layer-icon.green { background: rgba(16,185,129,0.15); border: 1px solid rgba(16,185,129,0.2); }
+  .layer-icon.orange { background: rgba(245,158,11,0.15); border: 1px solid rgba(245,158,11,0.2); }
+
+  .layer-title {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+  .layer-subtitle {
+    font-size: 13px;
+    color: var(--text-muted);
+    margin-top: 2px;
+  }
+
+  /* Components Grid */
+  .components {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 12px;
+  }
+  .component {
+    background: rgba(255,255,255,0.02);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 10px;
+    padding: 16px;
+    transition: all 0.2s ease;
+  }
+  .component:hover {
+    background: rgba(255,255,255,0.04);
+    border-color: rgba(255,255,255,0.1);
+  }
+  .component-name {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-primary);
+    margin-bottom: 4px;
+  }
+  .component-desc {
+    font-size: 12px;
+    color: var(--text-muted);
+    line-height: 1.5;
+  }
+  .component-tag {
+    display: inline-block;
+    margin-top: 8px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    padding: 2px 8px;
+    border-radius: 4px;
+    letter-spacing: 0.5px;
+  }
+  .tag-new { background: rgba(16,185,129,0.15); color: var(--accent-green); }
+  .tag-existing { background: rgba(59,130,246,0.15); color: var(--accent-blue); }
+  .tag-enhanced { background: rgba(245,158,11,0.15); color: var(--accent-orange); }
+
+  /* Flow Diagram */
+  .flow-section {
+    margin-bottom: 60px;
+  }
+  .flow-container {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 40px;
+    overflow-x: auto;
+  }
+  .flow-row {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    justify-content: center;
+    flex-wrap: nowrap;
+    min-width: fit-content;
+    margin-bottom: 24px;
+  }
+  .flow-row:last-child { margin-bottom: 0; }
+  .flow-node {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 20px;
+    text-align: center;
+    min-width: 140px;
+    transition: all 0.2s;
+    flex-shrink: 0;
+  }
+  .flow-node:hover {
+    transform: scale(1.05);
+    border-color: rgba(59,130,246,0.4);
+  }
+  .flow-node-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+  .flow-node-sub {
+    font-size: 10px;
+    color: var(--text-muted);
+    margin-top: 4px;
+  }
+  .flow-arrow {
+    color: var(--text-muted);
+    font-size: 20px;
+    padding: 0 8px;
+    flex-shrink: 0;
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .flow-arrow-down {
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 20px;
+    padding: 8px 0;
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .flow-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--accent-cyan);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 12px;
+    text-align: center;
+  }
+
+  .node-blue { border-color: rgba(59,130,246,0.3); background: rgba(59,130,246,0.08); }
+  .node-purple { border-color: rgba(139,92,246,0.3); background: rgba(139,92,246,0.08); }
+  .node-green { border-color: rgba(16,185,129,0.3); background: rgba(16,185,129,0.08); }
+  .node-orange { border-color: rgba(245,158,11,0.3); background: rgba(245,158,11,0.08); }
+  .node-red { border-color: rgba(239,68,68,0.3); background: rgba(239,68,68,0.08); }
+  .node-cyan { border-color: rgba(6,182,212,0.3); background: rgba(6,182,212,0.08); }
+
+  /* Tech Stack */
+  .tech-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 16px;
+    margin-bottom: 60px;
+  }
+  .tech-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+  }
+  .tech-card-icon {
+    width: 40px; height: 40px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    flex-shrink: 0;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.08);
+  }
+  .tech-card-title {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 600;
+    font-size: 15px;
+    margin-bottom: 4px;
+  }
+  .tech-card-items {
+    font-size: 13px;
+    color: var(--text-secondary);
+    line-height: 1.6;
+  }
+
+  /* Page Structure */
+  .pages-section { margin-bottom: 60px; }
+  .pages-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 16px;
+  }
+  .page-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 28px;
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s;
+  }
+  .page-card:hover {
+    transform: translateY(-2px);
+    border-color: rgba(59,130,246,0.3);
+  }
+  .page-card-num {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 48px;
+    font-weight: 700;
+    color: rgba(255,255,255,0.04);
+    position: absolute;
+    top: 12px; right: 20px;
+    line-height: 1;
+  }
+  .page-card-title {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 18px;
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+  .page-card-route {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--accent-cyan);
+    margin-bottom: 12px;
+  }
+  .page-card-features {
+    list-style: none;
+    padding: 0;
+  }
+  .page-card-features li {
+    font-size: 13px;
+    color: var(--text-secondary);
+    padding: 4px 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .page-card-features li::before {
+    content: '›';
+    color: var(--accent-blue);
+    font-weight: 700;
+    font-size: 16px;
+  }
+
+  /* DB Schema */
+  .db-section { margin-bottom: 60px; }
+  .db-table {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+    margin-bottom: 16px;
+  }
+  .db-table-name {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--accent-cyan);
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .db-table-name::before {
+    content: '⊞';
+    font-size: 16px;
+  }
+  .db-fields {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 6px;
+  }
+  .db-field {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--text-secondary);
+    padding: 4px 0;
+  }
+  .db-field .type {
+    color: var(--text-muted);
+    font-size: 11px;
+  }
+  .db-field .pk {
+    color: var(--accent-orange);
+    font-size: 10px;
+    margin-left: 4px;
+  }
+
+  /* Footer */
+  .footer {
+    text-align: center;
+    padding: 40px 0;
+    border-top: 1px solid var(--border);
+    margin-top: 40px;
+  }
+  .footer-text {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+
+  /* Animations */
+  @keyframes fadeInDown {
+    from { opacity: 0; transform: translateY(-20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+
+  /* Interactive Tabs */
+  .tab-container { margin-bottom: 60px; }
+  .tab-header {
+    display: flex;
+    gap: 4px;
+    background: var(--bg-secondary);
+    border-radius: 12px;
+    padding: 4px;
+    margin-bottom: 24px;
+    overflow-x: auto;
+  }
+  .tab-btn {
+    padding: 10px 20px;
+    border-radius: 8px;
+    border: none;
+    background: transparent;
+    color: var(--text-muted);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+  }
+  .tab-btn:hover { color: var(--text-secondary); background: rgba(255,255,255,0.03); }
+  .tab-btn.active {
+    background: var(--bg-card);
+    color: var(--text-primary);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+  }
+  .tab-content { display: none; }
+  .tab-content.active { display: block; animation: fadeInUp 0.3s ease-out; }
+
+  /* Responsive */
+  @media (max-width: 768px) {
+    .header h1 { font-size: 32px; }
+    .flow-row { flex-direction: column; }
+    .flow-arrow { transform: rotate(90deg); }
+    .components { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+  <div class="bg-grid"></div>
+  <div class="bg-glow bg-glow-1"></div>
+  <div class="bg-glow bg-glow-2"></div>
+
+  <div class="container">
+    <!-- Header -->
+    <div class="header">
+      <div class="header-badge">
+        <span class="dot"></span>
+        Architecture Document
+      </div>
+      <h1>BA&QA Intelligence Platform</h1>
+      <p>Birleşik BA değerlendirme, QA test analizi, design compliance ve JIRA otomasyon platformu. BA ve QA ekibinin tüm kalite süreçlerini tek çatı altında toplayan Streamlit dashboard.</p>
+    </div>
+
+    <!-- Tab Navigation -->
+    <div class="tab-container">
+      <div class="tab-header">
+        <button class="tab-btn active" onclick="showTab('overview')">🏗️ Mimari</button>
+        <button class="tab-btn" onclick="showTab('flow')">🔄 Veri Akışı</button>
+        <button class="tab-btn" onclick="showTab('pages')">📱 Sayfa Yapısı</button>
+        <button class="tab-btn" onclick="showTab('tech')">⚙️ Tech Stack</button>
+        <button class="tab-btn" onclick="showTab('db')">🗄️ Veri Modeli</button>
+      </div>
+
+      <!-- TAB 1: Architecture Overview -->
+      <div id="tab-overview" class="tab-content active">
+        <div class="section-title">Katmanlı Mimari</div>
+        <div class="arch-overview">
+
+          <!-- Layer 1: Presentation -->
+          <div class="layer">
+            <div class="layer-header">
+              <div class="layer-icon blue">🖥️</div>
+              <div>
+                <div class="layer-title">Presentation Layer</div>
+                <div class="layer-subtitle">Streamlit Multi-Page Dashboard</div>
+              </div>
+            </div>
+            <div class="components">
+              <div class="component">
+                <div class="component-name">Dashboard</div>
+                <div class="component-desc">Genel bakış, KPI'lar, son analizler, skor trendleri</div>
+                <span class="component-tag tag-new">NEW</span>
+              </div>
+              <div class="component">
+                <div class="component-name">QA Analiz</div>
+                <div class="component-desc">BA doküman + Test Case kalite değerlendirme</div>
+                <span class="component-tag tag-existing">FROM QA-AGENT</span>
+              </div>
+              <div class="component">
+                <div class="component-name">Design Compliance</div>
+                <div class="component-desc">Figma tasarım vs BA uyumluluk kontrolü</div>
+                <span class="component-tag tag-existing">FROM DESIGN-AGENT</span>
+              </div>
+              <div class="component">
+                <div class="component-name">JIRA Entegrasyon</div>
+                <div class="component-desc">Task çekme, comment yazma, label yönetimi</div>
+                <span class="component-tag tag-enhanced">ENHANCED</span>
+              </div>
+              <div class="component">
+                <div class="component-name">Raporlar</div>
+                <div class="component-desc">Google Sheets export, trend grafikleri</div>
+                <span class="component-tag tag-enhanced">ENHANCED</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Layer 2: Agent Orchestration -->
+          <div class="layer">
+            <div class="layer-header">
+              <div class="layer-icon purple">🤖</div>
+              <div>
+                <div class="layer-title">Agent Orchestration Layer</div>
+                <div class="layer-subtitle">Agno Framework + Multi-Agent Coordinator</div>
+              </div>
+            </div>
+            <div class="components">
+              <div class="component">
+                <div class="component-name">BA Analyst Agent</div>
+                <div class="component-desc">İş Analizi doküman kalite skoru (yapı, kapsam, netlik)</div>
+                <span class="component-tag tag-existing">FROM QA-AGENT</span>
+              </div>
+              <div class="component">
+                <div class="component-name">TC Evaluator Agent</div>
+                <div class="component-desc">Test Case completeness & coverage analizi</div>
+                <span class="component-tag tag-existing">FROM QA-AGENT</span>
+              </div>
+              <div class="component">
+                <div class="component-name">UX Reviewer Agent</div>
+                <div class="component-desc">Figma screen vs gereksinim uyumluluk kontrolü</div>
+                <span class="component-tag tag-existing">FROM DESIGN-AGENT</span>
+              </div>
+              <div class="component">
+                <div class="component-name">Requirements Agent</div>
+                <div class="component-desc">BA'dan gereksinim listesi çıkarma (REQ-xxx)</div>
+                <span class="component-tag tag-existing">FROM DESIGN-AGENT</span>
+              </div>
+              <div class="component">
+                <div class="component-name">Orchestrator</div>
+                <div class="component-desc">Agent seçimi, paralel çalıştırma, sonuç birleştirme</div>
+                <span class="component-tag tag-new">NEW</span>
+              </div>
+              <div class="component">
+                <div class="component-name">Report Generator Agent</div>
+                <div class="component-desc">Tüm sonuçları birleştirip unified rapor üretme</div>
+                <span class="component-tag tag-new">NEW</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Layer 3: Integration -->
+          <div class="layer">
+            <div class="layer-header">
+              <div class="layer-icon green">🔗</div>
+              <div>
+                <div class="layer-title">Integration Layer</div>
+                <div class="layer-subtitle">Dış Servis Bağlantıları</div>
+              </div>
+            </div>
+            <div class="components">
+              <div class="component">
+                <div class="component-name">JIRA Client</div>
+                <div class="component-desc">REST API — task CRUD, comment, label, transition</div>
+                <span class="component-tag tag-enhanced">ENHANCED</span>
+              </div>
+              <div class="component">
+                <div class="component-name">Google Docs Client</div>
+                <div class="component-desc">BA doküman okuma (Drive API v3)</div>
+                <span class="component-tag tag-existing">FROM QA-AGENT</span>
+              </div>
+              <div class="component">
+                <div class="component-name">Google Sheets Client</div>
+                <div class="component-desc">TC veri okuma + sonuç yazma (Sheets API v4)</div>
+                <span class="component-tag tag-enhanced">ENHANCED</span>
+              </div>
+              <div class="component">
+                <div class="component-name">Figma Client</div>
+                <div class="component-desc">Design frame export, node traverse (Figma REST API)</div>
+                <span class="component-tag tag-existing">FROM DESIGN-AGENT</span>
+              </div>
+              <div class="component">
+                <div class="component-name">Gemini API Client</div>
+                <div class="component-desc">Gemini 2.5 Flash — tüm agent'ların LLM backend'i</div>
+                <span class="component-tag tag-existing">SHARED</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Layer 4: Data -->
+          <div class="layer">
+            <div class="layer-header">
+              <div class="layer-icon orange">💾</div>
+              <div>
+                <div class="layer-title">Data & Storage Layer</div>
+                <div class="layer-subtitle">Sonuç Saklama & Cache</div>
+              </div>
+            </div>
+            <div class="components">
+              <div class="component">
+                <div class="component-name">SQLite DB</div>
+                <div class="component-desc">Analiz sonuçları, skorlar, geçmiş veriler</div>
+                <span class="component-tag tag-new">NEW</span>
+              </div>
+              <div class="component">
+                <div class="component-name">Google Sheets</div>
+                <div class="component-desc">Mevcut sonuç tabloları (geriye uyumlu)</div>
+                <span class="component-tag tag-existing">EXISTING</span>
+              </div>
+              <div class="component">
+                <div class="component-name">Session State</div>
+                <div class="component-desc">Streamlit session — anlık analiz sonuçları</div>
+                <span class="component-tag tag-existing">EXISTING</span>
+              </div>
+              <div class="component">
+                <div class="component-name">Cache Layer</div>
+                <div class="component-desc">Doküman cache, API response cache (TTL: 1h)</div>
+                <span class="component-tag tag-new">NEW</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB 2: Data Flow -->
+      <div id="tab-flow" class="tab-content">
+        <div class="section-title">QA Değerlendirme Akışı</div>
+        <div class="flow-container" style="margin-bottom: 24px;">
+          <div class="flow-label">Flow 1 — BA + TC Quality Assessment</div>
+          <div class="flow-row">
+            <div class="flow-node node-blue">
+              <div class="flow-node-label">JIRA Task</div>
+              <div class="flow-node-sub">Issue key ile çek</div>
+            </div>
+            <div class="flow-arrow">→</div>
+            <div class="flow-node node-cyan">
+              <div class="flow-node-label">Parse Links</div>
+              <div class="flow-node-sub">Docs + Sheets URL</div>
+            </div>
+            <div class="flow-arrow">→</div>
+            <div class="flow-node node-green">
+              <div class="flow-node-label">Fetch Docs</div>
+              <div class="flow-node-sub">BA doc + TC sheets</div>
+            </div>
+            <div class="flow-arrow">→</div>
+            <div class="flow-node node-purple">
+              <div class="flow-node-label">BA Agent</div>
+              <div class="flow-node-sub">Kalite analizi</div>
+            </div>
+            <div class="flow-arrow">→</div>
+            <div class="flow-node node-purple">
+              <div class="flow-node-label">TC Agent</div>
+              <div class="flow-node-sub">Coverage analizi</div>
+            </div>
+            <div class="flow-arrow">→</div>
+            <div class="flow-node node-orange">
+              <div class="flow-node-label">Report</div>
+              <div class="flow-node-sub">Sheets + JIRA comment</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="flow-container" style="margin-bottom: 24px;">
+          <div class="flow-label">Flow 2 — Design Compliance Check</div>
+          <div class="flow-row">
+            <div class="flow-node node-blue">
+              <div class="flow-node-label">BA Document</div>
+              <div class="flow-node-sub">Upload / JIRA link</div>
+            </div>
+            <div class="flow-arrow">→</div>
+            <div class="flow-node node-cyan">
+              <div class="flow-node-label">Req Extract</div>
+              <div class="flow-node-sub">REQ-001, REQ-002...</div>
+            </div>
+            <div class="flow-arrow">→</div>
+            <div class="flow-node node-green">
+              <div class="flow-node-label">Figma Screens</div>
+              <div class="flow-node-sub">Image upload</div>
+            </div>
+            <div class="flow-arrow">→</div>
+            <div class="flow-node node-purple">
+              <div class="flow-node-label">UX Review Agent</div>
+              <div class="flow-node-sub">Screen ↔ Req eşleşme</div>
+            </div>
+            <div class="flow-arrow">→</div>
+            <div class="flow-node node-orange">
+              <div class="flow-node-label">Compliance Report</div>
+              <div class="flow-node-sub">Score + eksikler</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="flow-container">
+          <div class="flow-label">Flow 3 — Full Pipeline (Combined)</div>
+          <div class="flow-row">
+            <div class="flow-node node-blue">
+              <div class="flow-node-label">JIRA Issue</div>
+              <div class="flow-node-sub">Tek tıkla başlat</div>
+            </div>
+            <div class="flow-arrow">→</div>
+            <div class="flow-node node-purple" style="border-color: rgba(236,72,153,0.4); background: rgba(236,72,153,0.08);">
+              <div class="flow-node-label">🎯 Orchestrator</div>
+              <div class="flow-node-sub">Paralel agent dispatch</div>
+            </div>
+            <div class="flow-arrow">→</div>
+            <div class="flow-node" style="border-color: rgba(139,92,246,0.3); background: rgba(139,92,246,0.05); min-width: 220px;">
+              <div class="flow-node-label" style="font-size: 10px;">
+                BA Agent ∥ TC Agent ∥ UX Agent
+              </div>
+              <div class="flow-node-sub">Eş zamanlı çalışma</div>
+            </div>
+            <div class="flow-arrow">→</div>
+            <div class="flow-node node-green">
+              <div class="flow-node-label">Merge Results</div>
+              <div class="flow-node-sub">Unified score</div>
+            </div>
+            <div class="flow-arrow">→</div>
+            <div class="flow-node node-orange">
+              <div class="flow-node-label">Dashboard</div>
+              <div class="flow-node-sub">Sheets + JIRA + UI</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB 3: Page Structure -->
+      <div id="tab-pages" class="tab-content">
+        <div class="section-title">Streamlit Sayfa Yapısı</div>
+        <div class="pages-grid">
+          <div class="page-card">
+            <div class="page-card-num">01</div>
+            <div class="page-card-title">📊 Dashboard</div>
+            <div class="page-card-route">/pages/1_Dashboard.py</div>
+            <ul class="page-card-features">
+              <li>Toplam analiz sayısı, ortalama skorlar</li>
+              <li>Son 7 gün trend grafiği (Plotly)</li>
+              <li>Proje bazlı kalite heat-map</li>
+              <li>En son 10 analiz sonucu tablosu</li>
+              <li>Agent bazlı performans metrikleri</li>
+            </ul>
+          </div>
+
+          <div class="page-card">
+            <div class="page-card-num">02</div>
+            <div class="page-card-title">📋 QA Değerlendirme</div>
+            <div class="page-card-route">/pages/2_QA_Analysis.py</div>
+            <ul class="page-card-features">
+              <li>JIRA issue key ile otomatik veri çekme</li>
+              <li>BA doküman kalite analizi (skor + detay)</li>
+              <li>TC coverage & completeness değerlendirme</li>
+              <li>BA vs BRD çapraz referans kontrolü</li>
+              <li>JIRA'ya otomatik comment yazma</li>
+            </ul>
+          </div>
+
+          <div class="page-card">
+            <div class="page-card-num">03</div>
+            <div class="page-card-title">🎨 Design Compliance</div>
+            <div class="page-card-route">/pages/3_Design_Compliance.py</div>
+            <ul class="page-card-features">
+              <li>BA doküman yükleme veya JIRA'dan çekme</li>
+              <li>Figma ekran görselleri yükleme</li>
+              <li>Gereksinim listesi çıkarma (REQ-xxx)</li>
+              <li>Screen ↔ Requirement eşleşme matrisi</li>
+              <li>Compliance skoru & eksik kapsam raporu</li>
+            </ul>
+          </div>
+
+          <div class="page-card">
+            <div class="page-card-num">04</div>
+            <div class="page-card-title">🔗 JIRA Manager</div>
+            <div class="page-card-route">/pages/4_JIRA_Manager.py</div>
+            <ul class="page-card-features">
+              <li>Proje bazlı task listeleme & filtreleme</li>
+              <li>Toplu analiz başlatma (batch mode)</li>
+              <li>Label yönetimi (qa-devam, qa-tamamlandi)</li>
+              <li>Comment geçmişi görüntüleme</li>
+              <li>Task transition (status değiştirme)</li>
+            </ul>
+          </div>
+
+          <div class="page-card">
+            <div class="page-card-num">05</div>
+            <div class="page-card-title">📈 Raporlar</div>
+            <div class="page-card-route">/pages/5_Reports.py</div>
+            <ul class="page-card-features">
+              <li>Google Sheets'e toplu export</li>
+              <li>Sprint bazlı kalite raporu</li>
+              <li>Agent performans karşılaştırma</li>
+              <li>CSV / Excel indirme</li>
+              <li>Zaman serisi trend analizi</li>
+            </ul>
+          </div>
+
+          <div class="page-card">
+            <div class="page-card-num">06</div>
+            <div class="page-card-title">⚙️ Ayarlar</div>
+            <div class="page-card-route">/pages/6_Settings.py</div>
+            <ul class="page-card-features">
+              <li>API key yönetimi (Gemini, JIRA, Google)</li>
+              <li>JIRA proje konfigürasyonu</li>
+              <li>Google Sheets hedef tablo seçimi</li>
+              <li>Agent prompt özelleştirme</li>
+              <li>Bildirim & webhook ayarları</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB 4: Tech Stack -->
+      <div id="tab-tech" class="tab-content">
+        <div class="section-title">Teknoloji Yığını</div>
+        <div class="tech-grid">
+          <div class="tech-card">
+            <div class="tech-card-icon">🐍</div>
+            <div>
+              <div class="tech-card-title">Backend</div>
+              <div class="tech-card-items">Python 3.11+ · Streamlit 1.40+ · Agno Framework · asyncio</div>
+            </div>
+          </div>
+          <div class="tech-card">
+            <div class="tech-card-icon">🧠</div>
+            <div>
+              <div class="tech-card-title">AI / LLM</div>
+              <div class="tech-card-items">Gemini 2.5 Flash (1M context) · Agno multi-agent · Structured output</div>
+            </div>
+          </div>
+          <div class="tech-card">
+            <div class="tech-card-icon">🔗</div>
+            <div>
+              <div class="tech-card-title">Entegrasyonlar</div>
+              <div class="tech-card-items">JIRA REST API v3 · Google Drive/Sheets API · Figma REST API</div>
+            </div>
+          </div>
+          <div class="tech-card">
+            <div class="tech-card-icon">💾</div>
+            <div>
+              <div class="tech-card-title">Data Storage</div>
+              <div class="tech-card-items">SQLite (lokal) · Google Sheets (paylaşılabilir) · Streamlit Session State</div>
+            </div>
+          </div>
+          <div class="tech-card">
+            <div class="tech-card-icon">📊</div>
+            <div>
+              <div class="tech-card-title">Visualizasyon</div>
+              <div class="tech-card-items">Plotly · Streamlit charts · Custom CSS theming</div>
+            </div>
+          </div>
+          <div class="tech-card">
+            <div class="tech-card-icon">🚀</div>
+            <div>
+              <div class="tech-card-title">Deployment</div>
+              <div class="tech-card-items">Streamlit Cloud · GitHub Actions CI · Secrets management</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB 5: Data Model -->
+      <div id="tab-db" class="tab-content">
+        <div class="section-title">Veri Modeli (SQLite)</div>
+        
+        <div class="db-table">
+          <div class="db-table-name">analyses</div>
+          <div class="db-fields">
+            <div class="db-field">id <span class="type">INTEGER</span><span class="pk">PK</span></div>
+            <div class="db-field">jira_key <span class="type">TEXT</span></div>
+            <div class="db-field">project <span class="type">TEXT</span></div>
+            <div class="db-field">analysis_type <span class="type">ENUM(qa, design, full)</span></div>
+            <div class="db-field">status <span class="type">ENUM(pending, running, done, error)</span></div>
+            <div class="db-field">created_at <span class="type">DATETIME</span></div>
+            <div class="db-field">completed_at <span class="type">DATETIME</span></div>
+            <div class="db-field">triggered_by <span class="type">TEXT</span></div>
+          </div>
+        </div>
+
+        <div class="db-table">
+          <div class="db-table-name">qa_results</div>
+          <div class="db-fields">
+            <div class="db-field">id <span class="type">INTEGER</span><span class="pk">PK</span></div>
+            <div class="db-field">analysis_id <span class="type">INTEGER</span><span class="pk">FK</span></div>
+            <div class="db-field">ba_score <span class="type">FLOAT</span></div>
+            <div class="db-field">ba_detail <span class="type">JSON</span></div>
+            <div class="db-field">tc_score <span class="type">FLOAT</span></div>
+            <div class="db-field">tc_detail <span class="type">JSON</span></div>
+            <div class="db-field">tc_coverage_pct <span class="type">FLOAT</span></div>
+            <div class="db-field">overall_score <span class="type">FLOAT</span></div>
+            <div class="db-field">recommendations <span class="type">JSON</span></div>
+          </div>
+        </div>
+
+        <div class="db-table">
+          <div class="db-table-name">design_results</div>
+          <div class="db-fields">
+            <div class="db-field">id <span class="type">INTEGER</span><span class="pk">PK</span></div>
+            <div class="db-field">analysis_id <span class="type">INTEGER</span><span class="pk">FK</span></div>
+            <div class="db-field">requirements_count <span class="type">INTEGER</span></div>
+            <div class="db-field">screens_count <span class="type">INTEGER</span></div>
+            <div class="db-field">compliance_score <span class="type">FLOAT</span></div>
+            <div class="db-field">coverage_matrix <span class="type">JSON</span></div>
+            <div class="db-field">missing_reqs <span class="type">JSON</span></div>
+            <div class="db-field">ux_findings <span class="type">JSON</span></div>
+          </div>
+        </div>
+
+        <div class="db-table">
+          <div class="db-table-name">jira_sync_log</div>
+          <div class="db-fields">
+            <div class="db-field">id <span class="type">INTEGER</span><span class="pk">PK</span></div>
+            <div class="db-field">analysis_id <span class="type">INTEGER</span><span class="pk">FK</span></div>
+            <div class="db-field">action <span class="type">ENUM(comment, label, transition)</span></div>
+            <div class="db-field">jira_key <span class="type">TEXT</span></div>
+            <div class="db-field">payload <span class="type">JSON</span></div>
+            <div class="db-field">success <span class="type">BOOLEAN</span></div>
+            <div class="db-field">created_at <span class="type">DATETIME</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- File Structure -->
+    <div class="section-title">Proje Dosya Yapısı</div>
+    <div class="flow-container" style="margin-bottom: 60px;">
+      <pre style="font-family: 'JetBrains Mono', monospace; font-size: 13px; color: var(--text-secondary); line-height: 1.8;">
+<span style="color: var(--accent-cyan);">ba-qa-intelligence-platform/</span>
+├── <span style="color: var(--accent-orange);">app.py</span>                          <span style="color: var(--text-muted);"># Streamlit ana giriş noktası</span>
+├── <span style="color: var(--accent-cyan);">pages/</span>
+│   ├── 1_Dashboard.py                  <span style="color: var(--text-muted);"># Genel bakış & KPI'lar</span>
+│   ├── 2_QA_Analysis.py                <span style="color: var(--text-muted);"># BA + TC değerlendirme</span>
+│   ├── 3_Design_Compliance.py          <span style="color: var(--text-muted);"># Figma vs BA uyumluluk</span>
+│   ├── 4_JIRA_Manager.py              <span style="color: var(--text-muted);"># JIRA task yönetimi</span>
+│   ├── 5_Reports.py                    <span style="color: var(--text-muted);"># Raporlama & export</span>
+│   └── 6_Settings.py                   <span style="color: var(--text-muted);"># Konfigürasyon</span>
+├── <span style="color: var(--accent-cyan);">agents/</span>
+│   ├── __init__.py
+│   ├── orchestrator.py                 <span style="color: var(--text-muted);"># Agent koordinatör</span>
+│   ├── ba_analyst.py                   <span style="color: var(--text-muted);"># BA kalite agent</span>
+│   ├── tc_evaluator.py                 <span style="color: var(--text-muted);"># TC coverage agent</span>
+│   ├── ux_reviewer.py                  <span style="color: var(--text-muted);"># Design uyumluluk agent</span>
+│   ├── requirements_extractor.py       <span style="color: var(--text-muted);"># Gereksinim çıkarma agent</span>
+│   └── report_generator.py             <span style="color: var(--text-muted);"># Birleşik rapor agent</span>
+├── <span style="color: var(--accent-cyan);">integrations/</span>
+│   ├── __init__.py
+│   ├── jira_client.py                  <span style="color: var(--text-muted);"># JIRA REST API wrapper</span>
+│   ├── google_docs.py                  <span style="color: var(--text-muted);"># Google Docs okuyucu</span>
+│   ├── google_sheets.py                <span style="color: var(--text-muted);"># Google Sheets R/W</span>
+│   └── figma_client.py                 <span style="color: var(--text-muted);"># Figma API wrapper</span>
+├── <span style="color: var(--accent-cyan);">data/</span>
+│   ├── database.py                     <span style="color: var(--text-muted);"># SQLite ORM (sqlite3)</span>
+│   ├── models.py                       <span style="color: var(--text-muted);"># Dataclass tanımları</span>
+│   └── cache.py                        <span style="color: var(--text-muted);"># Doküman cache</span>
+├── <span style="color: var(--accent-cyan);">utils/</span>
+│   ├── config.py                       <span style="color: var(--text-muted);"># Env & secrets</span>
+│   └── helpers.py                      <span style="color: var(--text-muted);"># Ortak yardımcılar</span>
+├── <span style="color: var(--accent-orange);">requirements.txt</span>
+├── <span style="color: var(--accent-orange);">.streamlit/</span>
+│   ├── config.toml                     <span style="color: var(--text-muted);"># Theme & layout</span>
+│   └── secrets.toml                    <span style="color: var(--text-muted);"># API keys (local dev)</span>
+└── <span style="color: var(--accent-orange);">README.md</span>
+      </pre>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">
+      <div class="footer-text">BA&QA Intelligence Platform v1.0 — Architecture Document — February 2026</div>
+    </div>
+  </div>
+
+  <script>
+    function showTab(tabName) {
+      document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.getElementById('tab-' + tabName).classList.add('active');
+      event.target.classList.add('active');
+    }
+  </script>
+</body>
+</html>

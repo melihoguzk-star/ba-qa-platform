@@ -1,0 +1,5 @@
+.streamlit/secrets.toml
+venv/
+data/baqa.db
+__pycache__/
+*.pyc
