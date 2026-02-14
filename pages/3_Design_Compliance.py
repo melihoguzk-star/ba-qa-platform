@@ -481,11 +481,12 @@ if st.button("🚀 Uyumluluk Kontrolünü Başlat", type="primary", use_containe
     </div>
     """, unsafe_allow_html=True)
 
-    with st.expander("🧠 Adım 1: Gereksinim Çıkarma", expanded=True):
+    with st.status("🧠 Adım 1: Gereksinim Çıkarma", expanded=True) as step1:
         req_prompt = f"Aşağıdaki iş analizi dokümanından tüm gereksinimleri çıkar.\nKontrol kapsamı: {checks_str}\n{f'Ek bağlam: {context_str}' if context_str else ''}\n\n--- İŞ ANALİZİ DOKÜMANI ---\n{doc_content}"
         req_response = requirements_agent.run(req_prompt)
         requirements_output = req_response.content
         st.markdown(f'<div class="agent-output requirements">{requirements_output}</div>', unsafe_allow_html=True)
+        step1.update(label="✅ Adım 1: Gereksinimler çıkarıldı", state="complete", expanded=False)
 
     # Step 2: Screen Analysis
     progress.progress(35, text="👁️ 2/4 — Ekran analizi yapılıyor...")
@@ -513,11 +514,12 @@ if st.button("🚀 Uyumluluk Kontrolünü Başlat", type="primary", use_containe
     </div>
     """, unsafe_allow_html=True)
 
-    with st.expander("👁️ Adım 2: Ekran Analizi", expanded=True):
+    with st.status("👁️ Adım 2: Ekran Analizi", expanded=True) as step2:
         screen_prompt = f"Bu tasarım ekranlarını detaylı analiz et.\n{f'Proje: {project_name}' if project_name else ''}\nEkran sayısı: {len(design_files)}"
         screen_response = screen_agent.run(screen_prompt, images=design_images)
         screen_output = screen_response.content
         st.markdown(f'<div class="agent-output screen">{screen_output}</div>', unsafe_allow_html=True)
+        step2.update(label=f"✅ Adım 2: {len(design_files)} ekran analiz edildi", state="complete", expanded=False)
 
     # Step 3: Compliance Check
     progress.progress(60, text="⚖️ 3/4 — Uyumluluk kontrolü yapılıyor...")
@@ -545,11 +547,12 @@ if st.button("🚀 Uyumluluk Kontrolünü Başlat", type="primary", use_containe
     </div>
     """, unsafe_allow_html=True)
 
-    with st.expander("⚖️ Adım 3: Uyumluluk Kontrolü", expanded=True):
+    with st.status("⚖️ Adım 3: Uyumluluk Kontrolü", expanded=True) as step3:
         compliance_prompt = f"Karşılaştır:\nKontroller: {checks_str}\n\n--- GEREKSİNİMLER ---\n{requirements_output}\n\n--- EKRAN ANALİZİ ---\n{screen_output}"
         compliance_response = compliance_agent.run(compliance_prompt, images=design_images)
         compliance_output = compliance_response.content
         st.markdown(f'<div class="agent-output compliance">{compliance_output}</div>', unsafe_allow_html=True)
+        step3.update(label="✅ Adım 3: Uyumluluk kontrolü tamamlandı", state="complete", expanded=False)
 
     # Step 4: Report Generation
     progress.progress(85, text="📋 4/4 — Rapor oluşturuluyor...")
@@ -577,11 +580,12 @@ if st.button("🚀 Uyumluluk Kontrolünü Başlat", type="primary", use_containe
     </div>
     """, unsafe_allow_html=True)
 
-    with st.expander("📋 Adım 4: Uyumluluk Raporu", expanded=True):
+    with st.status("📋 Adım 4: Uyumluluk Raporu", expanded=True) as step4:
         report_prompt = f"Rapor oluştur.\nProje: {project_name or 'Belirtilmedi'}\nEkran sayısı: {len(design_files)}\n\n--- UYUMLULUK ---\n{compliance_output}\n\n--- GEREKSİNİMLER ---\n{requirements_output}"
         report_response = report_agent.run(report_prompt)
         report_output = report_response.content
         st.markdown(f'<div class="agent-output report">{report_output}</div>', unsafe_allow_html=True)
+        step4.update(label="✅ Adım 4: Rapor oluşturuldu", state="complete", expanded=False)
 
     progress.progress(100, text="✅ Analiz tamamlandı!")
 
