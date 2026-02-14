@@ -275,9 +275,8 @@ stats = get_stats()
 
 ba_stats = next((s for s in stats["by_type"] if s["analysis_type"] == "ba"), {})
 tc_stats = next((s for s in stats["by_type"] if s["analysis_type"] == "tc"), {})
-design_stats = next((s for s in stats["by_type"] if s["analysis_type"] == "design"), {})
 
-col1, col2, col3, col4 = st.columns(4)
+col1, col2, col3 = st.columns(3)
 with col1:
     st.markdown(f"""
     <div class="stat-card">
@@ -299,14 +298,6 @@ with col3:
     <div class="stat-card">
         <div class="stat-num">{avg:.0f}</div>
         <div class="stat-label">TC Ort. Puan</div>
-    </div>""", unsafe_allow_html=True)
-
-with col4:
-    avg = design_stats.get("avg_puan", 0) or 0
-    st.markdown(f"""
-    <div class="stat-card">
-        <div class="stat-num">{avg:.0f}</div>
-        <div class="stat-label">Design Ort. Puan</div>
     </div>""", unsafe_allow_html=True)
 
 # ── Feature Cards ──
