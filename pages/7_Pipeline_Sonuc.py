@@ -10,8 +10,10 @@ import io
 import time
 import streamlit as st
 import pandas as pd
+from components.sidebar import render_custom_sidebar
 
 st.set_page_config(page_title="Pipeline Sonuç", page_icon="📊", layout="wide")
+render_custom_sidebar(active_page="pipeline_sonuc")
 st.title("📊 Pipeline Sonuç")
 
 # ── Veri kontrolü ──

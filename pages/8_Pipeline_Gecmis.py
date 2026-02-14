@@ -1,8 +1,10 @@
 """Sayfa 3: Pipeline Geçmişi."""
 import json
 import streamlit as st
+from components.sidebar import render_custom_sidebar
 
 st.set_page_config(page_title="Geçmiş", page_icon="📜", layout="wide")
+render_custom_sidebar(active_page="pipeline_gecmis")
 st.title("📜 Pipeline Geçmişi")
 
 try:

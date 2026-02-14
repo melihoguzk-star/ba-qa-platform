@@ -8,8 +8,10 @@ import time
 import io
 import streamlit as st
 from utils.config import BA_PASS_THRESHOLD, TA_PASS_THRESHOLD, TC_PASS_THRESHOLD, MAX_REVISIONS
+from components.sidebar import render_custom_sidebar
 
 st.set_page_config(page_title="BRD Pipeline", page_icon="📋", layout="wide")
+render_custom_sidebar(active_page="brd_pipeline")
 st.title("📋 BRD Pipeline — Adım Adım")
 
 # ── API Key kontrolü ──
