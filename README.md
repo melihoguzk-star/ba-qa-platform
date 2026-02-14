@@ -709,6 +709,15 @@ instructions = [
 
 ## 📝 Güncellemeler (Changelog)
 
+### v1.1.2 - BRD Pipeline UI İyileştirmesi (2025-02-15)
+
+#### Hata Düzeltmeleri
+- 🐛 **Missing Sidebar**: BRD Pipeline sayfalarına (6, 7, 8) eksik sol menü eklendi
+  - `render_custom_sidebar()` tüm BRD Pipeline sayfalarında aktif hale getirildi
+  - Sayfa navigasyonu artık tüm BRD Pipeline sayfalarında tutarlı
+
+---
+
 ### v1.1.1 - BRD Pipeline İyileştirmeleri (2025-02-15)
 
 #### Hata Düzeltmeleri
