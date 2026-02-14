@@ -266,7 +266,13 @@ def show_qa_result(qa_result, stage_name):
     for s in qa_result.get("skorlar",[]):
         puan = s.get("puan",0)
         bar = "🟩" * puan + "⬜" * (10 - puan)
-        st.markdown(f"**{s.get('kriter','')}**: {bar} {puan}/10 — {s.get('aciklama','')}")
+        aciklama = s.get('aciklama', '')
+        # Eğer aciklama dict ise string'e çevir
+        if isinstance(aciklama, dict):
+            aciklama = str(aciklama)
+        elif isinstance(aciklama, list):
+            aciklama = ', '.join(str(x) for x in aciklama)
+        st.markdown(f"**{s.get('kriter','')}**: {bar} {puan}/10 — {aciklama}")
     st.markdown(f"**Değerlendirme:** {qa_result.get('genel_degerlendirme','')}")
     oneriler = qa_result.get("iyilestirme_onerileri",[])
     if oneriler:
@@ -334,11 +340,21 @@ elif step == "ba_review":
     show_ba_preview(st.session_state.ba_content)
     show_log()
     st.divider()
-    st.markdown("**QA Hakeme göndermek istiyor musunuz?**")
+
+    # Hakeme gönderme seçeneği
+    skip_qa = st.checkbox("⚡ Hakeme göndermeden devam et (QA'yı atla)", key="skip_ba_qa")
+
     c1, c2 = st.columns(2)
     with c1:
-        if st.button("✅ Onayla — Hakeme Gönder", type="primary", use_container_width=True):
-            st.session_state.pipeline_step = "ba_qa"
+        if st.button("✅ Onayla ve İlerle", type="primary", use_container_width=True):
+            if skip_qa:
+                # QA'yı atla, direkt TA'ya geç
+                st.session_state.ba_score = 100  # Force pass
+                st.session_state.pipeline_step = "ta_gen"
+                st.success("⚡ QA atlandı, Teknik Analize geçiliyor...")
+            else:
+                # Normal akış, QA'ya gönder
+                st.session_state.pipeline_step = "ba_qa"
             st.rerun()
     with c2:
         if st.button("🔄 Yeniden Üret", use_container_width=True):
@@ -418,11 +434,21 @@ elif step == "ta_review":
     show_ta_preview(st.session_state.ta_content)
     show_log()
     st.divider()
-    st.markdown("**QA Hakeme göndermek istiyor musunuz?**")
+
+    # Hakeme gönderme seçeneği
+    skip_qa = st.checkbox("⚡ Hakeme göndermeden devam et (QA'yı atla)", key="skip_ta_qa")
+
     c1, c2 = st.columns(2)
     with c1:
-        if st.button("✅ Onayla — Hakeme Gönder", type="primary", use_container_width=True, key="ta_ok"):
-            st.session_state.pipeline_step = "ta_qa"
+        if st.button("✅ Onayla ve İlerle", type="primary", use_container_width=True, key="ta_ok"):
+            if skip_qa:
+                # QA'yı atla, direkt TC'ye geç
+                st.session_state.ta_score = 100  # Force pass
+                st.session_state.pipeline_step = "tc_gen"
+                st.success("⚡ QA atlandı, Test Case'e geçiliyor...")
+            else:
+                # Normal akış, QA'ya gönder
+                st.session_state.pipeline_step = "ta_qa"
             st.rerun()
     with c2:
         if st.button("🔄 Yeniden Üret", use_container_width=True, key="ta_re"):
@@ -501,11 +527,21 @@ elif step == "tc_review":
     show_tc_preview(st.session_state.tc_content)
     show_log()
     st.divider()
-    st.markdown("**QA Hakeme göndermek istiyor musunuz?**")
+
+    # Hakeme gönderme seçeneği
+    skip_qa = st.checkbox("⚡ Hakeme göndermeden devam et (QA'yı atla)", key="skip_tc_qa")
+
     c1, c2 = st.columns(2)
     with c1:
-        if st.button("✅ Onayla — Hakeme Gönder", type="primary", use_container_width=True, key="tc_ok"):
-            st.session_state.pipeline_step = "tc_qa"
+        if st.button("✅ Onayla ve İlerle", type="primary", use_container_width=True, key="tc_ok"):
+            if skip_qa:
+                # QA'yı atla, direkt done'a geç
+                st.session_state.tc_score = 100  # Force pass
+                st.session_state.pipeline_step = "done"
+                st.success("⚡ QA atlandı, Pipeline tamamlandı!")
+            else:
+                # Normal akış, QA'ya gönder
+                st.session_state.pipeline_step = "tc_qa"
             st.rerun()
     with c2:
         if st.button("🔄 Yeniden Üret", use_container_width=True, key="tc_re"):
