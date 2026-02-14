@@ -13,12 +13,35 @@ st.set_page_config(page_title="BRD Pipeline", page_icon="📋", layout="wide")
 st.title("📋 BRD Pipeline — Adım Adım")
 
 # ── API Key kontrolü ──
-anthropic_key = st.session_state.get("anthropic_api_key") or st.secrets.get("ANTHROPIC_API_KEY", "")
-gemini_key = st.session_state.get("gemini_api_key") or st.secrets.get("GEMINI_API_KEY", "")
+anthropic_key = st.session_state.get("anthropic_api_key", "")
+gemini_key = st.session_state.get("gemini_key", "")
 
+# Session state'de yoksa secrets'tan dene
+if not anthropic_key:
+    try:
+        anthropic_key = st.secrets.get("ANTHROPIC_API_KEY", "")
+    except Exception:
+        pass
+
+if not gemini_key:
+    try:
+        gemini_key = st.secrets.get("GEMINI_API_KEY", "")
+    except Exception:
+        pass
+
+# Hala yoksa hata ver
 if not anthropic_key or not gemini_key:
-    st.error("Anthropic ve Gemini API Key'leri gerekli. Ana sayfadaki sidebar'dan girin.")
+    st.error("⚠️ API Key'ler bulunamadı!")
+    st.info("🔑 Lütfen `.streamlit/secrets.toml` dosyasına ANTHROPIC_API_KEY ve GEMINI_API_KEY ekleyin.")
+    st.code("""# .streamlit/secrets.toml
+ANTHROPIC_API_KEY = "your-key-here"
+GEMINI_API_KEY = "your-key-here"
+""", language="toml")
     st.stop()
+
+# Session state'e yaz (diğer sayfalar için)
+st.session_state["anthropic_api_key"] = anthropic_key
+st.session_state["gemini_key"] = gemini_key
 
 if "pipeline_step" not in st.session_state:
     st.session_state.pipeline_step = "upload"
