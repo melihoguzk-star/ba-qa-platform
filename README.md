@@ -709,6 +709,32 @@ instructions = [
 
 ## 📝 Güncellemeler (Changelog)
 
+### v1.1.1 - BRD Pipeline İyileştirmeleri (2025-02-15)
+
+#### Hata Düzeltmeleri
+- 🐛 **QA Result Display**: TA/BA/TC QA sonuçlarında `TypeError: expected str instance, dict found` hatası düzeltildi
+  - QA hakem sonuçlarında `aciklama` field'ı dict/list olduğunda otomatik string'e dönüştürülüyor
+- 🐛 **Import Path Fixes**: Tüm BRD Pipeline import hataları düzeltildi
+  - `pipeline.json_repair` → `pipeline.brd.json_repair`
+  - Database fonksiyon alias'ları düzeltildi (`update_pipeline_run`, `save_pipeline_stage_output`, `get_pipeline_run_outputs`)
+- 🐛 **Config Constants**: BRD Pipeline sabitleri `utils/config.py`'ye eklendi
+  - `BA_PASS_THRESHOLD`, `TA_PASS_THRESHOLD`, `TC_PASS_THRESHOLD`, `MAX_REVISIONS`
+  - `CHUNK_OUTPUT_TOKEN_LIMIT`, `QA_OUTPUT_TOKEN_LIMIT`, `SONNET_MODEL`, `GEMINI_MODEL`
+
+#### Yeni Özellikler
+- ⚡ **Hakeme Gönderme Seçeneği**: Her review aşamasında QA'yı atlama imkanı
+  - BA Review, TA Review, TC Review aşamalarında checkbox
+  - "⚡ Hakeme göndermeden devam et (QA'yı atla)" seçeneği
+  - İşaretlenirse: Gemini QA'ya gönderilmez, otomatik 100 puan (force pass)
+  - İşaretlenmezse: Normal akış, QA hakem değerlendirmesi yapılır
+  - **Avantajlar**: API maliyet tasarrufu, hızlı iterasyon, kullanıcı kontrolü
+
+#### Kullanıcı Deneyimi İyileştirmeleri
+- ✨ Review aşamalarında buton metinleri güncellendi: "Onayla — Hakeme Gönder" → "Onayla ve İlerle"
+- ✨ QA atlandığında bilgilendirme mesajı: "⚡ QA atlandı, [sonraki aşama]'ya geçiliyor..."
+
+---
+
 ### v1.1 - BRD Pipeline Entegrasyonu (2025-02-15)
 
 #### Yeni Özellikler
