@@ -709,6 +709,34 @@ instructions = [
 
 ## 📝 Güncellemeler (Changelog)
 
+### v1.2.1 - Mimari Dokümantasyon ve Sidebar İyileştirmesi (2025-02-15)
+
+#### Yeni Özellikler
+- 📚 **BRD Pipeline Mimari Dokümantasyonu**: Mimari sayfasına BRD Pipeline detayları eklendi
+  - 3 yeni AI Agent açıklaması (WF1: BA Generator, WF2: TA Generator, WF3: TC Generator)
+  - Dual AI System detayları (Claude Sonnet 4 generation + Gemini 2.5 Flash QA)
+  - Checkpoint & Revision System açıklaması
+  - BRD Pipeline akış diyagramı (3-stage sequential with QA referee)
+  - Claude Sonnet 4 API entegrasyon detayları
+
+- 🔌 **Sidebar Anthropic API Durumu**: Sol menüye Anthropic API bağlantı durumu eklendi
+  - Yeşil badge: API key mevcut
+  - Kırmızı badge: API key eksik
+  - Gemini ve JIRA durumlarıyla birlikte gösteriliyor
+
+#### İyileştirmeler
+- 📊 **İstatistik Güncellemesi**: Mimari sayfası stats kartları güncellendi
+  - 12 → 15 AI Agents (BRD Pipeline agents eklendi)
+  - 5 → 6 Entegrasyonlar (Anthropic API eklendi)
+  - 6 → 9 Sayfalar (BRD Pipeline 3 sayfa)
+  - 3 → 4 Pipeline (BRD Pipeline eklendi)
+
+- 💾 **Database Dokümantasyonu**: SQLite database açıklaması güncellendi
+  - pipeline_runs ve stage_outputs tabloları eklendi
+  - 4 → 6 ana tablo
+
+---
+
 ### v1.2.0 - Pipeline Sonuç Geçmiş Desteği (2025-02-15)
 
 #### Yeni Özellikler
