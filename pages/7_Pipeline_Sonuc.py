@@ -268,28 +268,133 @@ def render_pipeline_result(ba_content, ta_content, tc_content, ba_qa, ta_qa, tc_
 
     # ── QA TAB ──
     with tab_qa:
-        st.subheader("QA Hakem Detayları")
-        for stage_name, qa in [("BA", ba_qa), ("TA", ta_qa), ("TC", tc_qa)]:
-            if not qa:
-                continue
-            with st.expander(f"**{stage_name} QA** — Puan: {qa.get('genel_puan', '?')}/100"):
-                st.markdown(qa.get("genel_degerlendirme", ""))
-                for s in qa.get("skorlar", []):
-                    puan = s.get("puan", 0)
-                    bar = "🟩" * puan + "⬜" * (10 - puan)
-                    st.markdown(f"**{s.get('kriter', '')}**: {bar} {puan}/10")
-                    aciklama = s.get("aciklama", "")
-                    # Fix: Convert dict/list to string
-                    if isinstance(aciklama, dict):
-                        aciklama = str(aciklama)
-                    elif isinstance(aciklama, list):
-                        aciklama = ', '.join(str(x) for x in aciklama)
-                    st.caption(aciklama)
-                oneriler = qa.get("iyilestirme_onerileri", [])
-                if oneriler:
-                    st.markdown("**İyileştirme Önerileri:**")
-                    for o in oneriler:
-                        st.markdown(f"- {o}")
+        st.subheader("🔍 QA Hakem Değerlendirmeleri")
+
+        # Tab'lar ile ayrı ayrı göster
+        if ba_qa or ta_qa or tc_qa:
+            qa_tab_ba, qa_tab_ta, qa_tab_tc = st.tabs(["📋 BA Hakem", "⚙️ TA Hakem", "🧪 TC Hakem"])
+
+            with qa_tab_ba:
+                if ba_qa:
+                    score = ba_qa.get("genel_puan", 0)
+                    passed = ba_qa.get("gecti_mi", False)
+
+                    # Genel değerlendirme
+                    if passed:
+                        st.success(f"✅ BA QA Geçti — Puan: {score}/100")
+                    else:
+                        st.warning(f"⚠️ BA QA Geçmedi — Puan: {score}/100")
+
+                    # Genel değerlendirme metni
+                    if ba_qa.get("genel_degerlendirme"):
+                        st.markdown(f"**Genel Değerlendirme:** {ba_qa.get('genel_degerlendirme')}")
+
+                    st.markdown("---")
+                    st.markdown("**Kriter Skorları:**")
+
+                    for s in ba_qa.get("skorlar", []):
+                        puan = s.get("puan", 0)
+                        bar = "🟩" * puan + "⬜" * (10 - puan)
+                        st.markdown(f"**{s.get('kriter', '')}**: {bar} {puan}/10")
+                        aciklama = s.get("aciklama", "")
+                        # Fix: Convert dict/list to string
+                        if isinstance(aciklama, dict):
+                            aciklama = str(aciklama)
+                        elif isinstance(aciklama, list):
+                            aciklama = ', '.join(str(x) for x in aciklama)
+                        if aciklama:
+                            st.caption(aciklama)
+
+                    oneriler = ba_qa.get("iyilestirme_onerileri", [])
+                    if oneriler:
+                        st.markdown("---")
+                        st.markdown("**İyileştirme Önerileri:**")
+                        for o in oneriler:
+                            st.markdown(f"- {o}")
+                else:
+                    st.info("BA hakem değerlendirmesi mevcut değil.")
+
+            with qa_tab_ta:
+                if ta_qa:
+                    score = ta_qa.get("genel_puan", 0)
+                    passed = ta_qa.get("gecti_mi", False)
+
+                    # Genel değerlendirme
+                    if passed:
+                        st.success(f"✅ TA QA Geçti — Puan: {score}/100")
+                    else:
+                        st.warning(f"⚠️ TA QA Geçmedi — Puan: {score}/100")
+
+                    # Genel değerlendirme metni
+                    if ta_qa.get("genel_degerlendirme"):
+                        st.markdown(f"**Genel Değerlendirme:** {ta_qa.get('genel_degerlendirme')}")
+
+                    st.markdown("---")
+                    st.markdown("**Kriter Skorları:**")
+
+                    for s in ta_qa.get("skorlar", []):
+                        puan = s.get("puan", 0)
+                        bar = "🟩" * puan + "⬜" * (10 - puan)
+                        st.markdown(f"**{s.get('kriter', '')}**: {bar} {puan}/10")
+                        aciklama = s.get("aciklama", "")
+                        # Fix: Convert dict/list to string
+                        if isinstance(aciklama, dict):
+                            aciklama = str(aciklama)
+                        elif isinstance(aciklama, list):
+                            aciklama = ', '.join(str(x) for x in aciklama)
+                        if aciklama:
+                            st.caption(aciklama)
+
+                    oneriler = ta_qa.get("iyilestirme_onerileri", [])
+                    if oneriler:
+                        st.markdown("---")
+                        st.markdown("**İyileştirme Önerileri:**")
+                        for o in oneriler:
+                            st.markdown(f"- {o}")
+                else:
+                    st.info("TA hakem değerlendirmesi mevcut değil.")
+
+            with qa_tab_tc:
+                if tc_qa:
+                    score = tc_qa.get("genel_puan", 0)
+                    passed = tc_qa.get("gecti_mi", False)
+
+                    # Genel değerlendirme
+                    if passed:
+                        st.success(f"✅ TC QA Geçti — Puan: {score}/100")
+                    else:
+                        st.warning(f"⚠️ TC QA Geçmedi — Puan: {score}/100")
+
+                    # Genel değerlendirme metni
+                    if tc_qa.get("genel_degerlendirme"):
+                        st.markdown(f"**Genel Değerlendirme:** {tc_qa.get('genel_degerlendirme')}")
+
+                    st.markdown("---")
+                    st.markdown("**Kriter Skorları:**")
+
+                    for s in tc_qa.get("skorlar", []):
+                        puan = s.get("puan", 0)
+                        bar = "🟩" * puan + "⬜" * (10 - puan)
+                        st.markdown(f"**{s.get('kriter', '')}**: {bar} {puan}/10")
+                        aciklama = s.get("aciklama", "")
+                        # Fix: Convert dict/list to string
+                        if isinstance(aciklama, dict):
+                            aciklama = str(aciklama)
+                        elif isinstance(aciklama, list):
+                            aciklama = ', '.join(str(x) for x in aciklama)
+                        if aciklama:
+                            st.caption(aciklama)
+
+                    oneriler = tc_qa.get("iyilestirme_onerileri", [])
+                    if oneriler:
+                        st.markdown("---")
+                        st.markdown("**İyileştirme Önerileri:**")
+                        for o in oneriler:
+                            st.markdown(f"- {o}")
+                else:
+                    st.info("TC hakem değerlendirmesi mevcut değil.")
+        else:
+            st.info("QA hakem değerlendirmesi mevcut değil.")
 
     # ── EXPORT TAB ──
     with tab_export:
