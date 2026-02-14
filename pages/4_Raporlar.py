@@ -481,8 +481,11 @@ if analyses:
         status_badge = "badge-success" if gecti else "badge-error"
         status_text = "✓ Geçti" if gecti else "✗ Kaldı"
 
-        # Expander label with badges
-        expander_label = f"{tip_icon} **{r.get('jira_key', '—')}** • {status_text} • **{puan:.0f}/100** • {r.get('created_at', '')[:16]}"
+        # Expander label with badges (Design Compliance doesn't use scoring)
+        if r["analysis_type"] == "design":
+            expander_label = f"{tip_icon} **{r.get('jira_key', '—')}** • {r.get('created_at', '')[:16]}"
+        else:
+            expander_label = f"{tip_icon} **{r.get('jira_key', '—')}** • {status_text} • **{puan:.0f}/100** • {r.get('created_at', '')[:16]}"
 
         # Accordion for each analysis
         with st.expander(expander_label, expanded=False):

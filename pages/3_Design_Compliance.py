@@ -333,6 +333,62 @@ if not all(agents):
     st.stop()
 requirements_agent, screen_agent, compliance_agent, report_agent = agents
 
+# ── Show Previous Results (if exists) ──
+if "last_design_analysis" in st.session_state:
+    last_analysis = st.session_state["last_design_analysis"]
+    with st.expander(f"📋 Son Analiz Sonucu ({last_analysis.get('timestamp', 'N/A')}) — {last_analysis.get('project_name', 'Proje')} — {last_analysis.get('num_screens', 0)} ekran", expanded=False):
+        st.markdown("### 📊 Final Rapor")
+        st.markdown(last_analysis.get("report_output", ""), unsafe_allow_html=True)
+
+        # Download buttons
+        full_report_cached = f"""# Design Compliance Report
+
+## Proje: {last_analysis.get('project_name', 'Belirtilmedi')}
+## Tarih: {last_analysis.get('timestamp', 'N/A')}
+## Ekran Sayısı: {last_analysis.get('num_screens', 0)}
+## Kontroller: {last_analysis.get('checks_str', 'N/A')}
+
+---
+
+# 1. Gereksinimler
+{last_analysis.get('requirements_output', '')}
+
+---
+
+# 2. Ekran Analizi
+{last_analysis.get('screen_output', '')}
+
+---
+
+# 3. Uyumluluk Kontrolü
+{last_analysis.get('compliance_output', '')}
+
+---
+
+# 4. Final Rapor
+{last_analysis.get('report_output', '')}
+"""
+        col_dl1, col_dl2 = st.columns(2)
+        with col_dl1:
+            st.download_button(
+                "📥 Markdown Rapor İndir",
+                data=full_report_cached,
+                file_name=f"compliance_cached_{datetime.datetime.now().strftime('%Y%m%d_%H%M')}.md",
+                mime="text/markdown",
+                use_container_width=True,
+                key="download_md_cached"
+            )
+        with col_dl2:
+            st.download_button(
+                "📄 Text Rapor İndir",
+                data=full_report_cached,
+                file_name=f"compliance_cached_{datetime.datetime.now().strftime('%Y%m%d_%H%M')}.txt",
+                mime="text/plain",
+                use_container_width=True,
+                key="download_txt_cached"
+            )
+    st.markdown("---")
+
 # ── Input Section ──
 st.markdown("## 📥 Giriş Verileri")
 
@@ -449,37 +505,49 @@ if st.button("🚀 Uyumluluk Kontrolünü Başlat", type="primary", use_containe
 
     # ── Analysis Pipeline ──
     st.markdown("---")
+
+    # Critical warning
+    st.warning("**ÖNEMLİ:** Analiz sırasında sayfa değiştirmeyin veya tarayıcı sekmesini kapatmayın. İşlem 2-3 dakika sürebilir ve sayfa değiştirilirse kesilir.", icon="⚠️")
+
     st.markdown(f"## 📊 Analiz Sonuçları{f' — {project_name}' if project_name else ''}")
 
     progress = st.progress(0, text="Analiz başlatılıyor...")
     checks_str = ", ".join(checks)
     context_str = f"Proje: {project_name}. {extra_context}" if project_name else extra_context
 
+    # Helper function to generate step indicator HTML
+    def render_step_indicator(current_step):
+        steps = [
+            {"num": 1, "label": "Requirements"},
+            {"num": 2, "label": "Screen Analysis"},
+            {"num": 3, "label": "Compliance"},
+            {"num": 4, "label": "Report"}
+        ]
+        html = '<div class="step-indicator">'
+        for i, step_data in enumerate(steps):
+            if step_data["num"] < current_step:
+                state = "completed"
+            elif step_data["num"] == current_step:
+                state = "active"
+            else:
+                state = ""
+
+            html += f'''
+            <div class="step">
+                <div class="step-number {state}">{step_data["num"]}</div>
+                <div class="step-label {state}">{step_data["label"]}</div>
+            </div>'''
+            if i < len(steps) - 1:
+                html += '<div class="step-arrow">→</div>'
+        html += '</div>'
+        return html
+
+    # Create placeholder for step indicator (will be updated dynamically)
+    step_indicator_placeholder = st.empty()
+    step_indicator_placeholder.markdown(render_step_indicator(1), unsafe_allow_html=True)
+
     # Step 1: Requirements Extraction
     progress.progress(10, text="🧠 1/4 — Gereksinimler çıkarılıyor...")
-    st.markdown("""
-    <div class="step-indicator">
-        <div class="step">
-            <div class="step-number active">1</div>
-            <div class="step-label active">Requirements</div>
-        </div>
-        <div class="step-arrow">→</div>
-        <div class="step">
-            <div class="step-number">2</div>
-            <div class="step-label">Screen Analysis</div>
-        </div>
-        <div class="step-arrow">→</div>
-        <div class="step">
-            <div class="step-number">3</div>
-            <div class="step-label">Compliance</div>
-        </div>
-        <div class="step-arrow">→</div>
-        <div class="step">
-            <div class="step-number">4</div>
-            <div class="step-label">Report</div>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
 
     with st.status("🧠 Adım 1: Gereksinim Çıkarma", expanded=True) as step1:
         req_prompt = f"Aşağıdaki iş analizi dokümanından tüm gereksinimleri çıkar.\nKontrol kapsamı: {checks_str}\n{f'Ek bağlam: {context_str}' if context_str else ''}\n\n--- İŞ ANALİZİ DOKÜMANI ---\n{doc_content}"
@@ -490,29 +558,7 @@ if st.button("🚀 Uyumluluk Kontrolünü Başlat", type="primary", use_containe
 
     # Step 2: Screen Analysis
     progress.progress(35, text="👁️ 2/4 — Ekran analizi yapılıyor...")
-    st.markdown("""
-    <div class="step-indicator">
-        <div class="step">
-            <div class="step-number completed">1</div>
-            <div class="step-label completed">Requirements</div>
-        </div>
-        <div class="step-arrow">→</div>
-        <div class="step">
-            <div class="step-number active">2</div>
-            <div class="step-label active">Screen Analysis</div>
-        </div>
-        <div class="step-arrow">→</div>
-        <div class="step">
-            <div class="step-number">3</div>
-            <div class="step-label">Compliance</div>
-        </div>
-        <div class="step-arrow">→</div>
-        <div class="step">
-            <div class="step-number">4</div>
-            <div class="step-label">Report</div>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
+    step_indicator_placeholder.markdown(render_step_indicator(2), unsafe_allow_html=True)
 
     with st.status("👁️ Adım 2: Ekran Analizi", expanded=True) as step2:
         screen_prompt = f"Bu tasarım ekranlarını detaylı analiz et.\n{f'Proje: {project_name}' if project_name else ''}\nEkran sayısı: {len(design_files)}"
@@ -523,29 +569,7 @@ if st.button("🚀 Uyumluluk Kontrolünü Başlat", type="primary", use_containe
 
     # Step 3: Compliance Check
     progress.progress(60, text="⚖️ 3/4 — Uyumluluk kontrolü yapılıyor...")
-    st.markdown("""
-    <div class="step-indicator">
-        <div class="step">
-            <div class="step-number completed">1</div>
-            <div class="step-label completed">Requirements</div>
-        </div>
-        <div class="step-arrow">→</div>
-        <div class="step">
-            <div class="step-number completed">2</div>
-            <div class="step-label completed">Screen Analysis</div>
-        </div>
-        <div class="step-arrow">→</div>
-        <div class="step">
-            <div class="step-number active">3</div>
-            <div class="step-label active">Compliance</div>
-        </div>
-        <div class="step-arrow">→</div>
-        <div class="step">
-            <div class="step-number">4</div>
-            <div class="step-label">Report</div>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
+    step_indicator_placeholder.markdown(render_step_indicator(3), unsafe_allow_html=True)
 
     with st.status("⚖️ Adım 3: Uyumluluk Kontrolü", expanded=True) as step3:
         compliance_prompt = f"Karşılaştır:\nKontroller: {checks_str}\n\n--- GEREKSİNİMLER ---\n{requirements_output}\n\n--- EKRAN ANALİZİ ---\n{screen_output}"
@@ -556,29 +580,7 @@ if st.button("🚀 Uyumluluk Kontrolünü Başlat", type="primary", use_containe
 
     # Step 4: Report Generation
     progress.progress(85, text="📋 4/4 — Rapor oluşturuluyor...")
-    st.markdown("""
-    <div class="step-indicator">
-        <div class="step">
-            <div class="step-number completed">1</div>
-            <div class="step-label completed">Requirements</div>
-        </div>
-        <div class="step-arrow">→</div>
-        <div class="step">
-            <div class="step-number completed">2</div>
-            <div class="step-label completed">Screen Analysis</div>
-        </div>
-        <div class="step-arrow">→</div>
-        <div class="step">
-            <div class="step-number completed">3</div>
-            <div class="step-label completed">Compliance</div>
-        </div>
-        <div class="step-arrow">→</div>
-        <div class="step">
-            <div class="step-number active">4</div>
-            <div class="step-label active">Report</div>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
+    step_indicator_placeholder.markdown(render_step_indicator(4), unsafe_allow_html=True)
 
     with st.status("📋 Adım 4: Uyumluluk Raporu", expanded=True) as step4:
         report_prompt = f"Rapor oluştur.\nProje: {project_name or 'Belirtilmedi'}\nEkran sayısı: {len(design_files)}\n\n--- UYUMLULUK ---\n{compliance_output}\n\n--- GEREKSİNİMLER ---\n{requirements_output}"
@@ -589,8 +591,20 @@ if st.button("🚀 Uyumluluk Kontrolünü Başlat", type="primary", use_containe
 
     progress.progress(100, text="✅ Analiz tamamlandı!")
 
-    # Save to database
+    # Save to database and session state
     save_analysis(project_name or "design", "design", 0, False, {"report": report_output})
+
+    # Save to session state for persistence
+    st.session_state["last_design_analysis"] = {
+        "requirements_output": requirements_output,
+        "screen_output": screen_output,
+        "compliance_output": compliance_output,
+        "report_output": report_output,
+        "project_name": project_name,
+        "num_screens": len(design_files),
+        "checks_str": checks_str,
+        "timestamp": datetime.datetime.now().strftime('%Y-%m-%d %H:%M')
+    }
 
     st.success(f"✅ Uyumluluk kontrolü başarıyla tamamlandı! {len(design_files)} ekran analiz edildi.")
 
