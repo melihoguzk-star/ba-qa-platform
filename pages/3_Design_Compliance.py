@@ -592,7 +592,7 @@ if st.button("🚀 Uyumluluk Kontrolünü Başlat", type="primary", use_containe
     progress.progress(100, text="✅ Analiz tamamlandı!")
 
     # Save to database and session state
-    save_analysis(project_name or "design", "design", 0, False, {"report": report_output})
+    save_analysis(project_name or "design", "design", 0, False, {"report": report_output}, report_text=report_output)
 
     # Save to session state for persistence
     st.session_state["last_design_analysis"] = {

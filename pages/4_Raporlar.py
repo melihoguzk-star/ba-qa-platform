@@ -539,11 +539,17 @@ if analyses:
             if r.get("report_text"):
                 st.markdown("<br>", unsafe_allow_html=True)
                 st.markdown("**📄 Detaylı Rapor:**")
-                st.markdown(f"""
-                <div style="background: #1a1d2e; border-radius: 8px; padding: 16px; font-family: 'JetBrains Mono', monospace; font-size: 13px; line-height: 1.8; color: #94a3b8; white-space: pre-wrap;">
+
+                # Design Compliance reports use Markdown tables, render them properly
+                if r["analysis_type"] == "design":
+                    st.markdown(r["report_text"], unsafe_allow_html=True)
+                else:
+                    # BA/TC reports are plain text
+                    st.markdown(f"""
+                    <div style="background: #1a1d2e; border-radius: 8px; padding: 16px; font-family: 'JetBrains Mono', monospace; font-size: 13px; line-height: 1.8; color: #94a3b8; white-space: pre-wrap;">
 {r["report_text"]}
-                </div>
-                """, unsafe_allow_html=True)
+                    </div>
+                    """, unsafe_allow_html=True)
 
     # ── Export Section ──
     st.markdown("---")

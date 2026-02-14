@@ -68,7 +68,7 @@ st.markdown("""
     .stat-card {
         background: #1a2236;
         border: 1px solid #2a3654;
-        border-radius: 16px;
+        border-radius: 12px;
         padding: 24px;
         text-align: center;
         transition: all 0.3s;
@@ -82,26 +82,36 @@ st.markdown("""
         left: 0;
         right: 0;
         height: 3px;
-        background: linear-gradient(135deg, #3b82f6, #06b6d4);
+        border-radius: 12px 12px 0 0;
     }
+    .stat-card.blue::before { background: linear-gradient(135deg, #3b82f6, #06b6d4); }
+    .stat-card.purple::before { background: linear-gradient(135deg, #8b5cf6, #ec4899); }
+    .stat-card.green::before { background: linear-gradient(135deg, #10b981, #06b6d4); }
+    .stat-card.orange::before { background: linear-gradient(135deg, #f59e0b, #ef4444); }
     .stat-card:hover {
-        border-color: rgba(59,130,246,0.4);
-        transform: translateY(-4px);
-        box-shadow: 0 8px 32px rgba(59,130,246,0.2);
+        border-color: rgba(59,130,246,0.3);
+        transform: translateY(-2px);
+        box-shadow: 0 8px 32px rgba(0,0,0,0.3);
     }
-    .stat-num {
-        font-family: 'JetBrains Mono', monospace;
-        font-size: 42px;
+    .stat-number {
+        font-family: 'Space Grotesk', sans-serif;
+        font-size: 36px;
         font-weight: 700;
-        background: linear-gradient(135deg, #3b82f6, #06b6d4);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
+        color: #f1f5f9;
         margin-bottom: 8px;
     }
     .stat-label {
-        font-size: 14px;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 11px;
+        color: #64748b;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        margin-bottom: 8px;
+    }
+    .stat-detail {
+        font-size: 12px;
         color: #94a3b8;
-        font-weight: 500;
+        margin-top: 8px;
     }
 
     /* Feature Cards */
@@ -273,32 +283,34 @@ st.markdown("""
 from data.database import get_stats, get_recent_analyses
 stats = get_stats()
 
-ba_stats = next((s for s in stats["by_type"] if s["analysis_type"] == "ba"), {})
-tc_stats = next((s for s in stats["by_type"] if s["analysis_type"] == "tc"), {})
+ba_s = next((s for s in stats["by_type"] if s["analysis_type"] == "ba"), {})
+tc_s = next((s for s in stats["by_type"] if s["analysis_type"] == "tc"), {})
+design_s = next((s for s in stats["by_type"] if s["analysis_type"] == "design"), {})
 
-col1, col2, col3 = st.columns(3)
-with col1:
-    st.markdown(f"""
-    <div class="stat-card">
-        <div class="stat-num">{stats['total']}</div>
+st.markdown(f"""
+<div class="stats-grid">
+    <div class="stat-card blue">
+        <div class="stat-number">{stats['total']}</div>
         <div class="stat-label">Toplam Analiz</div>
-    </div>""", unsafe_allow_html=True)
-
-with col2:
-    avg = ba_stats.get("avg_puan", 0) or 0
-    st.markdown(f"""
-    <div class="stat-card">
-        <div class="stat-num">{avg:.0f}</div>
-        <div class="stat-label">BA Ort. Puan</div>
-    </div>""", unsafe_allow_html=True)
-
-with col3:
-    avg = tc_stats.get("avg_puan", 0) or 0
-    st.markdown(f"""
-    <div class="stat-card">
-        <div class="stat-num">{avg:.0f}</div>
-        <div class="stat-label">TC Ort. Puan</div>
-    </div>""", unsafe_allow_html=True)
+        <div class="stat-detail">Tüm tipler</div>
+    </div>
+    <div class="stat-card purple">
+        <div class="stat-number">{ba_s.get('c', 0)}</div>
+        <div class="stat-label">BA Analiz</div>
+        <div class="stat-detail">Ort: {ba_s.get('avg_puan', 0) or 0:.0f} | Geçen: {ba_s.get('gecen', 0)}</div>
+    </div>
+    <div class="stat-card green">
+        <div class="stat-number">{tc_s.get('c', 0)}</div>
+        <div class="stat-label">TC Analiz</div>
+        <div class="stat-detail">Ort: {tc_s.get('avg_puan', 0) or 0:.0f} | Geçen: {tc_s.get('gecen', 0)}</div>
+    </div>
+    <div class="stat-card orange">
+        <div class="stat-number">{design_s.get('c', 0)}</div>
+        <div class="stat-label">Design Analiz</div>
+        <div class="stat-detail">Uyumluluk kontrolleri</div>
+    </div>
+</div>
+""", unsafe_allow_html=True)
 
 # ── Feature Cards ──
 st.markdown('<div class="section-title">✨ Özellikler</div>', unsafe_allow_html=True)
