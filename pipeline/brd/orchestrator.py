@@ -19,7 +19,7 @@ from agents.brd_prompts import (
 from agents.ai_client import call_sonnet, call_gemini
 from pipeline.brd.checkpoint import save_checkpoint, load_checkpoint, clear_checkpoint
 from pipeline.brd.json_repair import parse_ai_json
-from data.database import create_pipeline_run as create_run, update_run, save_stage_output
+from data.database import create_pipeline_run as create_run, update_pipeline_run as update_run, save_pipeline_stage_output as save_stage_output
 from utils.config import (
     MAX_REVISIONS, BA_PASS_THRESHOLD, TA_PASS_THRESHOLD, TC_PASS_THRESHOLD,
 )

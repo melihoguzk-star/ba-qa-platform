@@ -6,7 +6,7 @@ st.set_page_config(page_title="Geçmiş", page_icon="📜", layout="wide")
 st.title("📜 Pipeline Geçmişi")
 
 try:
-    from data.database import get_recent_pipeline_runs as get_recent_runs, get_run_outputs
+    from data.database import get_recent_pipeline_runs as get_recent_runs, get_pipeline_run_outputs as get_run_outputs
 
     runs = get_recent_runs(20)
     if not runs:
