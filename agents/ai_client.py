@@ -9,7 +9,7 @@ from google import genai
 from google.genai import types as genai_types
 
 from utils.config import SONNET_MODEL, GEMINI_MODEL, CHUNK_OUTPUT_TOKEN_LIMIT, QA_OUTPUT_TOKEN_LIMIT
-from pipeline.json_repair import parse_ai_json
+from pipeline.brd.json_repair import parse_ai_json
 
 
 def call_sonnet(system_prompt: str, user_content: str, api_key: str, max_tokens: int = CHUNK_OUTPUT_TOKEN_LIMIT) -> dict:
