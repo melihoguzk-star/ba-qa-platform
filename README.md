@@ -709,6 +709,37 @@ instructions = [
 
 ## 📝 Güncellemeler (Changelog)
 
+### v1.2.2 - QA Hakem Değerlendirme Detayları (2025-02-15)
+
+#### Yeni Özellikler
+- 🔍 **Pipeline Sonuç QA Detayları**: QA hakem değerlendirmeleri ayrı tab'larda gösteriliyor
+  - BA, TA, TC için ayrı sub-tab'lar (📋 BA Hakem, ⚙️ TA Hakem, 🧪 TC Hakem)
+  - Geçti/Geçmedi durumu belirgin badge'ler (✅ Geçti / ⚠️ Geçmedi)
+  - Genel değerlendirme metni
+  - Kriter skorları (🟩⬜ progress bar ile)
+  - İyileştirme önerileri ayrı bölümde
+
+- 📜 **Pipeline Geçmiş QA Detayları**: Geçmiş pipeline'lar için tam QA değerlendirmesi
+  - Her pipeline için BA/TA/TC hakem tab'ları
+  - Force pass (QA atlandı) bilgisi
+  - Revizyon numarası ve generation süresi
+  - Tam kriter skorları ve öneriler
+  - Geliştirilmiş istatistikler (Toplam çalıştırma, Tamamlanan, Ort. BA Skoru, Toplam süre)
+
+#### İyileştirmeler
+- 📊 **Görsel İyileştirmeler**:
+  - QA sonuçları daha görsel ve okunabilir
+  - Progress bar'lar ile kriter skorları
+  - Renkli badge'ler (success/warning)
+  - Bölümler arası divider'lar
+
+- 🛡️ **Hata Yönetimi**:
+  - QA sonuçlarında dict/list → string dönüşümü
+  - Traceback ile detaylı hata gösterimi
+  - Eksik data kontrolü
+
+---
+
 ### v1.2.1 - Mimari Dokümantasyon ve Sidebar İyileştirmesi (2025-02-15)
 
 #### Yeni Özellikler
