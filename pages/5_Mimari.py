@@ -407,19 +407,19 @@ st.markdown("""
 st.markdown("""
 <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 24px;">
     <div style="background: #1a2236; border: 1px solid #2a3654; border-radius: 12px; padding: 18px; text-align: center;">
-        <div style="font-family: 'Space Grotesk', sans-serif; font-size: 32px; font-weight: 700; color: #3b82f6; margin-bottom: 4px;">12</div>
+        <div style="font-family: 'Space Grotesk', sans-serif; font-size: 32px; font-weight: 700; color: #3b82f6; margin-bottom: 4px;">15</div>
         <div style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #64748b; text-transform: uppercase;">AI Agents</div>
     </div>
     <div style="background: #1a2236; border: 1px solid #2a3654; border-radius: 12px; padding: 18px; text-align: center;">
-        <div style="font-family: 'Space Grotesk', sans-serif; font-size: 32px; font-weight: 700; color: #8b5cf6; margin-bottom: 4px;">5</div>
+        <div style="font-family: 'Space Grotesk', sans-serif; font-size: 32px; font-weight: 700; color: #8b5cf6; margin-bottom: 4px;">6</div>
         <div style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #64748b; text-transform: uppercase;">Entegrasyonlar</div>
     </div>
     <div style="background: #1a2236; border: 1px solid #2a3654; border-radius: 12px; padding: 18px; text-align: center;">
-        <div style="font-family: 'Space Grotesk', sans-serif; font-size: 32px; font-weight: 700; color: #10b981; margin-bottom: 4px;">6</div>
+        <div style="font-family: 'Space Grotesk', sans-serif; font-size: 32px; font-weight: 700; color: #10b981; margin-bottom: 4px;">9</div>
         <div style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #64748b; text-transform: uppercase;">Sayfalar</div>
     </div>
     <div style="background: #1a2236; border: 1px solid #2a3654; border-radius: 12px; padding: 18px; text-align: center;">
-        <div style="font-family: 'Space Grotesk', sans-serif; font-size: 32px; font-weight: 700; color: #f59e0b; margin-bottom: 4px;">3</div>
+        <div style="font-family: 'Space Grotesk', sans-serif; font-size: 32px; font-weight: 700; color: #f59e0b; margin-bottom: 4px;">4</div>
         <div style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #64748b; text-transform: uppercase;">Pipeline</div>
     </div>
 </div>
@@ -702,6 +702,111 @@ with tab1:
         </div>
         """, unsafe_allow_html=True)
 
+    st.markdown("---")
+    st.markdown("### 🚀 BRD Pipeline Agents (Dual AI System)")
+    st.caption("3 adet generation agent (Claude Sonnet 4) + QA referee agents (Gemini 2.5 Flash)")
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+        st.markdown("""
+        <div class="agent-detail-card blue">
+            <div class="agent-name">📋 WF1: İş Analizi Generator</div>
+            <div class="agent-role">Business Requirements → BA Document (Claude Sonnet 4)</div>
+            <div class="agent-description">
+                BRD dokümanından ekran bazlı İş Analizi üretir. 2-chunk strategy ile büyük dokümanları işler, sonra merge eder.
+            </div>
+            <div class="agent-instructions">
+                <div class="agent-instructions-title">Çıktı Yapısı</div>
+                <div class="agent-instruction-item">Her ekran için: Açıklama, Gerekli Dokümanlar</div>
+                <div class="agent-instruction-item">İş Akışı Diyagramı (adım adım)</div>
+                <div class="agent-instruction-item">Fonksiyonel Gereksinimler (FR-001, FR-002...)</div>
+                <div class="agent-instruction-item">İş Kuralları (BR-001, BR-002...)</div>
+                <div class="agent-instruction-item">Kabul Kriterleri</div>
+                <div class="agent-instruction-item">Validasyonlar (alan, kısıt, hata mesajı)</div>
+            </div>
+            <div style="margin-top: 12px; padding: 8px 12px; background: rgba(59,130,246,0.1); border-radius: 6px; border-left: 3px solid #3b82f6;">
+                <div style="font-size: 11px; color: #94a3b8; line-height: 1.6;">
+                    <strong style="color: #3b82f6;">QA Referee (Gemini Flash):</strong><br>
+                    • 6 kriter: Eksiksizlik, FR/BR Kalitesi, Akış Netliği, Tutarlılık, Doğrulama Kuralları, Doküman Yapısı<br>
+                    • Geçme eşiği: 60/100<br>
+                    • Max 3 revizyon
+                </div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+        st.markdown("""
+        <div class="agent-detail-card blue">
+            <div class="agent-name">🧪 WF3: Test Case Generator</div>
+            <div class="agent-role">BA + TA → Test Cases (Claude Sonnet 4)</div>
+            <div class="agent-description">
+                BA ve TA dokümanlarından 23-kolonlu Loodos şablonunda detaylı test case'ler üretir. Happy path + edge cases.
+            </div>
+            <div class="agent-instructions">
+                <div class="agent-instructions-title">Test Case Şablonu (23 Kolon)</div>
+                <div class="agent-instruction-item">test_case_id, br_id, tr_id, priority, channel</div>
+                <div class="agent-instruction-item">testcase_type, user_type, test_area, test_scenario</div>
+                <div class="agent-instruction-item">testcase, test_steps, precondition, test_data</div>
+                <div class="agent-instruction-item">expected_result, postcondition, regression_case</div>
+            </div>
+            <div style="margin-top: 12px; padding: 8px 12px; background: rgba(59,130,246,0.1); border-radius: 6px; border-left: 3px solid #3b82f6;">
+                <div style="font-size: 11px; color: #94a3b8; line-height: 1.6;">
+                    <strong style="color: #3b82f6;">QA Referee (Gemini Flash):</strong><br>
+                    • 6 kriter: Kapsam, Sınır/Negatif Senaryolar, Test Adımları, Test Verisi, Öncelik, İzlenebilirlik<br>
+                    • Hedef: 56+ test case<br>
+                    • Geçme eşiği: 60/100
+                </div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    with col2:
+        st.markdown("""
+        <div class="agent-detail-card blue">
+            <div class="agent-name">⚙️ WF2: Teknik Analiz Generator</div>
+            <div class="agent-role">BA → Technical Analysis (Claude Sonnet 4)</div>
+            <div class="agent-description">
+                İş analizinden teknik analiz üretir. API endpoint, DTO, validasyon kuralları, cURL örnekleri ile developer-ready çıktı verir.
+            </div>
+            <div class="agent-instructions">
+                <div class="agent-instructions-title">Çıktı Yapısı</div>
+                <div class="agent-instruction-item">Genel Tanım (modül, stack, mimari)</div>
+                <div class="agent-instruction-item">API Endpoint Detayları (method, path, request/response)</div>
+                <div class="agent-instruction-item">DTO Veri Yapıları (field, tip, zorunlu, validasyon)</div>
+                <div class="agent-instruction-item">Validasyon Kuralları (VR-001, VR-002...)</div>
+                <div class="agent-instruction-item">Response Error Scenarios (HTTP code, error code, mesaj)</div>
+                <div class="agent-instruction-item">Mock cURL Örnekleri</div>
+            </div>
+            <div style="margin-top: 12px; padding: 8px 12px; background: rgba(59,130,246,0.1); border-radius: 6px; border-left: 3px solid #3b82f6;">
+                <div style="font-size: 11px; color: #94a3b8; line-height: 1.6;">
+                    <strong style="color: #3b82f6;">QA Referee (Gemini Flash):</strong><br>
+                    • 6 kriter: Endpoint Eksiksizlik, DTO Kalitesi, Validasyon, Error Handling, Mock Data, Doküman Netliği<br>
+                    • Geçme eşiği: 60/100<br>
+                    • Max 3 revizyon
+                </div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+        st.markdown("""
+        <div class="agent-detail-card purple">
+            <div class="agent-name">🔍 Checkpoint & Revision System</div>
+            <div class="agent-role">State Management & Quality Control</div>
+            <div class="agent-description">
+                Her aşamada checkpoint kaydeder, kullanıcı onayı bekler. QA geçmezse max 3 kez revizyon yapar veya kullanıcı manuel düzeltme yapabilir.
+            </div>
+            <div class="agent-instructions">
+                <div class="agent-instructions-title">Özellikler</div>
+                <div class="agent-instruction-item">Session state + database checkpoint</div>
+                <div class="agent-instruction-item">Manuel edit mode (kullanıcı JSON düzeltir)</div>
+                <div class="agent-instruction-item">Skip QA option (force pass, API tasarrufu)</div>
+                <div class="agent-instruction-item">Revizyon tracking (ba_revisions, ta_revisions, tc_revisions)</div>
+                <div class="agent-instruction-item">Export ready: BA/TA (DOCX), TC (CSV/Excel)</div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
 # ═══════════════════════════════════════════════════════════
 # TAB 2: INTEGRATIONS
 # ═══════════════════════════════════════════════════════════
@@ -840,23 +945,50 @@ with tab2:
         st.markdown("""
         <div class="integration-card">
             <div class="integration-header">
+                <div class="integration-icon">🤖</div>
+                <div>
+                    <div class="integration-name">6. Claude Sonnet 4 API (Anthropic)</div>
+                    <div class="integration-endpoint">Anthropic Messages API</div>
+                </div>
+            </div>
+            <div class="integration-desc">
+                BRD Pipeline'da doküman generation için kullanılır. Claude Sonnet 4 modeli ile BA, TA, TC üretimi yapar. 200k token context window.
+            </div>
+            <div class="integration-methods">
+                <span class="method-badge">Model: claude-sonnet-4-20250514</span>
+                <span class="method-badge">Context: 200k tokens</span>
+                <span class="method-badge">Max Output: 16k tokens</span>
+            </div>
+            <div style="margin-top: 12px; font-size: 11px; color: #64748b;">
+                <strong>Kullanım:</strong><br>
+                • BRD → BA generation (chunk-based)<br>
+                • BA → TA generation<br>
+                • BA + TA → TC generation<br>
+                • Structured JSON output
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+        st.markdown("""
+        <div class="integration-card">
+            <div class="integration-header">
                 <div class="integration-icon">💾</div>
                 <div>
-                    <div class="integration-name">6. SQLite Database</div>
+                    <div class="integration-name">7. SQLite Database</div>
                     <div class="integration-endpoint">Local File: data/baqa.db</div>
                 </div>
             </div>
             <div class="integration-desc">
-                Platform'un ana veri deposu. Analiz sonuçları, skorlar, raporlar ve geçmiş veriler saklanır.
+                Platform'un ana veri deposu. Analiz sonuçları, skorlar, raporlar, pipeline runs ve geçmiş veriler saklanır.
             </div>
             <div class="integration-methods">
                 <span class="method-badge">analyses</span>
-                <span class="method-badge">ba_results</span>
-                <span class="method-badge">tc_results</span>
+                <span class="method-badge">pipeline_runs</span>
+                <span class="method-badge">stage_outputs</span>
                 <span class="method-badge">design_results</span>
             </div>
             <div style="margin-top: 12px; font-size: 11px; color: #64748b;">
-                <strong>Tablolar:</strong> 4 ana tablo (analyses, qa_results, design_results, jira_sync_log)
+                <strong>Tablolar:</strong> 6 ana tablo (analyses, ba_results, tc_results, design_results, pipeline_runs, stage_outputs)
             </div>
         </div>
         """, unsafe_allow_html=True)
@@ -979,6 +1111,39 @@ with tab3:
     st.caption("**Ortalama Süre:** 90-120 saniye (ekran sayısına göre değişir)")
     st.caption("**Çıktı:** Uyumluluk matrisi, kritik/orta/düşük bulgular, eksik gereksinimler, Markdown rapor")
 
+    st.markdown("<br>", unsafe_allow_html=True)
+
+    # Pipeline 4: BRD Pipeline
+    st.markdown("""
+    <div class="pipeline-flow">
+        <div class="pipeline-title">🟠 Pipeline 4: BRD Pipeline (3-Stage Sequential with QA Referee)</div>
+        <div class="pipeline-steps">
+            <div class="pipeline-step">
+                <div class="pipeline-step-number">1</div>
+                <div class="pipeline-step-name">WF1: BA Generator</div>
+                <div class="pipeline-step-desc">BRD → BA (Claude Sonnet 4) → QA (Gemini) → Manual Review</div>
+            </div>
+            <div class="pipeline-arrow">→</div>
+            <div class="pipeline-step">
+                <div class="pipeline-step-number">2</div>
+                <div class="pipeline-step-name">WF2: TA Generator</div>
+                <div class="pipeline-step-desc">BA → TA (Claude Sonnet 4) → QA (Gemini) → Manual Review</div>
+            </div>
+            <div class="pipeline-arrow">→</div>
+            <div class="pipeline-step">
+                <div class="pipeline-step-number">3</div>
+                <div class="pipeline-step-name">WF3: TC Generator</div>
+                <div class="pipeline-step-desc">BA + TA → TC (Claude Sonnet 4) → QA (Gemini) → Export</div>
+            </div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    st.caption("**Kullanım:** BRD Pipeline sayfasından BRD upload → Adım adım manuel onay ile ilerler")
+    st.caption("**Ortalama Süre:** 5-8 dakika (3 stage × 2 chunk + QA + revisions)")
+    st.caption("**Çıktı:** BA (DOCX), TA (DOCX), TC (CSV + Excel 23 kolon), QA skorları, revision tracking")
+    st.caption("**Özellikler:** Checkpoint system, skip QA option, manual edit mode, force pass, database storage")
+
     st.markdown("---")
     st.markdown("### 🔄 Agent İşbirliği Senaryoları")
 
@@ -1043,10 +1208,11 @@ with tab4:
         <div style="background: #1a2236; border: 1px solid #2a3654; border-radius: 12px; padding: 18px; margin-bottom: 12px;">
             <div style="font-size: 13px; color: #64748b; margin-bottom: 8px;">🧠 AI / LLM</div>
             <div style="font-size: 13px; color: #cbd5e1; line-height: 1.8;">
-                • Gemini 2.5 Flash<br>
-                • 1M token context<br>
+                • Gemini 2.5 Flash (Evaluation)<br>
+                • Claude Sonnet 4 (Generation)<br>
+                • 200k-1M token context<br>
                 • Multimodal (vision)<br>
-                • Structured output
+                • Structured JSON output
             </div>
         </div>
         """, unsafe_allow_html=True)

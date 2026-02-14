@@ -283,6 +283,7 @@ def render_custom_sidebar(active_page="home"):
         # Check credentials
         import os
         gemini_key = st.session_state.get("gemini_key") or os.environ.get("GEMINI_API_KEY", "")
+        anthropic_key = st.session_state.get("anthropic_api_key") or os.environ.get("ANTHROPIC_API_KEY", "")
         jira_email = st.session_state.get("jira_email") or os.environ.get("JIRA_EMAIL", "")
         jira_token = st.session_state.get("jira_token") or os.environ.get("JIRA_API_TOKEN", "")
 
@@ -298,6 +299,21 @@ def render_custom_sidebar(active_page="home"):
             <div class="status-badge status-error">
                 <span class="status-dot"></span>
                 Gemini API
+            </div>
+            """, unsafe_allow_html=True)
+
+        if anthropic_key:
+            st.markdown("""
+            <div class="status-badge status-success">
+                <span class="status-dot"></span>
+                Anthropic API
+            </div>
+            """, unsafe_allow_html=True)
+        else:
+            st.markdown("""
+            <div class="status-badge status-error">
+                <span class="status-dot"></span>
+                Anthropic API
             </div>
             """, unsafe_allow_html=True)
 
