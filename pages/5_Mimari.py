@@ -28,7 +28,7 @@ st.markdown("""
     }
     .block-container {
         padding-top: 2rem;
-        max-width: 1400px;
+        max-width: 1600px;
     }
 
     /* Header Badge */
@@ -75,309 +75,220 @@ st.markdown("""
         margin-right: auto;
     }
 
-    /* Layer Cards */
-    .layer-card {
+    /* Agent Cards */
+    .agent-detail-card {
         background: #1a2236;
         border: 1px solid #2a3654;
-        border-radius: 16px;
+        border-radius: 14px;
         padding: 20px;
         margin-bottom: 16px;
         position: relative;
         overflow: hidden;
         transition: all 0.3s ease;
     }
-    .layer-card:hover {
+    .agent-detail-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 4px;
+        height: 100%;
+    }
+    .agent-detail-card.blue::before { background: linear-gradient(180deg, #3b82f6, #06b6d4); }
+    .agent-detail-card.green::before { background: linear-gradient(180deg, #10b981, #06b6d4); }
+    .agent-detail-card.purple::before { background: linear-gradient(180deg, #8b5cf6, #ec4899); }
+
+    .agent-detail-card:hover {
         border-color: rgba(59,130,246,0.3);
         transform: translateY(-2px);
         box-shadow: 0 8px 32px rgba(0,0,0,0.3);
     }
-    .layer-card::before {
-        content: '';
-        position: absolute;
-        top: 0; left: 0; right: 0;
-        height: 3px;
-        border-radius: 16px 16px 0 0;
-    }
-    .layer-card.blue::before { background: linear-gradient(135deg, #3b82f6, #06b6d4); }
-    .layer-card.purple::before { background: linear-gradient(135deg, #8b5cf6, #ec4899); }
-    .layer-card.green::before { background: linear-gradient(135deg, #10b981, #06b6d4); }
-    .layer-card.orange::before { background: linear-gradient(135deg, #f59e0b, #ef4444); }
 
-    .layer-header {
-        display: flex;
-        align-items: center;
-        gap: 16px;
-        margin-bottom: 20px;
-    }
-    .layer-icon {
-        width: 48px; height: 48px;
-        border-radius: 12px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 22px;
-    }
-    .layer-icon.blue { background: rgba(59,130,246,0.15); border: 1px solid rgba(59,130,246,0.2); }
-    .layer-icon.purple { background: rgba(139,92,246,0.15); border: 1px solid rgba(139,92,246,0.2); }
-    .layer-icon.green { background: rgba(16,185,129,0.15); border: 1px solid rgba(16,185,129,0.2); }
-    .layer-icon.orange { background: rgba(245,158,11,0.15); border: 1px solid rgba(245,158,11,0.2); }
-
-    .layer-title {
+    .agent-name {
         font-family: 'Space Grotesk', sans-serif;
-        font-size: 20px;
+        font-size: 18px;
         font-weight: 600;
         color: #f1f5f9;
+        margin-bottom: 8px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
     }
-    .layer-subtitle {
+    .agent-role {
         font-size: 13px;
         color: #64748b;
-        margin-top: 2px;
+        font-style: italic;
+        margin-bottom: 12px;
     }
-
-    /* Component Cards */
-    .component-card {
-        background: rgba(255,255,255,0.02);
-        border: 1px solid rgba(255,255,255,0.06);
-        border-radius: 10px;
-        padding: 14px;
-        margin-bottom: 10px;
-        transition: all 0.2s ease;
+    .agent-description {
+        font-size: 14px;
+        color: #cbd5e1;
+        line-height: 1.7;
+        margin-bottom: 12px;
     }
-    .component-card:hover {
-        background: rgba(255,255,255,0.04);
-        border-color: rgba(255,255,255,0.1);
+    .agent-instructions {
+        background: rgba(0,0,0,0.2);
+        border-radius: 8px;
+        padding: 12px;
+        margin-top: 12px;
     }
-    .component-name {
-        font-family: 'JetBrains Mono', monospace;
-        font-size: 13px;
-        font-weight: 500;
-        color: #f1f5f9;
-        margin-bottom: 4px;
-    }
-    .component-desc {
-        font-size: 12px;
-        color: #64748b;
-        line-height: 1.5;
-    }
-    .component-tag {
-        display: inline-block;
-        margin-top: 8px;
-        font-family: 'JetBrains Mono', monospace;
-        font-size: 10px;
-        padding: 2px 8px;
-        border-radius: 4px;
-        letter-spacing: 0.5px;
-    }
-    .tag-new { background: rgba(16,185,129,0.15); color: #10b981; }
-    .tag-existing { background: rgba(59,130,246,0.15); color: #3b82f6; }
-    .tag-enhanced { background: rgba(245,158,11,0.15); color: #f59e0b; }
-
-    /* Flow Nodes */
-    .flow-container {
-        background: #1a2236;
-        border: 1px solid #2a3654;
-        border-radius: 16px;
-        padding: 24px;
-        margin-bottom: 20px;
-    }
-    .flow-label {
+    .agent-instructions-title {
         font-family: 'JetBrains Mono', monospace;
         font-size: 11px;
         color: #06b6d4;
         text-transform: uppercase;
         letter-spacing: 1px;
-        margin-bottom: 16px;
-        text-align: center;
+        margin-bottom: 8px;
         font-weight: 600;
     }
-    .flow-row {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 12px;
-        margin-bottom: 20px;
-        flex-wrap: wrap;
+    .agent-instruction-item {
+        font-size: 12px;
+        color: #94a3b8;
+        line-height: 1.6;
+        padding: 4px 0 4px 16px;
+        position: relative;
     }
-    .flow-node {
-        background: #111827;
-        border: 1px solid #2a3654;
-        border-radius: 10px;
-        padding: 14px 20px;
-        text-align: center;
-        min-width: 140px;
-        transition: all 0.2s;
+    .agent-instruction-item::before {
+        content: '→';
+        position: absolute;
+        left: 0;
+        color: #3b82f6;
+        font-weight: 700;
     }
-    .flow-node:hover {
-        transform: scale(1.05);
-        border-color: rgba(59,130,246,0.4);
-    }
-    .flow-node-label {
-        font-family: 'JetBrains Mono', monospace;
-        font-size: 11px;
-        font-weight: 600;
-        color: #f1f5f9;
-    }
-    .flow-node-sub {
-        font-size: 10px;
-        color: #64748b;
-        margin-top: 4px;
-    }
-    .flow-arrow {
-        color: #64748b;
-        font-size: 20px;
-        font-family: 'JetBrains Mono', monospace;
-    }
-    .node-blue { border-color: rgba(59,130,246,0.3); background: rgba(59,130,246,0.08); }
-    .node-purple { border-color: rgba(139,92,246,0.3); background: rgba(139,92,246,0.08); }
-    .node-green { border-color: rgba(16,185,129,0.3); background: rgba(16,185,129,0.08); }
-    .node-orange { border-color: rgba(245,158,11,0.3); background: rgba(245,158,11,0.08); }
-    .node-cyan { border-color: rgba(6,182,212,0.3); background: rgba(6,182,212,0.08); }
-    .node-pink { border-color: rgba(236,72,153,0.3); background: rgba(236,72,153,0.08); }
 
-    /* Page Cards */
-    .page-card {
+    /* Integration Cards */
+    .integration-card {
         background: #1a2236;
         border: 1px solid #2a3654;
         border-radius: 14px;
         padding: 20px;
         margin-bottom: 14px;
-        position: relative;
         transition: all 0.3s;
     }
-    .page-card:hover {
+    .integration-card:hover {
+        border-color: rgba(139,92,246,0.3);
         transform: translateY(-2px);
-        border-color: rgba(59,130,246,0.3);
     }
-    .page-card-num {
-        font-family: 'JetBrains Mono', monospace;
-        font-size: 48px;
-        font-weight: 700;
-        color: rgba(255,255,255,0.04);
-        position: absolute;
-        top: 12px; right: 20px;
-    }
-    .page-card-title {
-        font-family: 'Space Grotesk', sans-serif;
-        font-size: 18px;
-        font-weight: 600;
-        margin-bottom: 4px;
-        color: #f1f5f9;
-    }
-    .page-card-route {
-        font-family: 'JetBrains Mono', monospace;
-        font-size: 11px;
-        color: #06b6d4;
-        margin-bottom: 12px;
-    }
-    .page-card-features {
-        list-style: none;
-        padding: 0;
-    }
-    .page-card-features li {
-        font-size: 13px;
-        color: #94a3b8;
-        padding: 4px 0;
+    .integration-header {
         display: flex;
         align-items: center;
-        gap: 8px;
-    }
-    .page-card-features li::before {
-        content: '›';
-        color: #3b82f6;
-        font-weight: 700;
-        font-size: 16px;
-    }
-
-    /* Tech Cards */
-    .tech-card {
-        background: #1a2236;
-        border: 1px solid #2a3654;
-        border-radius: 12px;
-        padding: 18px;
-        display: flex;
-        align-items: flex-start;
-        gap: 14px;
+        gap: 12px;
         margin-bottom: 12px;
     }
-    .tech-card-icon {
-        width: 40px; height: 40px;
+    .integration-icon {
+        width: 40px;
+        height: 40px;
         border-radius: 10px;
         display: flex;
         align-items: center;
         justify-content: center;
         font-size: 18px;
-        background: rgba(255,255,255,0.04);
-        border: 1px solid rgba(255,255,255,0.08);
+        background: rgba(139,92,246,0.1);
+        border: 1px solid rgba(139,92,246,0.2);
     }
-    .tech-card-title {
+    .integration-name {
         font-family: 'Space Grotesk', sans-serif;
+        font-size: 16px;
         font-weight: 600;
-        font-size: 15px;
-        margin-bottom: 4px;
         color: #f1f5f9;
     }
-    .tech-card-items {
+    .integration-endpoint {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 11px;
+        color: #06b6d4;
+        margin-top: 4px;
+    }
+    .integration-desc {
         font-size: 13px;
         color: #94a3b8;
         line-height: 1.6;
     }
-
-    /* DB Tables */
-    .db-table {
-        background: #1a2236;
-        border: 1px solid #2a3654;
-        border-radius: 12px;
-        padding: 18px;
-        margin-bottom: 14px;
-    }
-    .db-table-name {
-        font-family: 'JetBrains Mono', monospace;
-        font-size: 14px;
-        font-weight: 600;
-        color: #06b6d4;
-        margin-bottom: 12px;
+    .integration-methods {
+        margin-top: 12px;
         display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+    }
+    .method-badge {
+        display: inline-flex;
         align-items: center;
-        gap: 8px;
-    }
-    .db-table-name::before {
-        content: '⊞';
-        font-size: 16px;
-    }
-    .db-field {
+        padding: 4px 10px;
+        border-radius: 6px;
         font-family: 'JetBrains Mono', monospace;
-        font-size: 12px;
-        color: #94a3b8;
-        padding: 4px 0;
-    }
-    .db-field .type {
-        color: #64748b;
-        font-size: 11px;
-    }
-    .db-field .pk {
-        color: #f59e0b;
         font-size: 10px;
-        margin-left: 4px;
+        font-weight: 600;
+        background: rgba(59,130,246,0.1);
+        border: 1px solid rgba(59,130,246,0.2);
+        color: #3b82f6;
     }
 
-    /* File Tree */
-    .file-tree {
-        font-family: 'JetBrains Mono', monospace;
-        font-size: 13px;
-        color: #94a3b8;
-        line-height: 1.8;
+    /* Pipeline Flow */
+    .pipeline-flow {
         background: #1a2236;
         border: 1px solid #2a3654;
         border-radius: 16px;
         padding: 24px;
+        margin-bottom: 20px;
     }
-    .file-tree .folder { color: #06b6d4; }
-    .file-tree .file { color: #f59e0b; }
-    .file-tree .comment { color: #64748b; }
-
-    @keyframes pulse {
-        0%, 100% { opacity: 1; }
-        50% { opacity: 0.4; }
+    .pipeline-title {
+        font-family: 'Space Grotesk', sans-serif;
+        font-size: 18px;
+        font-weight: 600;
+        color: #f1f5f9;
+        margin-bottom: 16px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    .pipeline-steps {
+        display: flex;
+        align-items: stretch;
+        gap: 12px;
+        overflow-x: auto;
+    }
+    .pipeline-step {
+        flex: 1;
+        min-width: 180px;
+        background: rgba(255,255,255,0.02);
+        border: 1px solid rgba(255,255,255,0.06);
+        border-radius: 10px;
+        padding: 16px;
+        text-align: center;
+        position: relative;
+    }
+    .pipeline-step-number {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #3b82f6, #06b6d4);
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 10px;
+        font-family: 'JetBrains Mono', monospace;
+        font-weight: 700;
+        font-size: 14px;
+    }
+    .pipeline-step-name {
+        font-family: 'Space Grotesk', sans-serif;
+        font-size: 13px;
+        font-weight: 600;
+        color: #f1f5f9;
+        margin-bottom: 6px;
+    }
+    .pipeline-step-desc {
+        font-size: 11px;
+        color: #64748b;
+        line-height: 1.5;
+    }
+    .pipeline-arrow {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #3b82f6;
+        font-size: 24px;
+        font-weight: 300;
     }
 
     /* Breadcrumb Navigation */
@@ -405,37 +316,6 @@ st.markdown("""
     .breadcrumb .current {
         color: #f1f5f9;
         font-weight: 500;
-    }
-
-    /* Copy Button */
-    .copy-btn {
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-        background: rgba(59,130,246,0.1);
-        border: 1px solid rgba(59,130,246,0.2);
-        border-radius: 6px;
-        padding: 6px 12px;
-        font-family: 'JetBrains Mono', monospace;
-        font-size: 11px;
-        color: #3b82f6;
-        cursor: pointer;
-        transition: all 0.2s;
-        margin-left: 8px;
-    }
-    .copy-btn:hover {
-        background: rgba(59,130,246,0.2);
-        border-color: rgba(59,130,246,0.4);
-    }
-    .copy-btn.copied {
-        background: rgba(16,185,129,0.1);
-        border-color: rgba(16,185,129,0.2);
-        color: #10b981;
-    }
-
-    /* Smooth Scroll */
-    html {
-        scroll-behavior: smooth;
     }
 
     /* Scroll to Top Button */
@@ -467,54 +347,17 @@ st.markdown("""
         box-shadow: 0 6px 20px rgba(59,130,246,0.5);
     }
 
-    /* Hover effects for layer cards */
-    .layer-card {
-        cursor: default;
+    @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.4; }
     }
 
-    /* Add animation to stats */
-    @keyframes countUp {
-        from { opacity: 0; transform: translateY(10px); }
-        to { opacity: 1; transform: translateY(0); }
-    }
-
-    /* Print Styles */
-    @media print {
-        .scroll-top-btn,
-        .breadcrumb,
-        button {
-            display: none !important;
-        }
-
-        .main {
-            background: white;
-        }
-
-        .layer-card,
-        .component-card,
-        .flow-container,
-        .page-card,
-        .tech-card,
-        .db-table {
-            border: 1px solid #ccc;
-            page-break-inside: avoid;
-        }
-
-        * {
-            color: #000 !important;
-        }
-    }
-
-    /* Responsive Grid for Stats */
-    @media (max-width: 768px) {
-        div[style*="grid-template-columns: repeat(4, 1fr)"] {
-            grid-template-columns: repeat(2, 1fr) !important;
-        }
+    html {
+        scroll-behavior: smooth;
     }
 </style>
 
 <script>
-    // Scroll to Top Button
     window.addEventListener('scroll', function() {
         const scrollBtn = document.getElementById('scrollTopBtn');
         if (scrollBtn) {
@@ -529,15 +372,6 @@ st.markdown("""
     function scrollToTop() {
         window.scrollTo({ top: 0, behavior: 'smooth' });
     }
-
-    // Add active state to TOC items based on scroll position
-    window.addEventListener('scroll', function() {
-        const tocItems = document.querySelectorAll('.toc-item');
-        tocItems.forEach(item => {
-            // This is a simplified version - you can enhance this
-            // to detect which tab is currently visible
-        });
-    });
 </script>
 """, unsafe_allow_html=True)
 
@@ -569,478 +403,620 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-
 # ── Quick Stats ──
 st.markdown("""
 <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 24px;">
     <div style="background: #1a2236; border: 1px solid #2a3654; border-radius: 12px; padding: 18px; text-align: center;">
-        <div style="font-family: 'Space Grotesk', sans-serif; font-size: 32px; font-weight: 700; color: #3b82f6; margin-bottom: 4px;">4</div>
-        <div style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #64748b; text-transform: uppercase;">Katman</div>
+        <div style="font-family: 'Space Grotesk', sans-serif; font-size: 32px; font-weight: 700; color: #3b82f6; margin-bottom: 4px;">12</div>
+        <div style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #64748b; text-transform: uppercase;">AI Agents</div>
     </div>
     <div style="background: #1a2236; border: 1px solid #2a3654; border-radius: 12px; padding: 18px; text-align: center;">
-        <div style="font-family: 'Space Grotesk', sans-serif; font-size: 32px; font-weight: 700; color: #8b5cf6; margin-bottom: 4px;">6+</div>
-        <div style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #64748b; text-transform: uppercase;">Agent</div>
+        <div style="font-family: 'Space Grotesk', sans-serif; font-size: 32px; font-weight: 700; color: #8b5cf6; margin-bottom: 4px;">5</div>
+        <div style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #64748b; text-transform: uppercase;">Entegrasyonlar</div>
     </div>
     <div style="background: #1a2236; border: 1px solid #2a3654; border-radius: 12px; padding: 18px; text-align: center;">
         <div style="font-family: 'Space Grotesk', sans-serif; font-size: 32px; font-weight: 700; color: #10b981; margin-bottom: 4px;">6</div>
-        <div style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #64748b; text-transform: uppercase;">Sayfa</div>
+        <div style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #64748b; text-transform: uppercase;">Sayfalar</div>
     </div>
     <div style="background: #1a2236; border: 1px solid #2a3654; border-radius: 12px; padding: 18px; text-align: center;">
-        <div style="font-family: 'Space Grotesk', sans-serif; font-size: 32px; font-weight: 700; color: #f59e0b; margin-bottom: 4px;">5+</div>
-        <div style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #64748b; text-transform: uppercase;">Entegrasyon</div>
+        <div style="font-family: 'Space Grotesk', sans-serif; font-size: 32px; font-weight: 700; color: #f59e0b; margin-bottom: 4px;">3</div>
+        <div style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #64748b; text-transform: uppercase;">Pipeline</div>
     </div>
 </div>
 """, unsafe_allow_html=True)
 
 # ── Tab Navigation ──
-tab1, tab2, tab3, tab4, tab5 = st.tabs(["🏗️ Mimari", "🔄 Veri Akışı", "📱 Sayfa Yapısı", "⚙️ Tech Stack", "🗄️ Veri Modeli"])
+tab1, tab2, tab3, tab4 = st.tabs(["🤖 AI Agents", "🔗 Entegrasyonlar", "🔄 Pipeline Akışları", "⚙️ Tech Stack"])
 
 # ═══════════════════════════════════════════════════════════
-# TAB 1: ARCHITECTURE OVERVIEW
+# TAB 1: AI AGENTS
 # ═══════════════════════════════════════════════════════════
 with tab1:
-    st.markdown('<div style="font-family: \'Space Grotesk\', sans-serif; font-size: 22px; font-weight: 600; color: #f1f5f9; margin-bottom: 20px;">Katmanlı Mimari</div>', unsafe_allow_html=True)
+    st.markdown('<div style="font-family: \'Space Grotesk\', sans-serif; font-size: 22px; font-weight: 600; color: #f1f5f9; margin-bottom: 20px;">AI Agents (Gemini 2.5 Flash)</div>', unsafe_allow_html=True)
 
-    # Layer 1: Presentation
-    st.markdown("""
-    <div class="layer-card blue">
-        <div class="layer-header">
-            <div class="layer-icon blue">🖥️</div>
-            <div>
-                <div class="layer-title">Presentation Layer</div>
-                <div class="layer-subtitle">Streamlit Multi-Page Dashboard</div>
-            </div>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
+    st.markdown("### 📋 BA (İş Analizi) Agents")
+    st.caption("4 adet specialized agent ile İş Analizi doküman kalite değerlendirmesi yapar")
 
-    col1, col2, col3 = st.columns(3)
+    col1, col2 = st.columns(2)
+
     with col1:
         st.markdown("""
-        <div class="component-card">
-            <div class="component-name">Dashboard</div>
-            <div class="component-desc">Genel bakış, KPI'lar, son analizler, skor trendleri</div>
-            <span class="component-tag tag-new">NEW</span>
-        </div>
-        <div class="component-card">
-            <div class="component-name">QA Analiz</div>
-            <div class="component-desc">BA doküman + Test Case kalite değerlendirme</div>
-            <span class="component-tag tag-existing">FROM QA-AGENT</span>
-        </div>
-        """, unsafe_allow_html=True)
-    with col2:
-        st.markdown("""
-        <div class="component-card">
-            <div class="component-name">Design Compliance</div>
-            <div class="component-desc">Figma tasarım vs BA uyumluluk kontrolü</div>
-            <span class="component-tag tag-existing">FROM DESIGN-AGENT</span>
-        </div>
-        <div class="component-card">
-            <div class="component-name">JIRA Entegrasyon</div>
-            <div class="component-desc">Task çekme, comment yazma, label yönetimi</div>
-            <span class="component-tag tag-enhanced">ENHANCED</span>
-        </div>
-        """, unsafe_allow_html=True)
-    with col3:
-        st.markdown("""
-        <div class="component-card">
-            <div class="component-name">Raporlar</div>
-            <div class="component-desc">Google Sheets export, trend grafikleri</div>
-            <span class="component-tag tag-enhanced">ENHANCED</span>
-        </div>
-        """, unsafe_allow_html=True)
-
-    st.markdown("<br>", unsafe_allow_html=True)
-
-    # Layer 2: Agent Orchestration
-    st.markdown("""
-    <div class="layer-card purple">
-        <div class="layer-header">
-            <div class="layer-icon purple">🤖</div>
-            <div>
-                <div class="layer-title">Agent Orchestration Layer</div>
-                <div class="layer-subtitle">Agno Framework + Multi-Agent Coordinator</div>
+        <div class="agent-detail-card blue">
+            <div class="agent-name">🔍 Agent 1: JIRA Tarayıcı</div>
+            <div class="agent-role">JIRA Task Discovery & Link Extraction</div>
+            <div class="agent-description">
+                JIRA'dan iş analizi task'larını tarar, Google Docs linklerini tespit eder ve task bilgilerini analiz eder.
+            </div>
+            <div class="agent-instructions">
+                <div class="agent-instructions-title">Görevler</div>
+                <div class="agent-instruction-item">JIRA task'larını tarar ve filtreler</div>
+                <div class="agent-instruction-item">Google Docs URL'lerini description'dan çıkarır</div>
+                <div class="agent-instruction-item">Task bilgilerini özetler ve yapılandırır</div>
+                <div class="agent-instruction-item">qa-devam-ediyor label'ını ekler</div>
             </div>
         </div>
-    </div>
-    """, unsafe_allow_html=True)
-
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        st.markdown("""
-        <div class="component-card">
-            <div class="component-name">BA Analyst Agent</div>
-            <div class="component-desc">İş Analizi doküman kalite skoru (yapı, kapsam, netlik)</div>
-            <span class="component-tag tag-existing">FROM QA-AGENT</span>
-        </div>
-        <div class="component-card">
-            <div class="component-name">TC Evaluator Agent</div>
-            <div class="component-desc">Test Case completeness & coverage analizi</div>
-            <span class="component-tag tag-existing">FROM QA-AGENT</span>
-        </div>
-        """, unsafe_allow_html=True)
-    with col2:
-        st.markdown("""
-        <div class="component-card">
-            <div class="component-name">UX Reviewer Agent</div>
-            <div class="component-desc">Figma screen vs gereksinim uyumluluk kontrolü</div>
-            <span class="component-tag tag-existing">FROM DESIGN-AGENT</span>
-        </div>
-        <div class="component-card">
-            <div class="component-name">Requirements Agent</div>
-            <div class="component-desc">BA'dan gereksinim listesi çıkarma (REQ-xxx)</div>
-            <span class="component-tag tag-existing">FROM DESIGN-AGENT</span>
-        </div>
-        """, unsafe_allow_html=True)
-    with col3:
-        st.markdown("""
-        <div class="component-card">
-            <div class="component-name">Orchestrator</div>
-            <div class="component-desc">Agent seçimi, paralel çalıştırma, sonuç birleştirme</div>
-            <span class="component-tag tag-new">NEW</span>
-        </div>
-        <div class="component-card">
-            <div class="component-name">Report Generator Agent</div>
-            <div class="component-desc">Tüm sonuçları birleştirip unified rapor üretme</div>
-            <span class="component-tag tag-new">NEW</span>
-        </div>
         """, unsafe_allow_html=True)
 
-    st.markdown("<br>", unsafe_allow_html=True)
-
-    # Layer 3: Integration
-    st.markdown("""
-    <div class="layer-card green">
-        <div class="layer-header">
-            <div class="layer-icon green">🔗</div>
-            <div>
-                <div class="layer-title">Integration Layer</div>
-                <div class="layer-subtitle">Dış Servis Bağlantıları</div>
+        st.markdown("""
+        <div class="agent-detail-card blue">
+            <div class="agent-name">🧠 Agent 3: Kalite Değerlendirici</div>
+            <div class="agent-role">Quality Assessment & Scoring Engine</div>
+            <div class="agent-description">
+                İş analizi dokümanını 9 kriter üzerinden detaylı değerlendirir. Platform'un en kritik AI agent'ıdır.
+            </div>
+            <div class="agent-instructions">
+                <div class="agent-instructions-title">Değerlendirme Kriterleri (9 Kriter)</div>
+                <div class="agent-instruction-item">Tamlık (Completeness)</div>
+                <div class="agent-instruction-item">Wireframe / Ekran Tasarımları</div>
+                <div class="agent-instruction-item">Akış Diyagramları (Flow Diagrams)</div>
+                <div class="agent-instruction-item">Gereksinim Kalitesi</div>
+                <div class="agent-instruction-item">Kabul Kriterleri (Acceptance Criteria)</div>
+                <div class="agent-instruction-item">Tutarlılık (Consistency)</div>
+                <div class="agent-instruction-item">İş Kuralları Derinliği</div>
+                <div class="agent-instruction-item">Hata Yönetimi (Error Handling)</div>
+                <div class="agent-instruction-item">Dokümantasyon Kalitesi</div>
+            </div>
+            <div style="margin-top: 12px; padding: 8px 12px; background: rgba(59,130,246,0.1); border-radius: 6px; border-left: 3px solid #3b82f6;">
+                <div style="font-size: 11px; color: #94a3b8; line-height: 1.6;">
+                    <strong style="color: #3b82f6;">Puanlama Sistemi:</strong><br>
+                    • Her kriter: 1-10 puan<br>
+                    • Varsayılan başlangıç: 5/10<br>
+                    • 8+ = Mükemmel, 6-7 = İyi, 5 = Orta, <5 = Eksik<br>
+                    • Genel Puan = (9 kriter ortalaması × 100) / 90<br>
+                    • Geçme Notu: 60/100
+                </div>
             </div>
         </div>
-    </div>
-    """, unsafe_allow_html=True)
-
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        st.markdown("""
-        <div class="component-card">
-            <div class="component-name">JIRA Client</div>
-            <div class="component-desc">REST API — task CRUD, comment, label, transition</div>
-            <span class="component-tag tag-enhanced">ENHANCED</span>
-        </div>
-        <div class="component-card">
-            <div class="component-name">Google Docs Client</div>
-            <div class="component-desc">BA doküman okuma (Drive API v3)</div>
-            <span class="component-tag tag-existing">FROM QA-AGENT</span>
-        </div>
         """, unsafe_allow_html=True)
+
     with col2:
         st.markdown("""
-        <div class="component-card">
-            <div class="component-name">Google Sheets Client</div>
-            <div class="component-desc">TC veri okuma + sonuç yazma (Sheets API v4)</div>
-            <span class="component-tag tag-enhanced">ENHANCED</span>
-        </div>
-        <div class="component-card">
-            <div class="component-name">Figma Client</div>
-            <div class="component-desc">Design frame export, node traverse (Figma REST API)</div>
-            <span class="component-tag tag-existing">FROM DESIGN-AGENT</span>
-        </div>
-        """, unsafe_allow_html=True)
-    with col3:
-        st.markdown("""
-        <div class="component-card">
-            <div class="component-name">Gemini API Client</div>
-            <div class="component-desc">Gemini 2.5 Flash — tüm agent'ların LLM backend'i</div>
-            <span class="component-tag tag-existing">SHARED</span>
-        </div>
-        """, unsafe_allow_html=True)
-
-    st.markdown("<br>", unsafe_allow_html=True)
-
-    # Layer 4: Data & Storage
-    st.markdown("""
-    <div class="layer-card orange">
-        <div class="layer-header">
-            <div class="layer-icon orange">💾</div>
-            <div>
-                <div class="layer-title">Data & Storage Layer</div>
-                <div class="layer-subtitle">Sonuç Saklama & Cache</div>
+        <div class="agent-detail-card blue">
+            <div class="agent-name">📄 Agent 2: Doküman Okuyucu</div>
+            <div class="agent-role">Document Parser & Structure Analyzer</div>
+            <div class="agent-description">
+                Google Docs'tan çekilen BA dokümanını okur, yapısını analiz eder ve içeriği parçalara ayırır.
+            </div>
+            <div class="agent-instructions">
+                <div class="agent-instructions-title">Görevler</div>
+                <div class="agent-instruction-item">Doküman yapısını analiz eder (başlıklar, bölümler)</div>
+                <div class="agent-instruction-item">İçeriği parçalara ayırır</div>
+                <div class="agent-instruction-item">Eksik bölümleri tespit eder</div>
+                <div class="agent-instruction-item">Metrik bilgiler çıkarır (karakter sayısı, bölüm sayısı)</div>
             </div>
         </div>
-    </div>
-    """, unsafe_allow_html=True)
+        """, unsafe_allow_html=True)
 
-    col1, col2, col3 = st.columns(3)
+        st.markdown("""
+        <div class="agent-detail-card blue">
+            <div class="agent-name">📝 Agent 4: Raporcu</div>
+            <div class="agent-role">Report Formatter & JIRA Commenter</div>
+            <div class="agent-description">
+                Değerlendirme sonuçlarını JIRA comment formatına dönüştürür ve okunabilir rapor oluşturur.
+            </div>
+            <div class="agent-instructions">
+                <div class="agent-instructions-title">Görevler</div>
+                <div class="agent-instruction-item">JSON sonuçlarını Markdown formatına çevirir</div>
+                <div class="agent-instruction-item">Emoji ve görsel elementler ekler</div>
+                <div class="agent-instruction-item">JIRA comment'i oluşturur</div>
+                <div class="agent-instruction-item">qa-gecti/qa-gecmedi label'larını yönetir</div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    st.markdown("---")
+    st.markdown("### 🧪 TC (Test Case) Agents")
+    st.caption("4 adet specialized agent ile Test Case doküman kalite değerlendirmesi yapar")
+
+    col1, col2 = st.columns(2)
+
     with col1:
         st.markdown("""
-        <div class="component-card">
-            <div class="component-name">SQLite DB</div>
-            <div class="component-desc">Analiz sonuçları, skorlar, geçmiş veriler</div>
-            <span class="component-tag tag-new">NEW</span>
+        <div class="agent-detail-card green">
+            <div class="agent-name">🔍 Agent 1: JIRA & Sheet Tarayıcı</div>
+            <div class="agent-role">Test Task Discovery & BA Linking</div>
+            <div class="agent-description">
+                JIRA'dan TC task'larını tarar, linked BA task'ı bulur ve Google Sheets URL'lerini tespit eder.
+            </div>
+            <div class="agent-instructions">
+                <div class="agent-instructions-title">Görevler</div>
+                <div class="agent-instruction-item">JIRA component = Test filtresiyle TC task'larını bulur</div>
+                <div class="agent-instruction-item">Linked BA task key'ini tespit eder</div>
+                <div class="agent-instruction-item">Google Sheets URL'sini çıkarır</div>
+                <div class="agent-instruction-item">tc-qa-devam-ediyor label'ını ekler</div>
+            </div>
         </div>
         """, unsafe_allow_html=True)
+
+        st.markdown("""
+        <div class="agent-detail-card green">
+            <div class="agent-name">🧠 Agent 3: TC Kalite Değerlendirici</div>
+            <div class="agent-role">Test Case Quality Assessor</div>
+            <div class="agent-description">
+                Test case dokümanını 8 kriter üzerinden değerlendirir. Loodos standart şablonunu (23 sütun) bekler.
+            </div>
+            <div class="agent-instructions">
+                <div class="agent-instructions-title">Değerlendirme Kriterleri (8 Kriter)</div>
+                <div class="agent-instruction-item">Kapsam (Coverage) - BA gereksinimlerini kapsama oranı</div>
+                <div class="agent-instruction-item">Test Case Yapısı (Structure)</div>
+                <div class="agent-instruction-item">Sınır Değer & Negatif Senaryolar (Edge Cases)</div>
+                <div class="agent-instruction-item">Test Verisi Kalitesi (Data Quality)</div>
+                <div class="agent-instruction-item">Öncelik Sınıflandırması (Priority)</div>
+                <div class="agent-instruction-item">Regresyon Kapsamı (Regression Scope)</div>
+                <div class="agent-instruction-item">İzlenebilirlik (Traceability)</div>
+                <div class="agent-instruction-item">Okunabilirlik & Uygulanabilirlik</div>
+            </div>
+            <div style="margin-top: 12px; padding: 8px 12px; background: rgba(16,185,129,0.1); border-radius: 6px; border-left: 3px solid #10b981;">
+                <div style="font-size: 11px; color: #94a3b8; line-height: 1.6;">
+                    <strong style="color: #10b981;">Özel Kurallar:</strong><br>
+                    • Sadece happy path varsa edge_cases MAX 4/10<br>
+                    • Loodos şablonu yoksa (23 sütun) test_structure MAX 5/10<br>
+                    • Genel Puan = (8 kriter ortalaması × 100) / 80<br>
+                    • Geçme Notu: 60/100
+                </div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
     with col2:
         st.markdown("""
-        <div class="component-card">
-            <div class="component-name">Google Sheets</div>
-            <div class="component-desc">Mevcut sonuç tabloları (geriye uyumlu)</div>
-            <span class="component-tag tag-existing">EXISTING</span>
+        <div class="agent-detail-card green">
+            <div class="agent-name">📑 Agent 2: Doküman Birleştirici</div>
+            <div class="agent-role">Document Merger & Metrics Extractor</div>
+            <div class="agent-description">
+                BA dokümanı ve TC sheet'lerini birleştirip analiz için hazırlar. BA ile TC karşılaştırması yapar.
+            </div>
+            <div class="agent-instructions">
+                <div class="agent-instructions-title">Görevler</div>
+                <div class="agent-instruction-item">BA dokümanı ile TC sheet'i birleştirir</div>
+                <div class="agent-instruction-item">Test case sayısını ve coverage metriklerini çıkarır</div>
+                <div class="agent-instruction-item">BA gereksinimlerini TC'lerle eşleştirir</div>
+                <div class="agent-instruction-item">Eksik coverage alanlarını tespit eder</div>
+            </div>
         </div>
         """, unsafe_allow_html=True)
-    with col3:
+
         st.markdown("""
-        <div class="component-card">
-            <div class="component-name">Session State</div>
-            <div class="component-desc">Streamlit session — anlık analiz sonuçları</div>
-            <span class="component-tag tag-existing">EXISTING</span>
+        <div class="agent-detail-card green">
+            <div class="agent-name">📝 Agent 4: TC Raporcu</div>
+            <div class="agent-role">Test Report Generator</div>
+            <div class="agent-description">
+                TC değerlendirme sonuçlarını rapor formatına dönüştürür ve JIRA'ya yazar.
+            </div>
+            <div class="agent-instructions">
+                <div class="agent-instructions-title">Görevler</div>
+                <div class="agent-instruction-item">TC sonuçlarını Markdown formatına çevirir</div>
+                <div class="agent-instruction-item">Coverage metrikleri ekler</div>
+                <div class="agent-instruction-item">JIRA comment'i oluşturur</div>
+                <div class="agent-instruction-item">tc-qa-gecti/tc-qa-gecmedi label'larını yönetir</div>
+            </div>
         </div>
-        <div class="component-card">
-            <div class="component-name">Cache Layer</div>
-            <div class="component-desc">Doküman cache, API response cache (TTL: 1h)</div>
-            <span class="component-tag tag-new">NEW</span>
+        """, unsafe_allow_html=True)
+
+    st.markdown("---")
+    st.markdown("### 🎨 Design Compliance Agents")
+    st.caption("4 adet specialized agent ile Tasarım ↔ BA uyumluluk kontrolü yapar")
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+        st.markdown("""
+        <div class="agent-detail-card purple">
+            <div class="agent-name">📋 Agent 1: Requirements Extractor</div>
+            <div class="agent-role">Requirement ID Generator & Parser</div>
+            <div class="agent-description">
+                BA dokümanından gereksinimleri yapılandırılmış biçimde çıkarır ve her birine benzersiz ID verir (REQ-001, REQ-002...).
+            </div>
+            <div class="agent-instructions">
+                <div class="agent-instructions-title">Görevler</div>
+                <div class="agent-instruction-item">Her fonksiyonel gereksinimi tanımlar ve ID verir</div>
+                <div class="agent-instruction-item">Kabul kriterlerini çıkarır</div>
+                <div class="agent-instruction-item">UI bileşeni beklentilerini belirler</div>
+                <div class="agent-instruction-item">UI metinleri/label'ları aynen korur</div>
+                <div class="agent-instruction-item">İş kurallarını ve doğrulama koşullarını listeler</div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+        st.markdown("""
+        <div class="agent-detail-card purple">
+            <div class="agent-name">⚖️ Agent 3: Compliance Checker</div>
+            <div class="agent-role">Requirement ↔ Design Validator</div>
+            <div class="agent-description">
+                İş analizi gereksinimlerini tasarım ekranı analiziyle karşılaştırarak uyumluluk kontrolü yapar.
+            </div>
+            <div class="agent-instructions">
+                <div class="agent-instructions-title">Kontrol Türleri</div>
+                <div class="agent-instruction-item">Gereksinim ↔ Tasarım Eşleştirme (✅ UYUMLU / ⚠️ KISMİ / ❌ EKSİK)</div>
+                <div class="agent-instruction-item">Eksik/Fazla Özellik Tespiti</div>
+                <div class="agent-instruction-item">Acceptance Criteria Karşılaştırma</div>
+                <div class="agent-instruction-item">UI Text/Label Doğrulama</div>
+            </div>
+            <div style="margin-top: 12px; padding: 8px 12px; background: rgba(139,92,246,0.1); border-radius: 6px; border-left: 3px solid #8b5cf6;">
+                <div style="font-size: 11px; color: #94a3b8; line-height: 1.6;">
+                    <strong style="color: #8b5cf6;">Ciddiyet Seviyeleri:</strong><br>
+                    🔴 KRİTİK - İş akışı etkileniyor<br>
+                    🟡 ORTA - UX sorunu var<br>
+                    🟢 DÜŞÜK - Minör iyileştirme
+                </div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    with col2:
+        st.markdown("""
+        <div class="agent-detail-card purple">
+            <div class="agent-name">👁️ Agent 2: Screen Analyzer</div>
+            <div class="agent-role">UI/UX Vision Analyzer</div>
+            <div class="agent-description">
+                Figma ekran görüntüsünü detaylı biçimde analiz eder. Multimodal Gemini ile görsel analiz yapar.
+            </div>
+            <div class="agent-instructions">
+                <div class="agent-instructions-title">Görevler</div>
+                <div class="agent-instruction-item">TÜM UI bileşenlerini tespit eder ve listeler</div>
+                <div class="agent-instruction-item">Her bileşenin üzerindeki metni/label'ı AYNEN yazar</div>
+                <div class="agent-instruction-item">Sayfa yapısını ve navigasyon öğelerini tanımlar</div>
+                <div class="agent-instruction-item">Form alanlarının tipini belirtir (text, dropdown, checkbox, radio)</div>
+                <div class="agent-instruction-item">Görünür iş kurallarını tespit eder (zorunlu alan, validasyon)</div>
+                <div class="agent-instruction-item">Kullanıcı akışı ve etkileşim kalıplarını değerlendirir</div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+        st.markdown("""
+        <div class="agent-detail-card purple">
+            <div class="agent-name">📊 Agent 4: Report Generator</div>
+            <div class="agent-role">Compliance Report Formatter</div>
+            <div class="agent-description">
+                Uyumluluk kontrol sonuçlarını yapılandırılmış rapora dönüştürür. JIRA ticket oluşturulabilecek netlikte yazar.
+            </div>
+            <div class="agent-instructions">
+                <div class="agent-instructions-title">Rapor Bölümleri</div>
+                <div class="agent-instruction-item">📊 Uyumluluk Özet Tablosu</div>
+                <div class="agent-instruction-item">🔴 Kritik Bulgular</div>
+                <div class="agent-instruction-item">🟡 Orta Bulgular</div>
+                <div class="agent-instruction-item">🟢 Düşük Bulgular</div>
+                <div class="agent-instruction-item">✅ Uyumlu Gereksinimler</div>
+                <div class="agent-instruction-item">📝 Genel Değerlendirme</div>
+            </div>
         </div>
         """, unsafe_allow_html=True)
 
 # ═══════════════════════════════════════════════════════════
-# TAB 2: DATA FLOW
+# TAB 2: INTEGRATIONS
 # ═══════════════════════════════════════════════════════════
 with tab2:
-    st.markdown('<div style="font-family: \'Space Grotesk\', sans-serif; font-size: 22px; font-weight: 600; color: #f1f5f9; margin-bottom: 20px;">Veri Akışları</div>', unsafe_allow_html=True)
+    st.markdown('<div style="font-family: \'Space Grotesk\', sans-serif; font-size: 22px; font-weight: 600; color: #f1f5f9; margin-bottom: 20px;">Platform Entegrasyonları</div>', unsafe_allow_html=True)
 
-    # Flow 1
-    st.markdown("""
-    <div class="flow-container">
-        <div class="flow-label">Flow 1 — BA + TC Quality Assessment</div>
-        <div class="flow-row">
-            <div class="flow-node node-blue">
-                <div class="flow-node-label">JIRA Task</div>
-                <div class="flow-node-sub">Issue key ile çek</div>
-            </div>
-            <div class="flow-arrow">→</div>
-            <div class="flow-node node-cyan">
-                <div class="flow-node-label">Parse Links</div>
-                <div class="flow-node-sub">Docs + Sheets URL</div>
-            </div>
-            <div class="flow-arrow">→</div>
-            <div class="flow-node node-green">
-                <div class="flow-node-label">Fetch Docs</div>
-                <div class="flow-node-sub">BA doc + TC sheets</div>
-            </div>
-            <div class="flow-arrow">→</div>
-            <div class="flow-node node-purple">
-                <div class="flow-node-label">BA Agent</div>
-                <div class="flow-node-sub">Kalite analizi</div>
-            </div>
-            <div class="flow-arrow">→</div>
-            <div class="flow-node node-purple">
-                <div class="flow-node-label">TC Agent</div>
-                <div class="flow-node-sub">Coverage analizi</div>
-            </div>
-            <div class="flow-arrow">→</div>
-            <div class="flow-node node-orange">
-                <div class="flow-node-label">Report</div>
-                <div class="flow-node-sub">Sheets + JIRA comment</div>
-            </div>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
-
-    # Flow 2
-    st.markdown("""
-    <div class="flow-container">
-        <div class="flow-label">Flow 2 — Design Compliance Check</div>
-        <div class="flow-row">
-            <div class="flow-node node-blue">
-                <div class="flow-node-label">BA Document</div>
-                <div class="flow-node-sub">Upload / JIRA link</div>
-            </div>
-            <div class="flow-arrow">→</div>
-            <div class="flow-node node-cyan">
-                <div class="flow-node-label">Req Extract</div>
-                <div class="flow-node-sub">REQ-001, REQ-002...</div>
-            </div>
-            <div class="flow-arrow">→</div>
-            <div class="flow-node node-green">
-                <div class="flow-node-label">Figma Screens</div>
-                <div class="flow-node-sub">Image upload</div>
-            </div>
-            <div class="flow-arrow">→</div>
-            <div class="flow-node node-purple">
-                <div class="flow-node-label">UX Review Agent</div>
-                <div class="flow-node-sub">Screen ↔ Req eşleşme</div>
-            </div>
-            <div class="flow-arrow">→</div>
-            <div class="flow-node node-orange">
-                <div class="flow-node-label">Compliance Report</div>
-                <div class="flow-node-sub">Score + eksikler</div>
-            </div>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
-
-    # Flow 3
-    st.markdown("""
-    <div class="flow-container">
-        <div class="flow-label">Flow 3 — Full Pipeline (Combined)</div>
-        <div class="flow-row">
-            <div class="flow-node node-blue">
-                <div class="flow-node-label">JIRA Issue</div>
-                <div class="flow-node-sub">Tek tıkla başlat</div>
-            </div>
-            <div class="flow-arrow">→</div>
-            <div class="flow-node node-pink">
-                <div class="flow-node-label">🎯 Orchestrator</div>
-                <div class="flow-node-sub">Paralel agent dispatch</div>
-            </div>
-            <div class="flow-arrow">→</div>
-            <div class="flow-node node-purple" style="min-width: 220px;">
-                <div class="flow-node-label" style="font-size: 10px;">BA Agent ∥ TC Agent ∥ UX Agent</div>
-                <div class="flow-node-sub">Eş zamanlı çalışma</div>
-            </div>
-            <div class="flow-arrow">→</div>
-            <div class="flow-node node-green">
-                <div class="flow-node-label">Merge Results</div>
-                <div class="flow-node-sub">Unified score</div>
-            </div>
-            <div class="flow-arrow">→</div>
-            <div class="flow-node node-orange">
-                <div class="flow-node-label">Dashboard</div>
-                <div class="flow-node-sub">Sheets + JIRA + UI</div>
-            </div>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
-
-# ═══════════════════════════════════════════════════════════
-# TAB 3: PAGE STRUCTURE
-# ═══════════════════════════════════════════════════════════
-with tab3:
-    st.markdown('<div style="font-family: \'Space Grotesk\', sans-serif; font-size: 22px; font-weight: 600; color: #f1f5f9; margin-bottom: 20px;">Sayfa Yapısı</div>', unsafe_allow_html=True)
-
-    col1, col2, col3 = st.columns(3)
+    col1, col2 = st.columns(2)
 
     with col1:
         st.markdown("""
-        <div class="page-card">
-            <div class="page-card-num">01</div>
-            <div class="page-card-title">📊 Dashboard</div>
-            <div class="page-card-route">
-                /pages/1_Dashboard.py
-                <button class="copy-btn" onclick="navigator.clipboard.writeText('/pages/1_Dashboard.py'); this.classList.add('copied'); this.innerHTML='✓'; setTimeout(() => {this.classList.remove('copied'); this.innerHTML='📋'}, 2000)">
-                    📋
-                </button>
+        <div class="integration-card">
+            <div class="integration-header">
+                <div class="integration-icon">🔗</div>
+                <div>
+                    <div class="integration-name">1. n8n Webhook Proxy (Google Docs)</div>
+                    <div class="integration-endpoint">https://sh0tdie.app.n8n.cloud/webhook/google-docs-proxy</div>
+                </div>
             </div>
-            <ul class="page-card-features">
-                <li>Toplam analiz sayısı, ortalama skorlar</li>
-                <li>Son 7 gün trend grafiği (Plotly)</li>
-                <li>Proje bazlı kalite heat-map</li>
-                <li>En son 10 analiz sonucu tablosu</li>
-                <li>Agent bazlı performans metrikleri</li>
-            </ul>
+            <div class="integration-desc">
+                Google Docs API authentication bypass için n8n workflow kullanır. BA dokümanlarını proxy üzerinden çeker.
+            </div>
+            <div class="integration-methods">
+                <span class="method-badge">GET</span>
+                <span class="method-badge">?doc_id={id}</span>
+                <span class="method-badge">timeout: 120s</span>
+            </div>
+            <div style="margin-top: 12px; font-size: 11px; color: #64748b;">
+                <strong>Kullanım:</strong> BA Değerlendirme ve QA Değerlendirme pipeline'larında
+            </div>
         </div>
         """, unsafe_allow_html=True)
 
         st.markdown("""
-        <div class="page-card">
-            <div class="page-card-num">02</div>
-            <div class="page-card-title">📋 QA Değerlendirme</div>
-            <div class="page-card-route">
-                /pages/2_QA_Analysis.py
-                <button class="copy-btn" onclick="navigator.clipboard.writeText('/pages/2_QA_Analysis.py'); this.classList.add('copied'); this.innerHTML='✓'; setTimeout(() => {this.classList.remove('copied'); this.innerHTML='📋'}, 2000)">
-                    📋
-                </button>
+        <div class="integration-card">
+            <div class="integration-header">
+                <div class="integration-icon">📊</div>
+                <div>
+                    <div class="integration-name">2. n8n Webhook Proxy (Google Sheets)</div>
+                    <div class="integration-endpoint">https://sh0tdie.app.n8n.cloud/webhook/google-sheets-proxy</div>
+                </div>
             </div>
-            <ul class="page-card-features">
-                <li>JIRA issue key ile otomatik veri çekme</li>
-                <li>BA doküman kalite analizi (skor + detay)</li>
-                <li>TC coverage & completeness değerlendirme</li>
-                <li>BA vs BRD çapraz referans kontrolü</li>
-                <li>JIRA'ya otomatik comment yazma</li>
-            </ul>
+            <div class="integration-desc">
+                Google Sheets API authentication bypass için n8n workflow kullanır. TC dokümanlarını (23 sütun) proxy üzerinden çeker.
+            </div>
+            <div class="integration-methods">
+                <span class="method-badge">GET</span>
+                <span class="method-badge">?spreadsheet_id={id}</span>
+                <span class="method-badge">timeout: 120s</span>
+            </div>
+            <div style="margin-top: 12px; font-size: 11px; color: #64748b;">
+                <strong>Kullanım:</strong> QA Değerlendirme pipeline'ında
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+        st.markdown("""
+        <div class="integration-card">
+            <div class="integration-header">
+                <div class="integration-icon">🔑</div>
+                <div>
+                    <div class="integration-name">3. JIRA REST API v3</div>
+                    <div class="integration-endpoint">https://loodos.atlassian.net/rest/api/3/</div>
+                </div>
+            </div>
+            <div class="integration-desc">
+                JIRA Cloud REST API ile task yönetimi. Basic Auth (email + API token) kullanır.
+            </div>
+            <div class="integration-methods">
+                <span class="method-badge">jira_search()</span>
+                <span class="method-badge">jira_get_issue()</span>
+                <span class="method-badge">jira_add_label()</span>
+                <span class="method-badge">jira_update_labels()</span>
+                <span class="method-badge">jira_add_comment()</span>
+            </div>
+            <div style="margin-top: 12px; font-size: 11px; color: #64748b;">
+                <strong>Fonksiyonlar:</strong><br>
+                • JQL ile task arama<br>
+                • Issue detaylarını çekme<br>
+                • Label yönetimi (qa-devam-ediyor, qa-tamamlandi, qa-gecti/gecmedi)<br>
+                • Comment ekleme (Atlassian Document Format)
+            </div>
         </div>
         """, unsafe_allow_html=True)
 
     with col2:
         st.markdown("""
-        <div class="page-card">
-            <div class="page-card-num">03</div>
-            <div class="page-card-title">🎨 Design Compliance</div>
-            <div class="page-card-route">
-                /pages/3_Design_Compliance.py
-                <button class="copy-btn" onclick="navigator.clipboard.writeText('/pages/3_Design_Compliance.py'); this.classList.add('copied'); this.innerHTML='✓'; setTimeout(() => {this.classList.remove('copied'); this.innerHTML='📋'}, 2000)">
-                    📋
-                </button>
+        <div class="integration-card">
+            <div class="integration-header">
+                <div class="integration-icon">📄</div>
+                <div>
+                    <div class="integration-name">4. Google Docs Direct Export</div>
+                    <div class="integration-endpoint">https://docs.google.com/document/d/{id}/export?format=txt</div>
+                </div>
             </div>
-            <ul class="page-card-features">
-                <li>BA doküman yükleme veya JIRA'dan çekme</li>
-                <li>Figma ekran görselleri yükleme</li>
-                <li>Gereksinim listesi çıkarma (REQ-xxx)</li>
-                <li>Screen ↔ Requirement eşleşme matrisi</li>
-                <li>Compliance skoru & eksik kapsam raporu</li>
-            </ul>
+            <div class="integration-desc">
+                Public paylaşılan Google Docs'u doğrudan export endpoint ile çeker. n8n proxy'ye alternatif.
+            </div>
+            <div class="integration-methods">
+                <span class="method-badge">GET</span>
+                <span class="method-badge">Public Sharing Required</span>
+                <span class="method-badge">timeout: 30s</span>
+            </div>
+            <div style="margin-top: 12px; font-size: 11px; color: #64748b;">
+                <strong>Kullanım:</strong> Design Compliance page'de manuel BA upload için
+            </div>
         </div>
         """, unsafe_allow_html=True)
 
         st.markdown("""
-        <div class="page-card">
-            <div class="page-card-num">04</div>
-            <div class="page-card-title">🔗 JIRA Manager</div>
-            <div class="page-card-route">
-                /pages/4_JIRA_Manager.py
-                <button class="copy-btn" onclick="navigator.clipboard.writeText('/pages/4_JIRA_Manager.py'); this.classList.add('copied'); this.innerHTML='✓'; setTimeout(() => {this.classList.remove('copied'); this.innerHTML='📋'}, 2000)">
-                    📋
-                </button>
+        <div class="integration-card">
+            <div class="integration-header">
+                <div class="integration-icon">🧠</div>
+                <div>
+                    <div class="integration-name">5. Gemini 2.5 Flash API</div>
+                    <div class="integration-endpoint">Google Generative AI API</div>
+                </div>
             </div>
-            <ul class="page-card-features">
-                <li>Proje bazlı task listeleme & filtreleme</li>
-                <li>Toplu analiz başlatma (batch mode)</li>
-                <li>Label yönetimi (qa-devam, qa-tamamlandi)</li>
-                <li>Comment geçmişi görüntüleme</li>
-                <li>Task transition (status değiştirme)</li>
-            </ul>
-        </div>
-        """, unsafe_allow_html=True)
-
-    with col3:
-        st.markdown("""
-        <div class="page-card">
-            <div class="page-card-num">05</div>
-            <div class="page-card-title">📈 Raporlar</div>
-            <div class="page-card-route">
-                /pages/5_Reports.py
-                <button class="copy-btn" onclick="navigator.clipboard.writeText('/pages/5_Reports.py'); this.classList.add('copied'); this.innerHTML='✓'; setTimeout(() => {this.classList.remove('copied'); this.innerHTML='📋'}, 2000)">
-                    📋
-                </button>
+            <div class="integration-desc">
+                Tüm AI agent'ların backend'i. Agno Framework üzerinden Gemini 2.5 Flash modeli kullanır. 1M token context window.
             </div>
-            <ul class="page-card-features">
-                <li>Google Sheets'e toplu export</li>
-                <li>Sprint bazlı kalite raporu</li>
-                <li>Agent performans karşılaştırma</li>
-                <li>CSV / Excel indirme</li>
-                <li>Zaman serisi trend analizi</li>
-            </ul>
+            <div class="integration-methods">
+                <span class="method-badge">Model: gemini-2.5-flash</span>
+                <span class="method-badge">Context: 1M tokens</span>
+                <span class="method-badge">Multimodal</span>
+            </div>
+            <div style="margin-top: 12px; font-size: 11px; color: #64748b;">
+                <strong>Özellikler:</strong><br>
+                • Text generation (BA/TC değerlendirme)<br>
+                • Vision (Figma ekran analizi)<br>
+                • Structured output (JSON response)<br>
+                • Markdown formatting
+            </div>
         </div>
         """, unsafe_allow_html=True)
 
         st.markdown("""
-        <div class="page-card">
-            <div class="page-card-num">06</div>
-            <div class="page-card-title">⚙️ Ayarlar</div>
-            <div class="page-card-route">
-                /pages/6_Settings.py
-                <button class="copy-btn" onclick="navigator.clipboard.writeText('/pages/6_Settings.py'); this.classList.add('copied'); this.innerHTML='✓'; setTimeout(() => {this.classList.remove('copied'); this.innerHTML='📋'}, 2000)">
-                    📋
-                </button>
+        <div class="integration-card">
+            <div class="integration-header">
+                <div class="integration-icon">💾</div>
+                <div>
+                    <div class="integration-name">6. SQLite Database</div>
+                    <div class="integration-endpoint">Local File: data/baqa.db</div>
+                </div>
             </div>
-            <ul class="page-card-features">
-                <li>API key yönetimi (Gemini, JIRA, Google)</li>
-                <li>JIRA proje konfigürasyonu</li>
-                <li>Google Sheets hedef tablo seçimi</li>
-                <li>Agent prompt özelleştirme</li>
-                <li>Bildirim & webhook ayarları</li>
-            </ul>
+            <div class="integration-desc">
+                Platform'un ana veri deposu. Analiz sonuçları, skorlar, raporlar ve geçmiş veriler saklanır.
+            </div>
+            <div class="integration-methods">
+                <span class="method-badge">analyses</span>
+                <span class="method-badge">ba_results</span>
+                <span class="method-badge">tc_results</span>
+                <span class="method-badge">design_results</span>
+            </div>
+            <div style="margin-top: 12px; font-size: 11px; color: #64748b;">
+                <strong>Tablolar:</strong> 4 ana tablo (analyses, qa_results, design_results, jira_sync_log)
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+# ═══════════════════════════════════════════════════════════
+# TAB 3: PIPELINE FLOWS
+# ═══════════════════════════════════════════════════════════
+with tab3:
+    st.markdown('<div style="font-family: \'Space Grotesk\', sans-serif; font-size: 22px; font-weight: 600; color: #f1f5f9; margin-bottom: 20px;">3 Farklı Pipeline Akışı</div>', unsafe_allow_html=True)
+
+    # Pipeline 1: BA Değerlendirme
+    st.markdown("""
+    <div class="pipeline-flow">
+        <div class="pipeline-title">🔵 Pipeline 1: BA Değerlendirme (4-Agent Sequential)</div>
+        <div class="pipeline-steps">
+            <div class="pipeline-step">
+                <div class="pipeline-step-number">1</div>
+                <div class="pipeline-step-name">JIRA Tarayıcı</div>
+                <div class="pipeline-step-desc">JQL ile BA task'ları tarar, Google Docs URL çıkarır</div>
+            </div>
+            <div class="pipeline-arrow">→</div>
+            <div class="pipeline-step">
+                <div class="pipeline-step-number">2</div>
+                <div class="pipeline-step-name">Doküman Okuyucu</div>
+                <div class="pipeline-step-desc">n8n proxy ile BA dokümanını çeker ve parse eder</div>
+            </div>
+            <div class="pipeline-arrow">→</div>
+            <div class="pipeline-step">
+                <div class="pipeline-step-number">3</div>
+                <div class="pipeline-step-name">Kalite Değerlendirici</div>
+                <div class="pipeline-step-desc">9 kriter üzerinden AI analizi yapar (Gemini 2.5 Flash)</div>
+            </div>
+            <div class="pipeline-arrow">→</div>
+            <div class="pipeline-step">
+                <div class="pipeline-step-number">4</div>
+                <div class="pipeline-step-name">Raporcu</div>
+                <div class="pipeline-step-desc">JIRA'ya comment yazar, label'ları günceller, DB'ye kaydeder</div>
+            </div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    st.caption("**Kullanım:** BA Değerlendirme sayfasından \"⚡ Sıradakini Otomatik Değerlendir\" butonu")
+    st.caption("**Ortalama Süre:** 45-60 saniye")
+    st.caption("**Çıktı:** 9 kriter puanı, genel puan (0-100), JIRA comment, qa-gecti/qa-gecmedi label")
+
+    st.markdown("<br>", unsafe_allow_html=True)
+
+    # Pipeline 2: TC Değerlendirme
+    st.markdown("""
+    <div class="pipeline-flow">
+        <div class="pipeline-title">🟢 Pipeline 2: QA Değerlendirme (4-Agent Sequential + BA Link)</div>
+        <div class="pipeline-steps">
+            <div class="pipeline-step">
+                <div class="pipeline-step-number">1</div>
+                <div class="pipeline-step-name">JIRA & Sheet Tarayıcı</div>
+                <div class="pipeline-step-desc">TC task bulur, linked BA task'ı tespit eder, Sheet URL çıkarır</div>
+            </div>
+            <div class="pipeline-arrow">→</div>
+            <div class="pipeline-step">
+                <div class="pipeline-step-number">2</div>
+                <div class="pipeline-step-name">Doküman Birleştirici</div>
+                <div class="pipeline-step-desc">BA dokümanı + TC sheets'i n8n proxy ile çeker ve birleştirir</div>
+            </div>
+            <div class="pipeline-arrow">→</div>
+            <div class="pipeline-step">
+                <div class="pipeline-step-number">3</div>
+                <div class="pipeline-step-name">TC Değerlendirici</div>
+                <div class="pipeline-step-desc">8 kriter üzerinden AI analizi yapar, BA coverage kontrolü</div>
+            </div>
+            <div class="pipeline-arrow">→</div>
+            <div class="pipeline-step">
+                <div class="pipeline-step-number">4</div>
+                <div class="pipeline-step-name">TC Raporcu</div>
+                <div class="pipeline-step-desc">JIRA comment, tc-qa-gecti/gecmedi label, DB kayıt</div>
+            </div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    st.caption("**Kullanım:** QA Değerlendirme sayfasından \"⚡ Sıradakini Otomatik Değerlendir\" butonu")
+    st.caption("**Ortalama Süre:** 60-75 saniye (BA fetch dahil)")
+    st.caption("**Çıktı:** 8 kriter puanı, coverage metrikleri, JIRA comment, tc-qa-gecti/gecmedi label")
+
+    st.markdown("<br>", unsafe_allow_html=True)
+
+    # Pipeline 3: Design Compliance
+    st.markdown("""
+    <div class="pipeline-flow">
+        <div class="pipeline-title">🟣 Pipeline 3: Design Compliance (4-Agent Parallel + Sequential)</div>
+        <div class="pipeline-steps">
+            <div class="pipeline-step" style="background: rgba(59,130,246,0.05);">
+                <div class="pipeline-step-number">1</div>
+                <div class="pipeline-step-name">Requirements Extractor</div>
+                <div class="pipeline-step-desc">BA'dan REQ-001, REQ-002... formatında gereksinimleri çıkarır</div>
+            </div>
+            <div class="pipeline-arrow">→</div>
+            <div class="pipeline-step" style="background: rgba(139,92,246,0.05);">
+                <div class="pipeline-step-number">2</div>
+                <div class="pipeline-step-name">Screen Analyzer</div>
+                <div class="pipeline-step-desc">Figma ekranlarını Vision AI ile analiz eder (multimodal Gemini)</div>
+            </div>
+            <div class="pipeline-arrow">→</div>
+            <div class="pipeline-step" style="background: rgba(236,72,153,0.05);">
+                <div class="pipeline-step-number">3</div>
+                <div class="pipeline-step-name">Compliance Checker</div>
+                <div class="pipeline-step-desc">REQ ↔ Screen eşleştirmesi yapar, uyumluluk kontrolü</div>
+            </div>
+            <div class="pipeline-arrow">→</div>
+            <div class="pipeline-step" style="background: rgba(16,185,129,0.05);">
+                <div class="pipeline-step-number">4</div>
+                <div class="pipeline-step-name">Report Generator</div>
+                <div class="pipeline-step-desc">Uyumluluk raporu oluşturur (🔴🟡🟢 bulgular)</div>
+            </div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    st.caption("**Kullanım:** Design Compliance sayfasından \"🚀 Uyumluluk Kontrolünü Başlat\" butonu")
+    st.caption("**Ortalama Süre:** 90-120 saniye (ekran sayısına göre değişir)")
+    st.caption("**Çıktı:** Uyumluluk matrisi, kritik/orta/düşük bulgular, eksik gereksinimler, Markdown rapor")
+
+    st.markdown("---")
+    st.markdown("### 🔄 Agent İşbirliği Senaryoları")
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+        st.markdown("""
+        <div style="background: #1a2236; border: 1px solid #2a3654; border-radius: 12px; padding: 20px; margin-bottom: 14px;">
+            <div style="font-family: 'Space Grotesk', sans-serif; font-size: 16px; font-weight: 600; color: #f1f5f9; margin-bottom: 12px;">
+                📋 Senaryo 1: BA + TC Birlikte Değerlendirme
+            </div>
+            <div style="font-size: 13px; color: #94a3b8; line-height: 1.7;">
+                <strong>Akış:</strong><br>
+                1. BA Pipeline çalışır → BA skoru 75/100 (GEÇTİ)<br>
+                2. TC Pipeline tetiklenir → BA dokümanını baz alır<br>
+                3. TC Agent BA gereksinimlerini kullanarak coverage kontrolü yapar<br>
+                4. TC skoru: 82/100 (GEÇTİ, %95 coverage)<br>
+                <br>
+                <strong>Agent İşbirliği:</strong> TC Agent, BA Agent'ın çıktısını kullanarak traceability analizi yapar.
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    with col2:
+        st.markdown("""
+        <div style="background: #1a2236; border: 1px solid #2a3654; border-radius: 12px; padding: 20px; margin-bottom: 14px;">
+            <div style="font-family: 'Space Grotesk', sans-serif; font-size: 16px; font-weight: 600; color: #f1f5f9; margin-bottom: 12px;">
+                🎨 Senaryo 2: BA → Design Compliance Chain
+            </div>
+            <div style="font-size: 13px; color: #94a3b8; line-height: 1.7;">
+                <strong>Akış:</strong><br>
+                1. BA dokümanı Requirements Extractor'a verilir<br>
+                2. Figma ekranları Screen Analyzer'a verilir<br>
+                3. Compliance Checker iki agent'ın çıktısını karşılaştırır<br>
+                4. Report Generator final raporu oluşturur<br>
+                <br>
+                <strong>Agent İşbirliği:</strong> 4 agent sequential olarak çalışır, her biri bir öncekinin çıktısını kullanır.
+            </div>
         </div>
         """, unsafe_allow_html=True)
 
@@ -1054,137 +1030,68 @@ with tab4:
 
     with col1:
         st.markdown("""
-        <div class="tech-card">
-            <div class="tech-card-icon">🐍</div>
-            <div>
-                <div class="tech-card-title">Backend</div>
-                <div class="tech-card-items">Python 3.11+ · Streamlit 1.40+ · Agno Framework · asyncio</div>
+        <div style="background: #1a2236; border: 1px solid #2a3654; border-radius: 12px; padding: 18px; margin-bottom: 12px;">
+            <div style="font-size: 13px; color: #64748b; margin-bottom: 8px;">🐍 Backend</div>
+            <div style="font-size: 13px; color: #cbd5e1; line-height: 1.8;">
+                • Python 3.14<br>
+                • Streamlit 1.40+<br>
+                • Agno Framework 2.5+<br>
+                • asyncio
             </div>
         </div>
-        <div class="tech-card">
-            <div class="tech-card-icon">🧠</div>
-            <div>
-                <div class="tech-card-title">AI / LLM</div>
-                <div class="tech-card-items">Gemini 2.5 Flash (1M context) · Agno multi-agent · Structured output</div>
+
+        <div style="background: #1a2236; border: 1px solid #2a3654; border-radius: 12px; padding: 18px; margin-bottom: 12px;">
+            <div style="font-size: 13px; color: #64748b; margin-bottom: 8px;">🧠 AI / LLM</div>
+            <div style="font-size: 13px; color: #cbd5e1; line-height: 1.8;">
+                • Gemini 2.5 Flash<br>
+                • 1M token context<br>
+                • Multimodal (vision)<br>
+                • Structured output
             </div>
         </div>
         """, unsafe_allow_html=True)
 
     with col2:
         st.markdown("""
-        <div class="tech-card">
-            <div class="tech-card-icon">🔗</div>
-            <div>
-                <div class="tech-card-title">Entegrasyonlar</div>
-                <div class="tech-card-items">JIRA REST API v3 · Google Drive/Sheets API · Figma REST API</div>
+        <div style="background: #1a2236; border: 1px solid #2a3654; border-radius: 12px; padding: 18px; margin-bottom: 12px;">
+            <div style="font-size: 13px; color: #64748b; margin-bottom: 8px;">🔗 Entegrasyonlar</div>
+            <div style="font-size: 13px; color: #cbd5e1; line-height: 1.8;">
+                • JIRA REST API v3<br>
+                • n8n Webhook Proxy<br>
+                • Google Docs/Sheets<br>
+                • Figma (design upload)
             </div>
         </div>
-        <div class="tech-card">
-            <div class="tech-card-icon">💾</div>
-            <div>
-                <div class="tech-card-title">Data Storage</div>
-                <div class="tech-card-items">SQLite (lokal) · Google Sheets (paylaşılabilir) · Streamlit Session State</div>
+
+        <div style="background: #1a2236; border: 1px solid #2a3654; border-radius: 12px; padding: 18px; margin-bottom: 12px;">
+            <div style="font-size: 13px; color: #64748b; margin-bottom: 8px;">💾 Data Storage</div>
+            <div style="font-size: 13px; color: #cbd5e1; line-height: 1.8;">
+                • SQLite (lokal)<br>
+                • Session State<br>
+                • File cache (TTL: 1h)
             </div>
         </div>
         """, unsafe_allow_html=True)
 
     with col3:
         st.markdown("""
-        <div class="tech-card">
-            <div class="tech-card-icon">📊</div>
-            <div>
-                <div class="tech-card-title">Visualizasyon</div>
-                <div class="tech-card-items">Plotly · Streamlit charts · Custom CSS theming</div>
+        <div style="background: #1a2236; border: 1px solid #2a3654; border-radius: 12px; padding: 18px; margin-bottom: 12px;">
+            <div style="font-size: 13px; color: #64748b; margin-bottom: 8px;">📊 Visualization</div>
+            <div style="font-size: 13px; color: #cbd5e1; line-height: 1.8;">
+                • Plotly<br>
+                • Custom CSS<br>
+                • Gradient UI<br>
+                • Responsive grid
             </div>
         </div>
-        <div class="tech-card">
-            <div class="tech-card-icon">🚀</div>
-            <div>
-                <div class="tech-card-title">Deployment</div>
-                <div class="tech-card-items">Streamlit Cloud · GitHub Actions CI · Secrets management</div>
+
+        <div style="background: #1a2236; border: 1px solid #2a3654; border-radius: 12px; padding: 18px; margin-bottom: 12px;">
+            <div style="font-size: 13px; color: #64748b; margin-bottom: 8px;">🚀 Deployment</div>
+            <div style="font-size: 13px; color: #cbd5e1; line-height: 1.8;">
+                • Streamlit Cloud<br>
+                • GitHub Actions CI<br>
+                • Secrets management
             </div>
-        </div>
-        """, unsafe_allow_html=True)
-
-# ═══════════════════════════════════════════════════════════
-# TAB 5: DATA MODEL
-# ═══════════════════════════════════════════════════════════
-with tab5:
-    st.markdown('<div style="font-family: \'Space Grotesk\', sans-serif; font-size: 22px; font-weight: 600; color: #f1f5f9; margin-bottom: 20px;">Veri Modeli (SQLite)</div>', unsafe_allow_html=True)
-
-    col1, col2 = st.columns(2)
-
-    with col1:
-        st.markdown("""
-        <div class="db-table">
-            <div class="db-table-name">
-                analyses
-                <button class="copy-btn" onclick="navigator.clipboard.writeText('analyses'); this.classList.add('copied'); this.innerHTML='✓ Kopyalandı'; setTimeout(() => {this.classList.remove('copied'); this.innerHTML='📋 Kopyala'}, 2000)">
-                    📋 Kopyala
-                </button>
-            </div>
-            <div class="db-field">id <span class="type">INTEGER</span><span class="pk">PK</span></div>
-            <div class="db-field">jira_key <span class="type">TEXT</span></div>
-            <div class="db-field">project <span class="type">TEXT</span></div>
-            <div class="db-field">analysis_type <span class="type">ENUM(qa, design, full)</span></div>
-            <div class="db-field">status <span class="type">ENUM(pending, running, done, error)</span></div>
-            <div class="db-field">created_at <span class="type">DATETIME</span></div>
-            <div class="db-field">completed_at <span class="type">DATETIME</span></div>
-            <div class="db-field">triggered_by <span class="type">TEXT</span></div>
-        </div>
-
-        <div class="db-table">
-            <div class="db-table-name">
-                qa_results
-                <button class="copy-btn" onclick="navigator.clipboard.writeText('qa_results'); this.classList.add('copied'); this.innerHTML='✓ Kopyalandı'; setTimeout(() => {this.classList.remove('copied'); this.innerHTML='📋 Kopyala'}, 2000)">
-                    📋 Kopyala
-                </button>
-            </div>
-            <div class="db-field">id <span class="type">INTEGER</span><span class="pk">PK</span></div>
-            <div class="db-field">analysis_id <span class="type">INTEGER</span><span class="pk">FK</span></div>
-            <div class="db-field">ba_score <span class="type">FLOAT</span></div>
-            <div class="db-field">ba_detail <span class="type">JSON</span></div>
-            <div class="db-field">tc_score <span class="type">FLOAT</span></div>
-            <div class="db-field">tc_detail <span class="type">JSON</span></div>
-            <div class="db-field">tc_coverage_pct <span class="type">FLOAT</span></div>
-            <div class="db-field">overall_score <span class="type">FLOAT</span></div>
-            <div class="db-field">recommendations <span class="type">JSON</span></div>
-        </div>
-        """, unsafe_allow_html=True)
-
-    with col2:
-        st.markdown("""
-        <div class="db-table">
-            <div class="db-table-name">
-                design_results
-                <button class="copy-btn" onclick="navigator.clipboard.writeText('design_results'); this.classList.add('copied'); this.innerHTML='✓ Kopyalandı'; setTimeout(() => {this.classList.remove('copied'); this.innerHTML='📋 Kopyala'}, 2000)">
-                    📋 Kopyala
-                </button>
-            </div>
-            <div class="db-field">id <span class="type">INTEGER</span><span class="pk">PK</span></div>
-            <div class="db-field">analysis_id <span class="type">INTEGER</span><span class="pk">FK</span></div>
-            <div class="db-field">requirements_count <span class="type">INTEGER</span></div>
-            <div class="db-field">screens_count <span class="type">INTEGER</span></div>
-            <div class="db-field">compliance_score <span class="type">FLOAT</span></div>
-            <div class="db-field">coverage_matrix <span class="type">JSON</span></div>
-            <div class="db-field">missing_reqs <span class="type">JSON</span></div>
-            <div class="db-field">ux_findings <span class="type">JSON</span></div>
-        </div>
-
-        <div class="db-table">
-            <div class="db-table-name">
-                jira_sync_log
-                <button class="copy-btn" onclick="navigator.clipboard.writeText('jira_sync_log'); this.classList.add('copied'); this.innerHTML='✓ Kopyalandı'; setTimeout(() => {this.classList.remove('copied'); this.innerHTML='📋 Kopyala'}, 2000)">
-                    📋 Kopyala
-                </button>
-            </div>
-            <div class="db-field">id <span class="type">INTEGER</span><span class="pk">PK</span></div>
-            <div class="db-field">analysis_id <span class="type">INTEGER</span><span class="pk">FK</span></div>
-            <div class="db-field">action <span class="type">ENUM(comment, label, transition)</span></div>
-            <div class="db-field">jira_key <span class="type">TEXT</span></div>
-            <div class="db-field">payload <span class="type">JSON</span></div>
-            <div class="db-field">success <span class="type">BOOLEAN</span></div>
-            <div class="db-field">created_at <span class="type">DATETIME</span></div>
         </div>
         """, unsafe_allow_html=True)
 
