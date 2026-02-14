@@ -87,3 +87,29 @@ def emoji_score(p):
 
 def score_color(p):
     return "#00ff88" if p >= 8 else "#ffd700" if p >= 6 else "#ff4444"
+
+
+# ─────────────────────────────────────────────
+# BRD PIPELINE CONSTANTS
+# ─────────────────────────────────────────────
+
+MAX_REVISIONS = 3
+BA_PASS_THRESHOLD = 60
+TA_PASS_THRESHOLD = 60
+TC_PASS_THRESHOLD = 60
+CHECKPOINT_TTL_HOURS = 24
+CHUNK_OUTPUT_TOKEN_LIMIT = 16000
+QA_OUTPUT_TOKEN_LIMIT = 8000
+SONNET_MODEL = "claude-sonnet-4-20250514"
+GEMINI_MODEL = "gemini-2.5-flash"
+
+
+def get_anthropic_key() -> str:
+    """Returns Anthropic API key from session state or secrets"""
+    key = st.session_state.get("anthropic_api_key", "")
+    if not key:
+        try:
+            key = st.secrets.get("ANTHROPIC_API_KEY", "")
+        except Exception:
+            key = os.environ.get("ANTHROPIC_API_KEY", "")
+    return key
