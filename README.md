@@ -709,6 +709,28 @@ instructions = [
 
 ## 📝 Güncellemeler (Changelog)
 
+### v1.2.0 - Pipeline Sonuç Geçmiş Desteği (2025-02-15)
+
+#### Yeni Özellikler
+- ✨ **Geçmiş Pipeline Sonuçları**: Pipeline Sonuç sayfasında tüm geçmiş çalıştırmalar gösteriliyor
+  - Database'den son 50 pipeline çalıştırması çekiliyor
+  - Her pipeline sonucu ayrı expandable bölüm olarak listeleniyor
+  - Session state'ten gelen son çalışma en üstte "🔥 Son Çalıştırma" olarak gösteriliyor
+  - Her sonuç için tam BA, TA, TC tab'ları ve QA detayları mevcut
+  - Her sonuç için ayrı export butonları (DOCX, CSV, Excel)
+
+- 📊 **Pipeline İstatistikleri**:
+  - Toplam çalıştırma sayısı
+  - Ortalama BA skoru
+  - Tamamlanan pipeline sayısı
+
+- 📈 **Detaylı Sonuç Bilgileri**:
+  - Her pipeline için: BA/TA/TC skorları, revizyon sayıları, durum, süre
+  - Her aşama için QA hakem detayları ve iyileştirme önerileri
+  - Unique download button key'leri ile çakışma önlendi
+
+---
+
 ### v1.1.2 - BRD Pipeline UI İyileştirmesi (2025-02-15)
 
 #### Hata Düzeltmeleri
