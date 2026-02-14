@@ -191,6 +191,27 @@ def render_custom_sidebar(active_page="home"):
             "label": "Mimari",
             "url": "/Mimari",
             "section": "tools"
+        },
+        {
+            "key": "brd_pipeline",
+            "icon": "🚀",
+            "label": "BRD Pipeline",
+            "url": "/BRD_Pipeline",
+            "section": "pipeline"
+        },
+        {
+            "key": "pipeline_sonuc",
+            "icon": "📊",
+            "label": "Pipeline Sonuç",
+            "url": "/Pipeline_Sonuc",
+            "section": "pipeline"
+        },
+        {
+            "key": "pipeline_gecmis",
+            "icon": "📜",
+            "label": "Pipeline Geçmiş",
+            "url": "/Pipeline_Gecmis",
+            "section": "pipeline"
         }
     ]
 
@@ -234,6 +255,24 @@ def render_custom_sidebar(active_page="home"):
                 elif page["key"] == "architecture":
                     if st.button(f"{page['icon']} {page['label']}", key=f"nav_{page['key']}", use_container_width=True):
                         st.switch_page("pages/5_Mimari.py")
+
+        st.markdown('</div>', unsafe_allow_html=True)
+
+        # Pipeline section
+        st.markdown('<div class="nav-section">', unsafe_allow_html=True)
+        st.markdown('<div class="nav-section-title">BRD Pipeline</div>', unsafe_allow_html=True)
+
+        for page in pages:
+            if page["section"] == "pipeline":
+                if page["key"] == "brd_pipeline":
+                    if st.button(f"{page['icon']} {page['label']}", key=f"nav_{page['key']}", use_container_width=True):
+                        st.switch_page("pages/6_BRD_Pipeline.py")
+                elif page["key"] == "pipeline_sonuc":
+                    if st.button(f"{page['icon']} {page['label']}", key=f"nav_{page['key']}", use_container_width=True):
+                        st.switch_page("pages/7_Pipeline_Sonuc.py")
+                elif page["key"] == "pipeline_gecmis":
+                    if st.button(f"{page['icon']} {page['label']}", key=f"nav_{page['key']}", use_container_width=True):
+                        st.switch_page("pages/8_Pipeline_Gecmis.py")
 
         st.markdown('</div>', unsafe_allow_html=True)
 

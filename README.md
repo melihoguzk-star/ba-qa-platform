@@ -54,6 +54,15 @@ Figma tasarımlarını BA gereksinimleriyle karşılaştırır:
 - **Tip Bazlı Filtreleme**: BA, TC, Design analizlerini ayrı ayrı görüntüle
 - **İstatistikler**: Toplam analiz, ortalama puan, geçme oranları
 
+### 5. 🚀 BRD Pipeline (Yeni!)
+BRD dokümanından otomatik olarak İş Analizi, Teknik Analiz ve Test Case üretimi:
+- **3-Stage Pipeline**: WF1 (BA) → WF2 (TA) → WF3 (TC)
+- **Chunk-based Generation**: 2 chunk + merge stratejisi ile büyük dokümanlar
+- **QA Hakem Sistemi**: Claude Sonnet 4 üretim + Gemini 2.5 Flash değerlendirme
+- **Checkpoint System**: Her aşamada ara kayıt, revizyon desteği (max 3)
+- **DOCX/Excel Export**: BA, TA ve TC dokümanlarını Word/Excel formatında indir
+- **Kullanıcı Onaylı Akış**: Her aşama sonrası manuel onay ve düzenleme imkanı
+
 ---
 
 ## 🏗 Mimari ve Çalışma Yapısı
@@ -235,11 +244,23 @@ ba-qa-platform/
 │   ├── 2_TC_Degerlendirme.py   # TC değerlendirme sayfası
 │   ├── 3_Design_Compliance.py  # Design compliance sayfası
 │   ├── 4_Raporlar.py            # Raporlama ve analitik sayfası
-│   └── 5_Mimari.py              # Mimari dokümantasyon sayfası
+│   ├── 5_Mimari.py              # Mimari dokümantasyon sayfası
+│   ├── 6_BRD_Pipeline.py        # BRD Pipeline ana sayfa (YENI!)
+│   ├── 7_Pipeline_Sonuc.py      # Pipeline sonuç görüntüleme (YENI!)
+│   └── 8_Pipeline_Gecmis.py     # Pipeline çalıştırma geçmişi (YENI!)
+│
+├── pipeline/                   # BRD Pipeline modülleri (YENI!)
+│   └── brd/                    # BRD doküman işleme pipeline
+│       ├── __init__.py
+│       ├── orchestrator.py     # Pipeline orchestrator (BA→TA→TC)
+│       ├── checkpoint.py       # Ara kayıt sistemi
+│       └── json_repair.py      # AI JSON çıktı onarıcı
 │
 └── utils/                      # Yardımcı fonksiyonlar
     ├── __init__.py
-    └── config.py               # Genel konfigürasyon ayarları
+    ├── config.py               # Genel konfigürasyon ayarları
+    ├── text_extractor.py       # PDF/DOCX text extraction (YENI!)
+    └── export.py               # DOCX/Excel export (YENI!)
 ```
 
 ---
@@ -277,6 +298,9 @@ pip install -r requirements.txt
 
 # Gemini AI
 GEMINI_API_KEY = "your-gemini-api-key-here"
+
+# Anthropic Claude (for BRD Pipeline)
+ANTHROPIC_API_KEY = "your-anthropic-api-key-here"
 
 # JIRA
 JIRA_EMAIL = "your-email@loodos.com"
@@ -367,8 +391,10 @@ Tarayıcıda otomatik olarak `http://localhost:8501` açılacaktır.
 - **SQLite**: Database (Python built-in)
 
 ### AI
-- **Google Gemini 2.5 Flash**: 1M context, ultra hızlı analiz
+- **Google Gemini 2.5 Flash**: 1M context, ultra hızlı analiz & QA değerlendirme
 - **Model ID**: `gemini-2.5-flash`
+- **Claude Sonnet 4**: Doküman üretimi (BRD Pipeline) (YENI!)
+- **Model ID**: `claude-sonnet-4-20250514`
 
 ### Entegrasyonlar
 - **JIRA REST API**: Task yönetimi, comment, label
@@ -456,12 +482,59 @@ CREATE TABLE jira_sync_log (
 );
 ```
 
+### pipeline_runs tablosu (BRD Pipeline)
+
+```sql
+CREATE TABLE pipeline_runs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    project_name TEXT NOT NULL,       -- Proje adı
+    jira_key TEXT,                    -- JIRA task key (opsiyonel)
+    priority TEXT,                    -- Öncelik (HIGH, MEDIUM, LOW)
+    brd_filename TEXT,                -- BRD dosya adı
+    status TEXT DEFAULT 'running',    -- 'running' | 'completed' | 'failed'
+    current_stage TEXT DEFAULT 'ba',  -- 'ba' | 'ta' | 'tc'
+    ba_score REAL DEFAULT 0,          -- BA QA skoru
+    ta_score REAL DEFAULT 0,          -- TA QA skoru
+    tc_score REAL DEFAULT 0,          -- TC QA skoru
+    ba_revisions INTEGER DEFAULT 0,   -- BA revizyon sayısı
+    ta_revisions INTEGER DEFAULT 0,   -- TA revizyon sayısı
+    tc_revisions INTEGER DEFAULT 0,   -- TC revizyon sayısı
+    total_time_sec INTEGER DEFAULT 0, -- Toplam süre (saniye)
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+```
+
+### stage_outputs tablosu (BRD Pipeline)
+
+```sql
+CREATE TABLE stage_outputs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    pipeline_run_id INTEGER NOT NULL, -- pipeline_runs.id foreign key
+    stage TEXT NOT NULL,              -- 'ba' | 'ta' | 'tc'
+    content_json TEXT,                -- Üretilen içerik (JSON)
+    qa_result_json TEXT,              -- QA değerlendirme sonucu (JSON)
+    revision_number INTEGER DEFAULT 0,-- Revizyon numarası (0, 1, 2, 3)
+    forced_pass INTEGER DEFAULT 0,    -- Zorla geçirildi mi (1: evet, 0: hayır)
+    generation_time_sec INTEGER DEFAULT 0, -- Üretim süresi (saniye)
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (pipeline_run_id) REFERENCES pipeline_runs(id)
+);
+```
+
 ### Önemli Fonksiyonlar
 
+**Analiz Fonksiyonları:**
 - `init_db()`: Database'i oluşturur (otomatik)
 - `save_analysis()`: Yeni analiz kaydı ekler
 - `get_recent_analyses(limit, analysis_type)`: Son analizleri getirir
 - `get_stats()`: İstatistikleri döner (toplam, tip bazlı, 7 günlük)
+
+**BRD Pipeline Fonksiyonları:**
+- `create_pipeline_run()`: Yeni pipeline çalıştırması oluşturur
+- `update_pipeline_run()`: Pipeline durumunu günceller
+- `save_pipeline_stage_output()`: Aşama çıktısını kaydeder
+- `get_recent_pipeline_runs(limit)`: Son pipeline çalıştırmalarını getirir
+- `get_pipeline_run_outputs(run_id)`: Belirli bir pipeline'ın tüm çıktılarını getirir
 
 ---
 
@@ -635,6 +708,41 @@ instructions = [
 ---
 
 ## 📝 Güncellemeler (Changelog)
+
+### v1.1 - BRD Pipeline Entegrasyonu (2025-02-15)
+
+#### Yeni Özellikler
+- ✅ **BRD Pipeline Modülü**: BRD dokümanından otomatik BA, TA, TC üretimi
+  - WF1: İş Analizi (BA) üretimi - Ekran bazlı, FR/BR numaralandırmalı
+  - WF2: Teknik Analiz (TA) üretimi - API endpoint, DTO, validasyon
+  - WF3: Test Case (TC) üretimi - 56+ test case, 23 kolonlu Loodos şablonu
+- ✅ **Chunk-based Generation**: Büyük dokümanlar için 2 chunk + merge stratejisi
+- ✅ **QA Hakem Sistemi**: Claude Sonnet 4 üretim + Gemini 2.5 Flash değerlendirme
+- ✅ **Checkpoint System**: Her aşamada ara kayıt ve revizyon desteği (max 3)
+- ✅ **DOCX/Excel Export**: BA, TA ve TC dokümanlarını Word/Excel olarak indir
+- ✅ **Pipeline Geçmişi**: Tüm pipeline çalıştırmalarının detaylı geçmişi
+- ✅ **Anthropic Claude API**: BRD Pipeline için Claude Sonnet 4 entegrasyonu
+- ✅ **PDF/DOCX Parser**: BRD doküman okuma (PyPDF2, python-docx)
+- ✅ 3 Yeni Sayfa: BRD Pipeline, Pipeline Sonuç, Pipeline Geçmiş
+
+#### Database Güncellemeleri
+- ✅ `pipeline_runs` tablosu: Pipeline çalıştırma geçmişi
+- ✅ `stage_outputs` tablosu: Her aşamanın çıktı ve QA sonuçları
+
+#### Teknik İyileştirmeler
+- ✅ Modüler pipeline yapısı: `pipeline/brd/` klasörü
+- ✅ BRD-specific agent prompts: `agents/brd_prompts.py`
+- ✅ Text extraction utilities: PDF ve DOCX okuma
+- ✅ Export utilities: Doküman formatına dönüştürme
+- ✅ Sidebar'a "BRD Pipeline" section eklendi
+
+#### Bilinen Sorunlar
+- Figma API entegrasyonu yok (manuel upload)
+- Webhook desteği henüz aktif değil
+- Multi-tenant (çoklu proje) desteği yok
+- BRD Pipeline JIRA entegrasyonu henüz yok (sadece manuel BRD upload)
+
+---
 
 ### v1.0 - İlk Sürüm (2025-02-14)
 

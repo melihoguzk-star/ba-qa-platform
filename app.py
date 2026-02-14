@@ -247,6 +247,8 @@ st.markdown("""
 _gemini_key = ""
 _jira_email = ""
 _jira_token = ""
+_anthropic_key = ""
+
 try:
     _gemini_key = st.secrets.get("GEMINI_API_KEY", "")
 except Exception:
@@ -257,6 +259,10 @@ try:
 except Exception:
     _jira_email = os.environ.get("JIRA_EMAIL", "")
     _jira_token = os.environ.get("JIRA_API_TOKEN", "")
+try:
+    _anthropic_key = st.secrets.get("ANTHROPIC_API_KEY", "")
+except Exception:
+    _anthropic_key = os.environ.get("ANTHROPIC_API_KEY", "")
 
 # Session state'e yaz
 if _gemini_key:
@@ -265,6 +271,8 @@ if _jira_email:
     st.session_state["jira_email"] = _jira_email
 if _jira_token:
     st.session_state["jira_token"] = _jira_token
+if _anthropic_key:
+    st.session_state["anthropic_api_key"] = _anthropic_key
 
 # ── Custom Sidebar ──
 render_custom_sidebar(active_page="home")
