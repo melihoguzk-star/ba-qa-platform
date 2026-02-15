@@ -704,7 +704,7 @@ with tab1:
 
     st.markdown("---")
     st.markdown("### 🚀 BRD Pipeline Agents (Dual AI System)")
-    st.caption("3 adet generation agent (Claude Sonnet 4) + QA referee agents (Gemini 2.5 Flash)")
+    st.caption("3 adet generation agent (Anthropic Claude) + QA referee agents (Gemini 2.5 Flash)")
 
     col1, col2 = st.columns(2)
 
@@ -712,7 +712,7 @@ with tab1:
         st.markdown("""
         <div class="agent-detail-card blue">
             <div class="agent-name">📋 WF1: İş Analizi Generator</div>
-            <div class="agent-role">Business Requirements → BA Document (Claude Sonnet 4)</div>
+            <div class="agent-role">Business Requirements → BA Document</div>
             <div class="agent-description">
                 BRD dokümanından ekran bazlı İş Analizi üretir. 2-chunk strategy ile büyük dokümanları işler, sonra merge eder.
             </div>
@@ -739,7 +739,7 @@ with tab1:
         st.markdown("""
         <div class="agent-detail-card blue">
             <div class="agent-name">🧪 WF3: Test Case Generator</div>
-            <div class="agent-role">BA + TA → Test Cases (Claude Sonnet 4)</div>
+            <div class="agent-role">BA + TA → Test Cases</div>
             <div class="agent-description">
                 BA ve TA dokümanlarından 23-kolonlu Loodos şablonunda detaylı test case'ler üretir. Happy path + edge cases.
             </div>
@@ -765,7 +765,7 @@ with tab1:
         st.markdown("""
         <div class="agent-detail-card blue">
             <div class="agent-name">⚙️ WF2: Teknik Analiz Generator</div>
-            <div class="agent-role">BA → Technical Analysis (Claude Sonnet 4)</div>
+            <div class="agent-role">BA → Technical Analysis</div>
             <div class="agent-description">
                 İş analizinden teknik analiz üretir. API endpoint, DTO, validasyon kuralları, cURL örnekleri ile developer-ready çıktı verir.
             </div>
@@ -947,15 +947,15 @@ with tab2:
             <div class="integration-header">
                 <div class="integration-icon">🤖</div>
                 <div>
-                    <div class="integration-name">6. Claude Sonnet 4 API (Anthropic)</div>
+                    <div class="integration-name">6. Anthropic Claude API</div>
                     <div class="integration-endpoint">Anthropic Messages API</div>
                 </div>
             </div>
             <div class="integration-desc">
-                BRD Pipeline'da doküman generation için kullanılır. Claude Sonnet 4 modeli ile BA, TA, TC üretimi yapar. 200k token context window.
+                BRD Pipeline'da doküman generation için kullanılır. Anthropic Claude modeli ile BA, TA, TC üretimi yapar. 200k token context window.
             </div>
             <div class="integration-methods">
-                <span class="method-badge">Model: claude-sonnet-4-20250514</span>
+                <span class="method-badge">Provider: Anthropic</span>
                 <span class="method-badge">Context: 200k tokens</span>
                 <span class="method-badge">Max Output: 16k tokens</span>
             </div>
@@ -1121,19 +1121,19 @@ with tab3:
             <div class="pipeline-step">
                 <div class="pipeline-step-number">1</div>
                 <div class="pipeline-step-name">WF1: BA Generator</div>
-                <div class="pipeline-step-desc">BRD → BA (Claude Sonnet 4) → QA (Gemini) → Manual Review</div>
+                <div class="pipeline-step-desc">BRD → BA (Claude AI) → QA (Gemini) → Manual Review</div>
             </div>
             <div class="pipeline-arrow">→</div>
             <div class="pipeline-step">
                 <div class="pipeline-step-number">2</div>
                 <div class="pipeline-step-name">WF2: TA Generator</div>
-                <div class="pipeline-step-desc">BA → TA (Claude Sonnet 4) → QA (Gemini) → Manual Review</div>
+                <div class="pipeline-step-desc">BA → TA (Claude AI) → QA (Gemini) → Manual Review</div>
             </div>
             <div class="pipeline-arrow">→</div>
             <div class="pipeline-step">
                 <div class="pipeline-step-number">3</div>
                 <div class="pipeline-step-name">WF3: TC Generator</div>
-                <div class="pipeline-step-desc">BA + TA → TC (Claude Sonnet 4) → QA (Gemini) → Export</div>
+                <div class="pipeline-step-desc">BA + TA → TC (Claude AI) → QA (Gemini) → Export</div>
             </div>
         </div>
     </div>
@@ -1209,7 +1209,7 @@ with tab4:
             <div style="font-size: 13px; color: #64748b; margin-bottom: 8px;">🧠 AI / LLM</div>
             <div style="font-size: 13px; color: #cbd5e1; line-height: 1.8;">
                 • Gemini 2.5 Flash (Evaluation)<br>
-                • Claude Sonnet 4 (Generation)<br>
+                • Anthropic Claude (Generation)<br>
                 • 200k-1M token context<br>
                 • Multimodal (vision)<br>
                 • Structured JSON output
