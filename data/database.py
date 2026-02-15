@@ -223,7 +223,7 @@ def save_openapi_spec(run_id: int, stage: str, openapi_json: str):
     if row:
         conn.execute(
             "UPDATE stage_outputs SET openapi_spec_json = ? WHERE id = ?",
-            (openapi_json, row["id"])
+            (openapi_json, row[0])  # Use index instead of key
         )
         conn.commit()
     conn.close()
