@@ -8,7 +8,8 @@ import time
 import io
 import streamlit as st
 from utils.config import (BA_PASS_THRESHOLD, TA_PASS_THRESHOLD, TC_PASS_THRESHOLD, MAX_REVISIONS,
-                          ANTHROPIC_MODELS, GEMINI_MODELS, ALL_MODELS, SONNET_MODEL, GEMINI_MODEL)
+                          ANTHROPIC_MODELS, GEMINI_MODELS, ALL_MODELS, SONNET_MODEL, GEMINI_MODEL,
+                          get_gemini_keys, get_anthropic_key)
 from components.sidebar import render_custom_sidebar
 
 st.set_page_config(page_title="BRD Pipeline", page_icon="📋", layout="wide")
@@ -16,35 +17,28 @@ render_custom_sidebar(active_page="brd_pipeline")
 st.title("📋 BRD Pipeline — Adım Adım")
 
 # ── API Key kontrolü ──
-anthropic_key = st.session_state.get("anthropic_api_key", "")
-gemini_key = st.session_state.get("gemini_key", "")
-
-# Session state'de yoksa secrets'tan dene
-if not anthropic_key:
-    try:
-        anthropic_key = st.secrets.get("ANTHROPIC_API_KEY", "")
-    except Exception:
-        pass
-
-if not gemini_key:
-    try:
-        gemini_key = st.secrets.get("GEMINI_API_KEY", "")
-    except Exception:
-        pass
+anthropic_key = get_anthropic_key()
+gemini_keys = get_gemini_keys()
 
 # Hala yoksa hata ver
-if not anthropic_key or not gemini_key:
+if not anthropic_key or not gemini_keys:
     st.error("⚠️ API Key'ler bulunamadı!")
     st.info("🔑 Lütfen `.streamlit/secrets.toml` dosyasına ANTHROPIC_API_KEY ve GEMINI_API_KEY ekleyin.")
     st.code("""# .streamlit/secrets.toml
 ANTHROPIC_API_KEY = "your-key-here"
-GEMINI_API_KEY = "your-key-here"
+GEMINI_API_KEYS = [
+    "key-1",
+    "key-2",
+    "key-3"
+]
 """, language="toml")
     st.stop()
 
 # Session state'e yaz (diğer sayfalar için)
 st.session_state["anthropic_api_key"] = anthropic_key
-st.session_state["gemini_key"] = gemini_key
+st.session_state["gemini_keys"] = gemini_keys
+st.session_state["gemini_key"] = gemini_keys[0] if gemini_keys else ""  # Backward compatibility
+
 
 if "pipeline_step" not in st.session_state:
     st.session_state.pipeline_step = "upload"
