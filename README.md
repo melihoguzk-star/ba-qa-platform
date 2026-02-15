@@ -1,5 +1,11 @@
 # 🧠 BA&QA Intelligence Platform
 
+[![Tests & Quality](https://github.com/YOUR_USERNAME/ba-qa-platform/actions/workflows/test.yml/badge.svg)](https://github.com/YOUR_USERNAME/ba-qa-platform/actions/workflows/test.yml)
+[![codecov](https://codecov.io/gh/YOUR_USERNAME/ba-qa-platform/branch/main/graph/badge.svg)](https://codecov.io/gh/YOUR_USERNAME/ba-qa-platform)
+[![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
+[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 Birleşik BA değerlendirme, QA test analizi, design compliance ve JIRA otomasyon platformu.
 BA ve QA ekibinin tüm kalite süreçlerini tek çatı altında toplayan Streamlit dashboard.
 

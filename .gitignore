@@ -1,8 +1,74 @@
+# Secrets & Configuration
 .streamlit/secrets.toml
+.env
+.env.*
+secrets.toml
+
+# Python
 venv/
+.venv/
+env/
+ENV/
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Data & Databases
 # data/baqa.db  # Uncommented to persist data on Streamlit Cloud
 data/custom_models.json
 # data/pipeline.db  # Uncommented to persist data on Streamlit Cloud
-__pycache__/
-*.pyc
+
+# IDE
 .idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Testing & Coverage
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+coverage.xml
+*.cover
+.hypothesis/
+junit.xml
+
+# Build & Distribution
+build/
+dist/
+*.egg-info/
+.eggs/
+*.egg
+
+# MyPy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Documentation
+docs/_build/
+site/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+*.tmp
+*.bak
+*.swp
+.temp/
+
+# Security reports
+bandit-report.json
+safety-report.json
