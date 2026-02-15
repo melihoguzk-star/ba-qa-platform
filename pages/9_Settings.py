@@ -126,22 +126,20 @@ tab1, tab2, tab3 = st.tabs(["🔑 API Keys", "⚙️ Rotation Settings", "📊 S
 with tab1:
     st.header("🔑 API Key Management")
     
-    # Gemini Keys Section
-    st.subheader("Gemini API Keys (Rotation Pool)")
+    # Gemini Keys Section (Read-Only)
+    st.subheader("🔑 Gemini API Keys")
+    st.info("💡 **To add/remove keys:** Edit `.streamlit/secrets.toml` file and restart Streamlit.")
     
-    if not st.session_state.gemini_keys:
-        st.warning("⚠️ No Gemini API keys configured. Add at least one key to use the platform.")
-    else:
-        st.success(f"✅ {len(st.session_state.gemini_keys)} key(s) configured")
-    
-    # Display existing keys
     if st.session_state.gemini_keys:
-        for idx, key in enumerate(st.session_state.gemini_keys):
-            with st.container():
-                col1, col2, col3 = st.columns([3, 2, 1])
+        st.success(f"✅ **{len(st.session_state.gemini_keys)} key(s) configured**")
+        
+        for idx, key in enumerate(st.session_state.gemini_keys, 1):
+            with st.expander(f"Key {idx}: {mask_key(key)}", expanded=False):
+                col1, col2 = st.columns([3, 1])
                 
                 with col1:
-                    st.text(f"Key {idx + 1}: {mask_key(key)}")
+                    st.code(mask_key(key), language="text")
+                    st.caption(f"Hash: {hash_key(key)}")
                     
                     # Show status if key manager exists
                     if st.session_state.key_manager:
@@ -156,90 +154,34 @@ with tab1:
                             st.caption(f"⚠️ Quota Exceeded ({requests} requests)")
                         elif status == "invalid":
                             st.caption(f"❌ Invalid")
-                        else:
-                            st.caption(f"Status: {status}")
                 
                 with col2:
                     if st.button("🧪 Test", key=f"test_{idx}", use_container_width=True):
-                        with st.spinner("Testing key..."):
+                        with st.spinner("Testing..."):
                             is_valid, message = test_gemini_key(key)
                             if is_valid:
                                 st.success(message)
                             else:
                                 st.error(message)
-                
-                with col3:
-                    if st.button("🗑️ Remove", key=f"remove_{idx}", use_container_width=True, type="secondary"):
-                        st.session_state.gemini_keys.pop(idx)
-                        # Recreate key manager
-                        if st.session_state.gemini_keys:
-                            st.session_state.key_manager = APIKeyManager(st.session_state.gemini_keys, provider="gemini")
-                        else:
-                            st.session_state.key_manager = None
-                        # Auto-save to secrets.toml
-                        success, message = save_keys_to_secrets()
-                        if success:
-                            st.toast("✅ Key removed and saved!", icon="✅")
-                        else:
-                            st.toast(f"⚠️ Key removed but save failed: {message}", icon="⚠️")
-                        st.rerun()
-                
-                st.divider()
-    
-    # Add new key
-    st.subheader("➕ Add New Gemini Key")
-    
-    with st.form("add_key_form"):
-        new_key = st.text_input(
-            "API Key",
-            type="password",
-            placeholder="AIzaSy...",
-            help="Enter your Gemini API key from Google AI Studio"
-        )
-        
-        col1, col2 = st.columns(2)
-        with col1:
-            submit = st.form_submit_button("➕ Add Key", use_container_width=True, type="primary")
-        with col2:
-            test_before_add = st.checkbox("Test before adding", value=True)
-        
-        if submit and new_key:
-            # Check if key already exists
-            if new_key in st.session_state.gemini_keys:
-                st.error("❌ This key is already in the pool")
-            else:
-                # Test key if requested
-                if test_before_add:
-                    with st.spinner("Testing key..."):
-                        is_valid, message = test_gemini_key(new_key)
-                        if is_valid:
-                            st.session_state.gemini_keys.append(new_key)
-                            # Recreate key manager
-                            st.session_state.key_manager = APIKeyManager(st.session_state.gemini_keys, provider="gemini")
-                            # Auto-save to secrets.toml
-                            success, save_msg = save_keys_to_secrets()
-                            if success:
-                                st.toast("✅ Key added and saved!", icon="✅")
-                                st.success(f"✅ Key added! Total: {len(st.session_state.gemini_keys)} keys")
-                            else:
-                                st.toast(f"⚠️ Key added but save failed: {save_msg}", icon="⚠️")
-                                st.warning(f"Key added to session but not saved: {save_msg}")
-                            st.rerun()
-                        else:
-                            st.error(f"Cannot add key: {message}")
-                else:
-                    st.session_state.gemini_keys.append(new_key)
-                    # Recreate key manager
-                    st.session_state.key_manager = APIKeyManager(st.session_state.gemini_keys, provider="gemini")
-                    # Auto-save to secrets.toml
-                    success, save_msg = save_keys_to_secrets()
-                    if success:
-                        st.toast("✅ Key added and saved!", icon="✅")
-                        st.success(f"✅ Key added! Total: {len(st.session_state.gemini_keys)} keys")
-                    else:
-                        st.toast(f"⚠️ Key added but save failed: {save_msg}", icon="⚠️")
-                        st.warning(f"Key added to session but not saved: {save_msg}")
-                    st.rerun()
+    else:
+        st.warning("⚠️ **No Gemini keys configured**")
+        st.markdown("""
+        **To add keys:**
+        1. Open `.streamlit/secrets.toml`
+        2. Add single key:
+           ```toml
+           GEMINI_API_KEY = "your-key-here"
+           ```
+        3. Or multiple keys:
+           ```toml
+           GEMINI_API_KEYS = [
+               "key-1",
+               "key-2",
+               "key-3"
+           ]
+           ```
+        4. Restart Streamlit
+        """)
     
     st.divider()
     
