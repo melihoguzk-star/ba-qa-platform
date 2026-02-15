@@ -25,25 +25,25 @@ BA-QA Intelligence Platform'u, manuel süreçleri minimize eden, AI-destekli, ot
 ## 🎯 Near-term Priorities (v1.1 - v1.2)
 
 ### v1.1 Features (In Progress)
-- [ ] **Figma API entegrasyonu** (otomatik frame çekme) - *See Phase 1 below*
-- [ ] **Figma Screen - BA Feature Mapping**: Her ekran görüntüsünü BA'deki ilgili user story/feature ile eşleştirme
+- [ ] Figma API entegrasyonu (otomatik frame çekme) - *See Phase 1 below*
+- [ ] Figma Screen - BA Feature Mapping Her ekran görüntüsünü BA'deki ilgili user story/feature ile eşleştirme
   - Manuel etiketleme UI'ı (her ekran için "Hangi feature ile ilgili?" dropdown)
   - Semantic similarity ile otomatik öneri
   - Sadece ilgili ekranların TC generation'a gönderilmesi
   - Alakasız ekranların filtrelenmesi
-- [ ] **JIRA Webhook desteği** (otomatik tetikleme)
-- [ ] **Multi-tenant proje desteği**
-- [ ] **Kullanıcı yetkilendirme sistemi**
-- [ ] **Email bildirimleri**
-- [ ] **Slack entegrasyonu**
+- [ ] JIRA Webhook desteği (otomatik tetikleme)
+- [ ] Multi-tenant proje desteği
+- [ ] Kullanıcı yetkilendirme sistemi
+- [ ] Email bildirimleri
+- [ ] Slack entegrasyonu
 
 ### v1.2 Features (Planned)
-- [ ] **BA + TC + Design combo analizi** (full pipeline)
-- [ ] **Custom kriter tanımlama**
-- [ ] **Agent prompt'ları UI'dan düzenleme**
-- [ ] **PostgreSQL desteği** (SQLite yerine)
-- [ ] **Docker containerization**
-- [ ] **CI/CD pipeline**
+- [ ] BA + TC + Design combo analizi (full pipeline)
+- [ ] Custom kriter tanımlama
+- [ ] Agent prompt'ları UI'dan düzenleme
+- [ ] PostgreSQL desteği (SQLite yerine)
+- [ ] Docker containerization
+- [ ] CI/CD pipeline
 
 ---
 
@@ -57,9 +57,9 @@ BA-QA Intelligence Platform'u, manuel süreçleri minimize eden, AI-destekli, ot
 
 ##### 1.1 Temel Entegrasyon (Öncelik: Yüksek)
 - [ ] Figma API client implementasyonu
-- [ ] Figma file URL input (UI)
+- [*] Figma file URL input (UI)
 - [ ] Frame/page listing ve selection
-- [ ] PNG/SVG export functionality
+- [*] PNG/SVG export functionality
 - [ ] BA dokümanına otomatik wireframe ekleme
 - [ ] Image storage ve versiyonlama
 

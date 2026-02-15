@@ -85,6 +85,61 @@ def init_db():
 
         CREATE INDEX IF NOT EXISTS idx_pipeline_runs_created ON pipeline_runs(created_at);
         CREATE INDEX IF NOT EXISTS idx_stage_outputs_run ON stage_outputs(pipeline_run_id);
+
+        -- Document Repository Tables (Phase 1)
+        CREATE TABLE IF NOT EXISTS projects (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL UNIQUE,
+            description TEXT DEFAULT '',
+            jira_project_key TEXT DEFAULT '',
+            tags TEXT DEFAULT '[]',
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        );
+
+        CREATE TABLE IF NOT EXISTS documents (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            project_id INTEGER NOT NULL,
+            doc_type TEXT CHECK(doc_type IN ('ba', 'ta', 'tc')) NOT NULL,
+            title TEXT NOT NULL,
+            description TEXT DEFAULT '',
+            current_version INTEGER DEFAULT 1,
+            tags TEXT DEFAULT '[]',
+            status TEXT DEFAULT 'active' CHECK(status IN ('active', 'archived', 'draft')),
+            jira_keys TEXT DEFAULT '[]',
+            created_by TEXT DEFAULT 'system',
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+        );
+
+        CREATE TABLE IF NOT EXISTS document_versions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            document_id INTEGER NOT NULL,
+            version_number INTEGER NOT NULL,
+            content_json TEXT NOT NULL,
+            change_summary TEXT DEFAULT '',
+            created_by TEXT DEFAULT 'system',
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (document_id) REFERENCES documents(id) ON DELETE CASCADE,
+            UNIQUE(document_id, version_number)
+        );
+
+        CREATE TABLE IF NOT EXISTS document_sections (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            version_id INTEGER NOT NULL,
+            section_type TEXT NOT NULL,
+            section_title TEXT NOT NULL,
+            content_json TEXT NOT NULL,
+            order_index INTEGER DEFAULT 0,
+            FOREIGN KEY (version_id) REFERENCES document_versions(id) ON DELETE CASCADE
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_documents_project ON documents(project_id);
+        CREATE INDEX IF NOT EXISTS idx_documents_type ON documents(doc_type);
+        CREATE INDEX IF NOT EXISTS idx_documents_status ON documents(status);
+        CREATE INDEX IF NOT EXISTS idx_document_versions_doc ON document_versions(document_id);
+        CREATE INDEX IF NOT EXISTS idx_document_sections_version ON document_sections(version_id);
     """)
     conn.commit()
     conn.close()
@@ -485,6 +540,311 @@ def get_openapi_spec(run_id: int, stage: str = 'ta') -> str:
     ).fetchone()
     conn.close()
     return row["openapi_spec_json"] if row else None
+
+
+# ─────────────────────────────────────────────
+# Document Repository Functions (Phase 1)
+# ─────────────────────────────────────────────
+
+def create_project(name: str, description: str = "", jira_project_key: str = "", tags: list = None) -> int:
+    """Create a new project."""
+    conn = get_db()
+    tags_json = json.dumps(tags or [], ensure_ascii=False)
+    cur = conn.execute(
+        "INSERT INTO projects (name, description, jira_project_key, tags, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)",
+        (name, description, jira_project_key, tags_json, datetime.now().isoformat(), datetime.now().isoformat())
+    )
+    project_id = cur.lastrowid
+    conn.commit()
+    conn.close()
+    return project_id
+
+
+def get_projects(status: str = None, search: str = None) -> list:
+    """Get all projects with optional filters."""
+    conn = get_db()
+
+    query = "SELECT * FROM projects WHERE 1=1"
+    params = []
+
+    if search:
+        query += " AND (name LIKE ? OR description LIKE ?)"
+        search_term = f"%{search}%"
+        params.extend([search_term, search_term])
+
+    query += " ORDER BY updated_at DESC"
+
+    rows = conn.execute(query, params).fetchall()
+    conn.close()
+
+    result = []
+    for row in rows:
+        project = dict(row)
+        project['tags'] = json.loads(project.get('tags', '[]'))
+        result.append(project)
+
+    return result
+
+
+def get_project_by_id(project_id: int) -> dict:
+    """Get a project by ID."""
+    conn = get_db()
+    row = conn.execute("SELECT * FROM projects WHERE id = ?", (project_id,)).fetchone()
+    conn.close()
+
+    if row:
+        project = dict(row)
+        project['tags'] = json.loads(project.get('tags', '[]'))
+        return project
+    return None
+
+
+def create_document(project_id: int, doc_type: str, title: str, content_json: dict,
+                   description: str = "", tags: list = None, jira_keys: list = None,
+                   created_by: str = "system") -> int:
+    """Create a new document with initial version."""
+    conn = get_db()
+
+    # Create document record
+    tags_json = json.dumps(tags or [], ensure_ascii=False)
+    jira_keys_json = json.dumps(jira_keys or [], ensure_ascii=False)
+
+    cur = conn.execute(
+        """INSERT INTO documents (project_id, doc_type, title, description, current_version,
+           tags, jira_keys, created_by, created_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+        (project_id, doc_type, title, description, 1, tags_json, jira_keys_json,
+         created_by, datetime.now().isoformat(), datetime.now().isoformat())
+    )
+    doc_id = cur.lastrowid
+
+    # Create initial version
+    conn.execute(
+        """INSERT INTO document_versions (document_id, version_number, content_json,
+           change_summary, created_by, created_at) VALUES (?, ?, ?, ?, ?, ?)""",
+        (doc_id, 1, json.dumps(content_json, ensure_ascii=False),
+         "Initial version", created_by, datetime.now().isoformat())
+    )
+
+    conn.commit()
+    conn.close()
+    return doc_id
+
+
+def get_documents(project_id: int = None, doc_type: str = None, status: str = "active",
+                 search: str = None, tags: list = None) -> list:
+    """Get documents with optional filters."""
+    conn = get_db()
+
+    query = "SELECT * FROM documents WHERE 1=1"
+    params = []
+
+    if project_id:
+        query += " AND project_id = ?"
+        params.append(project_id)
+
+    if doc_type:
+        query += " AND doc_type = ?"
+        params.append(doc_type)
+
+    if status:
+        query += " AND status = ?"
+        params.append(status)
+
+    if search:
+        query += " AND (title LIKE ? OR description LIKE ?)"
+        search_term = f"%{search}%"
+        params.extend([search_term, search_term])
+
+    query += " ORDER BY updated_at DESC"
+
+    rows = conn.execute(query, params).fetchall()
+    conn.close()
+
+    result = []
+    for row in rows:
+        doc = dict(row)
+        doc['tags'] = json.loads(doc.get('tags', '[]'))
+        doc['jira_keys'] = json.loads(doc.get('jira_keys', '[]'))
+
+        # Filter by tags if provided
+        if tags:
+            if not any(tag in doc['tags'] for tag in tags):
+                continue
+
+        result.append(doc)
+
+    return result
+
+
+def get_document_by_id(doc_id: int) -> dict:
+    """Get a document by ID."""
+    conn = get_db()
+    row = conn.execute("SELECT * FROM documents WHERE id = ?", (doc_id,)).fetchone()
+    conn.close()
+
+    if row:
+        doc = dict(row)
+        doc['tags'] = json.loads(doc.get('tags', '[]'))
+        doc['jira_keys'] = json.loads(doc.get('jira_keys', '[]'))
+        return doc
+    return None
+
+
+def update_document(doc_id: int, **kwargs):
+    """Update document metadata."""
+    conn = get_db()
+
+    # Add updated_at timestamp
+    kwargs['updated_at'] = datetime.now().isoformat()
+
+    # Handle JSON fields
+    if 'tags' in kwargs and isinstance(kwargs['tags'], list):
+        kwargs['tags'] = json.dumps(kwargs['tags'], ensure_ascii=False)
+    if 'jira_keys' in kwargs and isinstance(kwargs['jira_keys'], list):
+        kwargs['jira_keys'] = json.dumps(kwargs['jira_keys'], ensure_ascii=False)
+
+    sets = ", ".join(f"{k} = ?" for k in kwargs)
+    vals = list(kwargs.values()) + [doc_id]
+
+    conn.execute(f"UPDATE documents SET {sets} WHERE id = ?", vals)
+    conn.commit()
+    conn.close()
+
+
+def create_document_version(doc_id: int, content_json: dict, change_summary: str = "",
+                            created_by: str = "system") -> int:
+    """Create a new version of a document."""
+    conn = get_db()
+
+    # Get current version number
+    current_doc = conn.execute("SELECT current_version FROM documents WHERE id = ?", (doc_id,)).fetchone()
+    if not current_doc:
+        conn.close()
+        raise ValueError(f"Document {doc_id} not found")
+
+    new_version = current_doc["current_version"] + 1
+
+    # Insert new version
+    cur = conn.execute(
+        """INSERT INTO document_versions (document_id, version_number, content_json,
+           change_summary, created_by, created_at) VALUES (?, ?, ?, ?, ?, ?)""",
+        (doc_id, new_version, json.dumps(content_json, ensure_ascii=False),
+         change_summary, created_by, datetime.now().isoformat())
+    )
+    version_id = cur.lastrowid
+
+    # Update document's current version
+    conn.execute(
+        "UPDATE documents SET current_version = ?, updated_at = ? WHERE id = ?",
+        (new_version, datetime.now().isoformat(), doc_id)
+    )
+
+    conn.commit()
+    conn.close()
+    return version_id
+
+
+def get_document_versions(doc_id: int) -> list:
+    """Get all versions of a document."""
+    conn = get_db()
+    rows = conn.execute(
+        "SELECT * FROM document_versions WHERE document_id = ? ORDER BY version_number DESC",
+        (doc_id,)
+    ).fetchall()
+    conn.close()
+
+    result = []
+    for row in rows:
+        version = dict(row)
+        version['content_json'] = json.loads(version['content_json'])
+        result.append(version)
+
+    return result
+
+
+def get_latest_version(doc_id: int) -> dict:
+    """Get the latest version of a document."""
+    conn = get_db()
+    row = conn.execute(
+        """SELECT * FROM document_versions WHERE document_id = ?
+           ORDER BY version_number DESC LIMIT 1""",
+        (doc_id,)
+    ).fetchone()
+    conn.close()
+
+    if row:
+        version = dict(row)
+        version['content_json'] = json.loads(version['content_json'])
+        return version
+    return None
+
+
+def create_document_sections(version_id: int, sections: list):
+    """Create document sections for a version.
+
+    Args:
+        version_id: Version ID
+        sections: List of dicts with {section_type, section_title, content_json, order_index}
+    """
+    conn = get_db()
+
+    for section in sections:
+        conn.execute(
+            """INSERT INTO document_sections (version_id, section_type, section_title,
+               content_json, order_index) VALUES (?, ?, ?, ?, ?)""",
+            (version_id, section['section_type'], section['section_title'],
+             json.dumps(section['content_json'], ensure_ascii=False), section.get('order_index', 0))
+        )
+
+    conn.commit()
+    conn.close()
+
+
+def get_document_sections(version_id: int) -> list:
+    """Get all sections for a document version."""
+    conn = get_db()
+    rows = conn.execute(
+        "SELECT * FROM document_sections WHERE version_id = ? ORDER BY order_index",
+        (version_id,)
+    ).fetchall()
+    conn.close()
+
+    result = []
+    for row in rows:
+        section = dict(row)
+        section['content_json'] = json.loads(section['content_json'])
+        result.append(section)
+
+    return result
+
+
+def get_document_stats() -> dict:
+    """Get document repository statistics."""
+    conn = get_db()
+
+    total_projects = conn.execute("SELECT COUNT(*) as c FROM projects").fetchone()["c"]
+    total_docs = conn.execute("SELECT COUNT(*) as c FROM documents WHERE status='active'").fetchone()["c"]
+
+    docs_by_type = conn.execute(
+        "SELECT doc_type, COUNT(*) as c FROM documents WHERE status='active' GROUP BY doc_type"
+    ).fetchall()
+
+    recent_docs = conn.execute(
+        """SELECT d.*, p.name as project_name FROM documents d
+           LEFT JOIN projects p ON d.project_id = p.id
+           WHERE d.status='active'
+           ORDER BY d.updated_at DESC LIMIT 10"""
+    ).fetchall()
+
+    conn.close()
+
+    return {
+        "total_projects": total_projects,
+        "total_documents": total_docs,
+        "by_type": [dict(r) for r in docs_by_type],
+        "recent_documents": [dict(r) for r in recent_docs]
+    }
 
 
 # Initialize on import
