@@ -17,15 +17,17 @@ from typing import Dict, List, Any, Optional, Union, cast
 
 def generate_openapi_spec(
     ta_content: dict,
+    ba_content: dict,
     project_name: str,
     version: str = "1.0.0",
     base_path: str = "/api/v1"
 ) -> dict:
     """
-    TA JSON'ından OpenAPI 3.0.4 spec oluşturur.
+    TA ve BA JSON'ından OpenAPI 3.0.4 spec oluşturur.
     
     Args:
         ta_content: Teknik Analiz JSON içeriği
+        ba_content: Business Analiz JSON içeriği
         project_name: Proje adı
         version: API versiyonu
         base_path: Base URL path (örn: /api/v1/bo-myservice)
@@ -545,19 +547,21 @@ def validate_openapi_spec(openapi_spec: dict) -> tuple[bool, str]:
 
 def generate_openapi_with_ai(
     ta_content: dict,
+    ba_content: dict,
     project_name: str,
     anthropic_key: str,
     gemini_key: str,
     version: str = "1.0.0",
     base_path: str = "/api/v1",
-    model: Optional[str] = None,
+    model: str = None,
     log=None
 ) -> dict:
     """
-    AI kullanarak OpenAPI spec oluşturur.
+    AI ile zenginleştirilmiş OpenAPI spec oluşturur (BA + TA kombinasyonu).
     
     Args:
         ta_content: Teknik Analiz JSON içeriği
+        ba_content: Business Analiz JSON içeriği
         project_name: Proje adı
         anthropic_key: Anthropic API key
         gemini_key: Gemini API key
@@ -580,8 +584,11 @@ def generate_openapi_with_ai(
     ta_summary = json.dumps({
         "genel_tanim": ta.get("genel_tanim", {}),
         "api_endpoint_ozeti": ta.get("api_endpoint_ozeti", []),
-        "request_response_modelleri": ta.get("request_response_modelleri", [])
+        "request_response_modelleri": ta.get("request_response_modeller", [])
     }, ensure_ascii=False, indent=2)
+
+    # BA içeriğini özetle
+    ba_summary = json.dumps(ba_content, ensure_ascii=False, indent=2)
     
     # User prompt oluştur
     user_prompt = f"""PROJE: {project_name}
@@ -591,7 +598,10 @@ BASE_PATH: {base_path}
 TEKNİK ANALİZ:
 {ta_summary}
 
-Yukarıdaki Teknik Analiz'den Loodos standartlarına %100 uyumlu OpenAPI 3.0.4 spec oluştur.
+BUSINESS ANALİZ:
+{ba_summary}
+
+Yukarıdaki Teknik Analiz ve Business Analiz'den Loodos standartlarına %100 uyumlu OpenAPI 3.0.4 spec oluştur.
 
 ZORUNLU:
 - EnliqResponse wrapper kullan
@@ -714,19 +724,21 @@ def validate_loodos_standards(openapi_spec: Dict[str, Any]) -> tuple[bool, List[
 
 def generate_openapi_spec_hybrid(
     ta_content: dict,
+    ba_content: dict,
     project_name: str,
     anthropic_key: str,
     gemini_key: str,
     version: str = "1.0.0",
     base_path: str = "/api/v1",
-    model: Optional[str] = None,
+    model: str = None,
     log=None
 ) -> dict:
     """
-    Hybrid OpenAPI generation: AI ile dene, validation başarısız olursa code-based'e düş.
+    Hybrid OpenAPI generation: AI ile dene (BA+TA), başarısız olursa code-based'e düş.
     
     Args:
         ta_content: Teknik Analiz JSON içeriği
+        ba_content: Business Analiz JSON içeriği
         project_name: Proje adı
         anthropic_key: Anthropic API key
         gemini_key: Gemini API key
@@ -742,7 +754,7 @@ def generate_openapi_spec_hybrid(
     try:
         # AI ile generate et
         spec = generate_openapi_with_ai(
-            ta_content, project_name, anthropic_key, gemini_key,
+            ta_content, ba_content, project_name, anthropic_key, gemini_key,
             version, base_path, model, log
         )
         
@@ -768,7 +780,7 @@ def generate_openapi_spec_hybrid(
                 log("    🔄 Code-based generation'a geçiliyor...")
             
             # Fallback to code-based
-            return generate_openapi_spec(ta_content, project_name, version, base_path)
+            return generate_openapi_spec(ta_content, ba_content, project_name, version, base_path)
     
     except Exception as e:
         if log:
@@ -777,4 +789,4 @@ def generate_openapi_spec_hybrid(
             log("    🔄 Code-based generation'a geçiliyor...")
 
         # Fallback to code-based
-        return generate_openapi_spec(ta_content, project_name, version, base_path)
+        return generate_openapi_spec(ta_content, ba_content, project_name, version, base_path)

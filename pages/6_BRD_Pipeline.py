@@ -657,6 +657,7 @@ elif step == "ta_qa":
         with st.spinner("OpenAPI spec oluşturuluyor..."):
             openapi_result = generate_openapi(
                 st.session_state.ta_content,
+                st.session_state.ba_content,
                 st.session_state.project_name,
                 log,
                 anthropic_key,

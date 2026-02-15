@@ -261,12 +261,13 @@ def finalize_stage(run_id, stage, content, qa_result, revision_count, forced_pas
     save_stage_output(run_id, stage, content, qa_result, revision_count, forced_pass, gen_time)
 
 
-def generate_openapi(ta_content, project_name, log, anthropic_key, gemini_key, 
+def generate_openapi(ta_content, ba_content, project_name, log, anthropic_key, gemini_key, 
                      base_path="/api/v1", model=None, use_ai=True):
-    """TA içeriğinden OpenAPI 3.0.4 spec oluşturur.
+    """TA ve BA içeriğinden OpenAPI 3.0.4 spec oluşturur.
     
     Args:
         ta_content: Teknik Analiz JSON içeriği
+        ba_content: Business Analiz JSON içeriği
         project_name: Proje adı
         log: Log fonksiyonu
         anthropic_key: Anthropic API key
@@ -296,6 +297,7 @@ def generate_openapi(ta_content, project_name, log, anthropic_key, gemini_key,
             log("    🤖 AI-assisted generation...")
             spec = generate_openapi_spec_hybrid(
                 ta_content=ta_content,
+                ba_content=ba_content,
                 project_name=project_name,
                 anthropic_key=anthropic_key,
                 gemini_key=gemini_key,
@@ -308,6 +310,7 @@ def generate_openapi(ta_content, project_name, log, anthropic_key, gemini_key,
             log("    ⚙️ Code-based generation...")
             spec = generate_openapi_spec(
                 ta_content=ta_content,
+                ba_content=ba_content,
                 project_name=project_name,
                 version="1.0.0",
                 base_path=base_path
