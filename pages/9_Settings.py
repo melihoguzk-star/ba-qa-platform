@@ -1,0 +1,315 @@
+"""
+Settings Page - API Key Management & Configuration
+"""
+import streamlit as st
+from utils.config import get_gemini_keys
+from utils.key_manager import APIKeyManager
+from datetime import datetime
+import hashlib
+
+st.set_page_config(page_title="Settings", page_icon="⚙️", layout="wide")
+
+# Initialize session state for keys
+if "gemini_keys" not in st.session_state:
+    st.session_state.gemini_keys = get_gemini_keys()
+
+if "key_manager" not in st.session_state:
+    if st.session_state.gemini_keys:
+        st.session_state.key_manager = APIKeyManager(st.session_state.gemini_keys, provider="gemini")
+    else:
+        st.session_state.key_manager = None
+
+
+def mask_key(key: str) -> str:
+    """Mask API key for display"""
+    if len(key) < 12:
+        return f"{key[:4]}***{key[-4:]}"
+    return f"{key[:8]}***{key[-4:]}"
+
+
+def hash_key(key: str) -> str:
+    """Create short hash of key"""
+    return hashlib.sha256(key.encode()).hexdigest()[:8]
+
+
+def test_gemini_key(key: str) -> tuple[bool, str]:
+    """Test if Gemini API key is valid"""
+    try:
+        from google import genai
+        client = genai.Client(api_key=key)
+        # Simple test call
+        response = client.models.generate_content(
+            model="gemini-2.0-flash-exp",
+            contents="Say 'OK' if you can read this.",
+            config=genai.types.GenerateContentConfig(
+                max_output_tokens=10,
+                temperature=0.0,
+            ),
+        )
+        if response.text:
+            return True, "✅ Key is valid"
+        return False, "❌ No response from API"
+    except Exception as e:
+        error_msg = str(e)
+        if "api key not valid" in error_msg.lower() or "invalid" in error_msg.lower():
+            return False, "❌ Invalid API key"
+        elif "quota" in error_msg.lower():
+            return True, "⚠️ Key valid but quota exceeded"
+        else:
+            return False, f"❌ Error: {error_msg[:100]}"
+
+
+# Header
+st.title("⚙️ Settings")
+st.markdown("Manage API keys, rotation settings, and view usage statistics.")
+
+# Tabs
+tab1, tab2, tab3 = st.tabs(["🔑 API Keys", "⚙️ Rotation Settings", "📊 Statistics"])
+
+# ============================================================================
+# TAB 1: API KEYS MANAGEMENT
+# ============================================================================
+with tab1:
+    st.header("🔑 API Key Management")
+    
+    # Gemini Keys Section
+    st.subheader("Gemini API Keys (Rotation Pool)")
+    
+    if not st.session_state.gemini_keys:
+        st.warning("⚠️ No Gemini API keys configured. Add at least one key to use the platform.")
+    else:
+        st.success(f"✅ {len(st.session_state.gemini_keys)} key(s) configured")
+    
+    # Display existing keys
+    if st.session_state.gemini_keys:
+        for idx, key in enumerate(st.session_state.gemini_keys):
+            with st.container():
+                col1, col2, col3 = st.columns([3, 2, 1])
+                
+                with col1:
+                    st.text(f"Key {idx + 1}: {mask_key(key)}")
+                    
+                    # Show status if key manager exists
+                    if st.session_state.key_manager:
+                        key_hash = hash_key(key)
+                        stats = st.session_state.key_manager.usage_stats.get(key_hash, {})
+                        status = stats.get("status", "unknown")
+                        requests = stats.get("requests", 0)
+                        
+                        if status == "active":
+                            st.caption(f"✅ Active ({requests} requests)")
+                        elif status == "quota_exceeded":
+                            st.caption(f"⚠️ Quota Exceeded ({requests} requests)")
+                        elif status == "invalid":
+                            st.caption(f"❌ Invalid")
+                        else:
+                            st.caption(f"Status: {status}")
+                
+                with col2:
+                    if st.button("🧪 Test", key=f"test_{idx}", use_container_width=True):
+                        with st.spinner("Testing key..."):
+                            is_valid, message = test_gemini_key(key)
+                            if is_valid:
+                                st.success(message)
+                            else:
+                                st.error(message)
+                
+                with col3:
+                    if st.button("🗑️ Remove", key=f"remove_{idx}", use_container_width=True, type="secondary"):
+                        st.session_state.gemini_keys.pop(idx)
+                        # Recreate key manager
+                        if st.session_state.gemini_keys:
+                            st.session_state.key_manager = APIKeyManager(st.session_state.gemini_keys, provider="gemini")
+                        else:
+                            st.session_state.key_manager = None
+                        st.rerun()
+                
+                st.divider()
+    
+    # Add new key
+    st.subheader("➕ Add New Gemini Key")
+    
+    with st.form("add_key_form"):
+        new_key = st.text_input(
+            "API Key",
+            type="password",
+            placeholder="AIzaSy...",
+            help="Enter your Gemini API key from Google AI Studio"
+        )
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            submit = st.form_submit_button("➕ Add Key", use_container_width=True, type="primary")
+        with col2:
+            test_before_add = st.checkbox("Test before adding", value=True)
+        
+        if submit and new_key:
+            # Check if key already exists
+            if new_key in st.session_state.gemini_keys:
+                st.error("❌ This key is already in the pool")
+            else:
+                # Test key if requested
+                if test_before_add:
+                    with st.spinner("Testing key..."):
+                        is_valid, message = test_gemini_key(new_key)
+                        if is_valid:
+                            st.session_state.gemini_keys.append(new_key)
+                            # Recreate key manager
+                            st.session_state.key_manager = APIKeyManager(st.session_state.gemini_keys, provider="gemini")
+                            st.success(f"✅ Key added successfully! Total: {len(st.session_state.gemini_keys)} keys")
+                            st.rerun()
+                        else:
+                            st.error(f"Cannot add key: {message}")
+                else:
+                    st.session_state.gemini_keys.append(new_key)
+                    # Recreate key manager
+                    st.session_state.key_manager = APIKeyManager(st.session_state.gemini_keys, provider="gemini")
+                    st.success(f"✅ Key added! Total: {len(st.session_state.gemini_keys)} keys")
+                    st.rerun()
+    
+    st.divider()
+    
+    # Anthropic Key Section
+    st.subheader("Anthropic API Key (Claude)")
+    
+    anthropic_key = st.session_state.get("anthropic_key", "")
+    
+    if anthropic_key:
+        st.text(f"Key: {mask_key(anthropic_key)}")
+        st.caption("✅ Configured")
+        if st.button("🗑️ Remove Anthropic Key"):
+            del st.session_state["anthropic_key"]
+            st.rerun()
+    else:
+        st.info("ℹ️ No Anthropic key configured. Add one to use Claude models.")
+        
+        with st.form("add_anthropic_key"):
+            new_anthropic_key = st.text_input(
+                "Anthropic API Key",
+                type="password",
+                placeholder="sk-ant-...",
+                help="Enter your Anthropic API key"
+            )
+            
+            if st.form_submit_button("➕ Add Anthropic Key", use_container_width=True):
+                if new_anthropic_key:
+                    st.session_state.anthropic_key = new_anthropic_key
+                    st.success("✅ Anthropic key added!")
+                    st.rerun()
+
+# ============================================================================
+# TAB 2: ROTATION SETTINGS
+# ============================================================================
+with tab2:
+    st.header("⚙️ Rotation Settings")
+    
+    if not st.session_state.gemini_keys or len(st.session_state.gemini_keys) < 2:
+        st.warning("⚠️ Add at least 2 Gemini keys to enable rotation.")
+    else:
+        st.success(f"✅ Rotation enabled with {len(st.session_state.gemini_keys)} keys")
+    
+    st.subheader("Rotation Strategy")
+    
+    rotation_strategy = st.radio(
+        "Select rotation strategy:",
+        ["Least Used", "Round Robin", "Random"],
+        index=0,
+        help="Least Used: Selects the key with fewest requests (default)"
+    )
+    
+    st.info(f"ℹ️ Current strategy: **{rotation_strategy}**")
+    
+    st.divider()
+    
+    st.subheader("Auto-Reset Settings")
+    
+    auto_reset = st.checkbox(
+        "Enable daily quota reset",
+        value=True,
+        help="Automatically reset quota status at 00:00 UTC"
+    )
+    
+    if auto_reset:
+        st.success("✅ Keys will be reset daily at 00:00 UTC")
+    
+    st.divider()
+    
+    st.subheader("Manual Actions")
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        if st.button("🔄 Reset All Keys Now", use_container_width=True):
+            if st.session_state.key_manager:
+                st.session_state.key_manager.reset_all_keys()
+                st.success("✅ All keys reset successfully!")
+                st.rerun()
+    
+    with col2:
+        if st.button("📊 Refresh Statistics", use_container_width=True):
+            st.rerun()
+
+# ============================================================================
+# TAB 3: STATISTICS
+# ============================================================================
+with tab3:
+    st.header("📊 Usage Statistics")
+    
+    if not st.session_state.key_manager:
+        st.info("ℹ️ No statistics available. Add Gemini keys to start tracking.")
+    else:
+        stats = st.session_state.key_manager.get_stats()
+        
+        # Overview metrics
+        col1, col2, col3, col4 = st.columns(4)
+        
+        with col1:
+            st.metric("Total Keys", stats["total_keys"])
+        with col2:
+            st.metric("Active Keys", stats["active_keys"], 
+                     delta=None if stats["active_keys"] == stats["total_keys"] else f"-{stats['failed_keys']}")
+        with col3:
+            st.metric("Total Requests", stats["total_requests"])
+        with col4:
+            st.metric("Total Errors", stats["total_errors"])
+        
+        st.divider()
+        
+        # Per-key statistics
+        st.subheader("Per-Key Statistics")
+        
+        if stats["keys"]:
+            for key_stat in stats["keys"]:
+                with st.expander(f"🔑 {key_stat['key_preview']}", expanded=False):
+                    col1, col2 = st.columns(2)
+                    
+                    with col1:
+                        st.metric("Status", key_stat["status"].replace("_", " ").title())
+                        st.metric("Requests", key_stat["requests"])
+                    
+                    with col2:
+                        st.metric("Errors", key_stat["errors"])
+                        if key_stat["last_used"]:
+                            st.caption(f"Last used: {key_stat['last_used']}")
+                    
+                    if key_stat["last_error"]:
+                        st.error(f"Last error: {key_stat['last_error'][:100]}")
+        else:
+            st.info("ℹ️ No usage data yet. Keys will appear here after first use.")
+        
+        st.divider()
+        
+        # Key distribution chart (if we have data)
+        if stats["total_requests"] > 0:
+            st.subheader("Request Distribution")
+            
+            chart_data = {
+                key_stat["key_preview"]: key_stat["requests"] 
+                for key_stat in stats["keys"]
+            }
+            
+            st.bar_chart(chart_data)
+
+# Footer
+st.divider()
+st.caption("💡 Tip: Add multiple Gemini keys to increase your daily quota and enable automatic rotation.")
