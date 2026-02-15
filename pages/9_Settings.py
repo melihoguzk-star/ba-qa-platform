@@ -51,7 +51,7 @@ def test_gemini_key(key: str) -> tuple[bool, str]:
         client = genai.Client(api_key=key)
         # Simple test call
         response = client.models.generate_content(
-            model="gemini-2.0-flash-exp",
+            model="gemini-2.5-flash",
             contents="Say 'OK' if you can read this.",
             config=genai.types.GenerateContentConfig(
                 max_output_tokens=10,
