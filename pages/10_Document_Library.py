@@ -11,9 +11,11 @@ from data.database import (
     create_project, get_projects, get_project_by_id,
     create_document, get_documents, get_document_by_id, update_document,
     create_document_version, get_document_versions, get_latest_version,
-    get_document_stats, get_documents_with_content
+    get_document_stats, get_documents_with_content,
+    get_template_candidates, get_document_lineage
 )
 from pipeline.document_matching import find_similar
+from pipeline.document_adaptation import DocumentAdapter
 
 st.set_page_config(page_title="Document Library", page_icon="📚", layout="wide")
 
@@ -84,7 +86,7 @@ with st.sidebar:
     st.header("Navigation")
     page = st.radio(
         "Select Page",
-        ["📊 Dashboard", "📁 Projects", "📄 Documents", "⬆️ Upload Document"],
+        ["📊 Dashboard", "📁 Projects", "📄 Documents", "📝 Create from Template", "⬆️ Upload Document"],
         label_visibility="collapsed"
     )
 
@@ -314,6 +316,15 @@ elif page == "📄 Documents":
                     if doc_tags:
                         st.markdown("**Tags:** " + " ".join([f'<span class="tag">{tag}</span>' for tag in doc_tags]), unsafe_allow_html=True)
 
+                    # Phase 3: Lineage information
+                    if doc.get('source_document_id'):
+                        lineage = get_document_lineage(doc['id'])
+                        if lineage and lineage['source']:
+                            source = lineage['source']
+                            st.markdown(f"🌳 **Adapted from:** [{source['title']}](#) (ID: {source['id']})")
+                            if doc.get('adaptation_notes'):
+                                st.caption(f"_{doc['adaptation_notes']}_")
+
                 with col_b:
                     if st.button("View Content", key=f"view_{doc['id']}", use_container_width=True):
                         st.session_state['view_doc_id'] = doc['id']
@@ -323,6 +334,9 @@ elif page == "📄 Documents":
 
                     if st.button("🔍 Find Similar", key=f"similar_{doc['id']}", use_container_width=True):
                         st.session_state['similar_doc_id'] = doc['id']
+
+                    if st.button("🌳 View Lineage", key=f"lineage_{doc['id']}", use_container_width=True):
+                        st.session_state['lineage_doc_id'] = doc['id']
 
                 # View content
                 if st.session_state.get('view_doc_id') == doc['id']:
@@ -433,6 +447,65 @@ elif page == "📄 Documents":
                                 st.info("No similar documents found. This document is unique!")
                         else:
                             st.warning("No content available for similarity matching")
+
+                # Document lineage (Phase 3)
+                if st.session_state.get('lineage_doc_id') == doc['id']:
+                    st.divider()
+                    st.subheader("🌳 Document Lineage")
+
+                    lineage = get_document_lineage(doc['id'])
+
+                    if lineage:
+                        # Source document
+                        if lineage['source']:
+                            source = lineage['source']
+                            st.markdown("### 📥 Source Template")
+                            st.markdown(f"""
+                            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                                        padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">
+                                <div style="color: white; font-weight: 600; margin-bottom: 0.3rem;">
+                                    📄 {source['title']}
+                                </div>
+                                <div style="color: rgba(255,255,255,0.8); font-size: 0.85rem;">
+                                    Type: {source['doc_type'].upper()} • Version: v{source['current_version']}
+                                </div>
+                            </div>
+                            """, unsafe_allow_html=True)
+
+                            if doc.get('adaptation_notes'):
+                                st.info(f"**Adaptation Notes:** {doc['adaptation_notes']}")
+
+                        # Derived documents
+                        if lineage['derived']:
+                            st.markdown("### 📤 Derived Documents")
+                            st.markdown(f"**{len(lineage['derived'])} document(s) created from this template:**")
+
+                            for derived in lineage['derived']:
+                                st.markdown(f"""
+                                <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+                                            padding: 1rem; border-radius: 8px; margin-bottom: 0.5rem;">
+                                    <div style="color: white; font-weight: 600; margin-bottom: 0.3rem;">
+                                        📄 {derived['title']}
+                                    </div>
+                                    <div style="color: rgba(255,255,255,0.8); font-size: 0.85rem;">
+                                        Created: {derived['created_at'][:10]} by {derived['created_by']}
+                                    </div>
+                                    {f'<div style="color: rgba(255,255,255,0.9); font-size: 0.8rem; margin-top: 0.3rem;">{derived.get("adaptation_notes", "")}</div>' if derived.get('adaptation_notes') else ''}
+                                </div>
+                                """, unsafe_allow_html=True)
+
+                        # Lineage stats
+                        if not lineage['source'] and not lineage['derived']:
+                            st.info("This document has no lineage. It was created independently.")
+                        else:
+                            col_x, col_y = st.columns(2)
+                            with col_x:
+                                st.metric("Lineage Depth", lineage['lineage_depth'])
+                            with col_y:
+                                st.metric("Derived Documents", len(lineage['derived']))
+
+                    else:
+                        st.warning("Unable to load lineage information")
     else:
         st.info("No documents found. Upload your first document to get started!")
 
@@ -535,12 +608,254 @@ elif page == "⬆️ Upload Document":
             if cancel:
                 st.rerun()
 
+# ─────────────────────────────────────────────
+# CREATE FROM TEMPLATE PAGE (PHASE 3)
+# ─────────────────────────────────────────────
+elif page == "📝 Create from Template":
+    st.header("📝 Create from Template")
+    st.markdown("**Reuse & Adapt** — Create new documents based on existing templates")
+
+    # Step indicator
+    if 'template_step' not in st.session_state:
+        st.session_state['template_step'] = 1
+
+    step = st.session_state['template_step']
+
+    # Progress indicator
+    progress_cols = st.columns(3)
+    with progress_cols[0]:
+        st.markdown(f"{'🟢' if step >= 1 else '⚪'} **1. Select Template**")
+    with progress_cols[1]:
+        st.markdown(f"{'🟢' if step >= 2 else '⚪'} **2. Adapt Content**")
+    with progress_cols[2]:
+        st.markdown(f"{'🟢' if step >= 3 else '⚪'} **3. Save Document**")
+
+    st.divider()
+
+    # ─── STEP 1: SELECT TEMPLATE ───
+    if step == 1:
+        st.subheader("Step 1: Select a Template")
+
+        # Filters
+        col1, col2 = st.columns(2)
+        with col1:
+            template_type = st.selectbox("Document Type", ["All Types", "BA", "TA", "TC"])
+            type_filter = None if template_type == "All Types" else template_type.lower()
+
+        with col2:
+            projects = get_projects()
+            project_options = ["All Projects"] + [p['name'] for p in projects]
+            selected_project_name = st.selectbox("Project", project_options)
+            project_filter = None
+            if selected_project_name != "All Projects":
+                project_filter = next((p['id'] for p in projects if p['name'] == selected_project_name), None)
+
+        # Get template candidates
+        templates = get_template_candidates(
+            doc_type=type_filter,
+            project_id=project_filter,
+            limit=20
+        )
+
+        if templates:
+            st.markdown(f"**Found {len(templates)} templates:**")
+
+            for template in templates:
+                with st.expander(f"📄 {template['title']}", expanded=False):
+                    col_a, col_b = st.columns([3, 1])
+
+                    with col_a:
+                        st.markdown(f"**Project:** {template.get('project_name', 'Unknown')}")
+                        st.markdown(f"**Type:** {template['doc_type'].upper()}")
+                        st.markdown(f"**Description:** {template.get('description', 'No description')}")
+
+                        tags = template.get('tags', [])
+                        if tags:
+                            st.markdown("**Tags:** " + " ".join([f'<span class="tag">{tag}</span>' for tag in tags]), unsafe_allow_html=True)
+
+                        times_used = template.get('times_used_as_template', 0)
+                        if times_used > 0:
+                            st.markdown(f"✨ **Used as template {times_used} time(s)**")
+
+                    with col_b:
+                        if st.button("Use Template", key=f"use_template_{template['id']}", type="primary", use_container_width=True):
+                            # Load template with content
+                            latest_version = get_latest_version(template['id'])
+                            if latest_version:
+                                template['content_json'] = latest_version['content_json']
+                                st.session_state['selected_template'] = template
+                                st.session_state['template_step'] = 2
+                                st.rerun()
+                            else:
+                                st.error("❌ No content available for this template")
+        else:
+            st.info("No templates found. Upload documents first to use them as templates.")
+
+    # ─── STEP 2: ADAPT CONTENT ───
+    elif step == 2:
+        if 'selected_template' not in st.session_state:
+            st.session_state['template_step'] = 1
+            st.rerun()
+
+        template = st.session_state['selected_template']
+
+        st.subheader(f"Step 2: Adapt Template")
+        st.markdown(f"**Template:** {template['title']}")
+
+        # Initialize adapter
+        if 'adapter' not in st.session_state:
+            st.session_state['adapter'] = DocumentAdapter()
+            st.session_state['adapted_content'] = template['content_json'].copy()
+
+        # Adaptation form
+        col1, col2 = st.columns(2)
+
+        with col1:
+            st.markdown("### Template Preview")
+            st.json(template['content_json'])
+
+        with col2:
+            st.markdown("### Adapted Version")
+
+            # Basic info
+            new_title = st.text_input("New Title*", value=f"{template['title']} (Copy)")
+            new_description = st.text_area("Description", value=template.get('description', ''))
+
+            # Tags
+            template_tags = template.get('tags', [])
+            tags_input = st.text_input("Tags (comma separated)", value=", ".join(template_tags))
+
+            # JIRA keys
+            jira_input = st.text_input("JIRA Keys (comma separated)", value="")
+
+            # Adaptation notes
+            adaptation_notes = st.text_area(
+                "Adaptation Notes",
+                value="",
+                help="Describe what you changed and why"
+            )
+
+            st.divider()
+
+            # Content preview
+            st.json(st.session_state['adapted_content'])
+
+        # Action buttons
+        col_a, col_b, col_c = st.columns(3)
+
+        with col_a:
+            if st.button("⬅️ Back to Templates", use_container_width=True):
+                st.session_state['template_step'] = 1
+                st.rerun()
+
+        with col_b:
+            if st.button("🔄 Reset to Template", use_container_width=True):
+                st.session_state['adapted_content'] = template['content_json'].copy()
+                st.session_state['adapter'] = DocumentAdapter()
+                st.rerun()
+
+        with col_c:
+            if st.button("➡️ Continue to Save", type="primary", use_container_width=True):
+                if not new_title:
+                    st.error("❌ Please provide a title")
+                else:
+                    st.session_state['new_title'] = new_title
+                    st.session_state['new_description'] = new_description
+                    st.session_state['new_tags'] = [t.strip() for t in tags_input.split(",")] if tags_input else []
+                    st.session_state['new_jira_keys'] = [k.strip() for k in jira_input.split(",")] if jira_input else []
+                    st.session_state['adaptation_notes'] = adaptation_notes
+                    st.session_state['template_step'] = 3
+                    st.rerun()
+
+    # ─── STEP 3: SAVE DOCUMENT ───
+    elif step == 3:
+        if 'selected_template' not in st.session_state:
+            st.session_state['template_step'] = 1
+            st.rerun()
+
+        template = st.session_state['selected_template']
+
+        st.subheader("Step 3: Review & Save")
+
+        # Summary
+        st.markdown("### Document Summary")
+
+        col1, col2 = st.columns(2)
+
+        with col1:
+            st.markdown("**Source Template:**")
+            st.markdown(f"- Title: {template['title']}")
+            st.markdown(f"- Type: {template['doc_type'].upper()}")
+            st.markdown(f"- Project: {template.get('project_name', 'Unknown')}")
+
+        with col2:
+            st.markdown("**New Document:**")
+            st.markdown(f"- Title: {st.session_state.get('new_title')}")
+            st.markdown(f"- Tags: {', '.join(st.session_state.get('new_tags', []))}")
+            st.markdown(f"- JIRA: {', '.join(st.session_state.get('new_jira_keys', []))}")
+
+        if st.session_state.get('adaptation_notes'):
+            st.markdown("**Adaptation Notes:**")
+            st.info(st.session_state['adaptation_notes'])
+
+        st.divider()
+
+        # Action buttons
+        col_a, col_b = st.columns(2)
+
+        with col_a:
+            if st.button("⬅️ Back to Adapt", use_container_width=True):
+                st.session_state['template_step'] = 2
+                st.rerun()
+
+        with col_b:
+            if st.button("💾 Save Document", type="primary", use_container_width=True):
+                try:
+                    # Create adapted document
+                    doc_id = create_document(
+                        project_id=template['project_id'],
+                        doc_type=template['doc_type'],
+                        title=st.session_state['new_title'],
+                        content_json=st.session_state['adapted_content'],
+                        description=st.session_state.get('new_description', ''),
+                        tags=st.session_state.get('new_tags', []),
+                        jira_keys=st.session_state.get('new_jira_keys', []),
+                        created_by="user",
+                        source_document_id=template['id'],
+                        adaptation_notes=st.session_state.get('adaptation_notes', '')
+                    )
+
+                    st.success(f"✅ Document created successfully! (ID: {doc_id})")
+                    st.balloons()
+
+                    # Clear session state
+                    for key in ['template_step', 'selected_template', 'adapter', 'adapted_content',
+                               'new_title', 'new_description', 'new_tags', 'new_jira_keys', 'adaptation_notes']:
+                        if key in st.session_state:
+                            del st.session_state[key]
+
+                    # Show lineage
+                    st.markdown("### 🌳 Document Lineage")
+                    st.markdown(f"**Derived from:** {template['title']} (ID: {template['id']})")
+
+                    if st.button("View New Document"):
+                        st.session_state['view_doc_id'] = doc_id
+                        st.session_state['template_step'] = 1
+                        st.rerun()
+
+                    if st.button("Create Another from Template"):
+                        st.session_state['template_step'] = 1
+                        st.rerun()
+
+                except Exception as e:
+                    st.error(f"❌ Error creating document: {str(e)}")
+
 # Footer
 st.divider()
 st.markdown("""
 <div style="text-align: center; color: #666; font-size: 0.9rem;">
     <strong>✅ Phase 1:</strong> Document Repository — Storage, organization, and retrieval<br>
     <strong>✅ Phase 2:</strong> Smart Matching & Recommendations — Hybrid TF-IDF + Metadata matching<br>
-    <strong>Coming in Phase 3:</strong> Incremental Updates & Evolution
+    <strong>✅ Phase 3:</strong> Reuse & Adapt Workflow — Template-based document creation with lineage tracking
 </div>
 """, unsafe_allow_html=True)

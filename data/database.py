@@ -110,6 +110,8 @@ def init_db():
             created_by TEXT DEFAULT 'system',
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            source_document_id INTEGER DEFAULT NULL REFERENCES documents(id) ON DELETE SET NULL,
+            adaptation_notes TEXT DEFAULT '',
             FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
         );
 
@@ -601,8 +603,25 @@ def get_project_by_id(project_id: int) -> dict:
 
 def create_document(project_id: int, doc_type: str, title: str, content_json: dict,
                    description: str = "", tags: list = None, jira_keys: list = None,
-                   created_by: str = "system") -> int:
-    """Create a new document with initial version."""
+                   created_by: str = "system", source_document_id: int = None,
+                   adaptation_notes: str = "") -> int:
+    """Create a new document with initial version.
+
+    Args:
+        project_id: Project ID
+        doc_type: Document type (ba, ta, tc)
+        title: Document title
+        content_json: Document content as JSON dict
+        description: Document description
+        tags: List of tags
+        jira_keys: List of JIRA keys
+        created_by: Creator name
+        source_document_id: ID of source document if adapted (Phase 3)
+        adaptation_notes: Notes about adaptation (Phase 3)
+
+    Returns:
+        Created document ID
+    """
     conn = get_db()
 
     # Create document record
@@ -611,19 +630,24 @@ def create_document(project_id: int, doc_type: str, title: str, content_json: di
 
     cur = conn.execute(
         """INSERT INTO documents (project_id, doc_type, title, description, current_version,
-           tags, jira_keys, created_by, created_at, updated_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+           tags, jira_keys, created_by, created_at, updated_at, source_document_id, adaptation_notes)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
         (project_id, doc_type, title, description, 1, tags_json, jira_keys_json,
-         created_by, datetime.now().isoformat(), datetime.now().isoformat())
+         created_by, datetime.now().isoformat(), datetime.now().isoformat(),
+         source_document_id, adaptation_notes)
     )
     doc_id = cur.lastrowid
 
     # Create initial version
+    change_summary = "Initial version"
+    if source_document_id:
+        change_summary = f"Adapted from document ID {source_document_id}"
+
     conn.execute(
         """INSERT INTO document_versions (document_id, version_number, content_json,
            change_summary, created_by, created_at) VALUES (?, ?, ?, ?, ?, ?)""",
         (doc_id, 1, json.dumps(content_json, ensure_ascii=False),
-         "Initial version", created_by, datetime.now().isoformat())
+         change_summary, created_by, datetime.now().isoformat())
     )
 
     conn.commit()
@@ -914,6 +938,120 @@ def get_document_stats() -> dict:
         "by_type": [dict(r) for r in docs_by_type],
         "recent_documents": [dict(r) for r in recent_docs]
     }
+
+
+# ═══════════════════════════════════════════════════════════════
+# PHASE 3: DOCUMENT LINEAGE & ADAPTATION
+# ═══════════════════════════════════════════════════════════════
+
+def get_document_lineage(doc_id: int) -> dict:
+    """
+    Get document lineage information (source and derived documents).
+
+    Args:
+        doc_id: Document ID
+
+    Returns:
+        Dict with source document and list of derived documents
+    """
+    conn = get_db()
+
+    # Get the document
+    doc = conn.execute("SELECT * FROM documents WHERE id = ?", (doc_id,)).fetchone()
+
+    if not doc:
+        conn.close()
+        return None
+
+    doc = dict(doc)
+
+    # Get source document (if this was adapted from another)
+    source_doc = None
+    if doc.get('source_document_id'):
+        source = conn.execute(
+            "SELECT * FROM documents WHERE id = ?",
+            (doc['source_document_id'],)
+        ).fetchone()
+        if source:
+            source_doc = dict(source)
+            source_doc['tags'] = json.loads(source_doc.get('tags', '[]'))
+            source_doc['jira_keys'] = json.loads(source_doc.get('jira_keys', '[]'))
+
+    # Get derived documents (documents adapted from this one)
+    derived = conn.execute(
+        "SELECT * FROM documents WHERE source_document_id = ? ORDER BY created_at DESC",
+        (doc_id,)
+    ).fetchall()
+
+    derived_docs = []
+    for row in derived:
+        derived_doc = dict(row)
+        derived_doc['tags'] = json.loads(derived_doc.get('tags', '[]'))
+        derived_doc['jira_keys'] = json.loads(derived_doc.get('jira_keys', '[]'))
+        derived_docs.append(derived_doc)
+
+    conn.close()
+
+    return {
+        'document': doc,
+        'source': source_doc,
+        'derived': derived_docs,
+        'lineage_depth': 1 if source_doc else 0,
+        'has_descendants': len(derived_docs) > 0
+    }
+
+
+def get_template_candidates(doc_type: str = None, project_id: int = None,
+                            exclude_id: int = None, limit: int = 20) -> list:
+    """
+    Get documents that can be used as templates.
+
+    Args:
+        doc_type: Filter by document type
+        project_id: Filter by project
+        exclude_id: Exclude specific document ID
+        limit: Maximum results
+
+    Returns:
+        List of documents suitable as templates
+    """
+    conn = get_db()
+
+    query = """
+        SELECT d.*, p.name as project_name,
+               (SELECT COUNT(*) FROM documents WHERE source_document_id = d.id) as times_used_as_template
+        FROM documents d
+        LEFT JOIN projects p ON d.project_id = p.id
+        WHERE d.status = 'active'
+    """
+    params = []
+
+    if doc_type:
+        query += " AND d.doc_type = ?"
+        params.append(doc_type)
+
+    if project_id:
+        query += " AND d.project_id = ?"
+        params.append(project_id)
+
+    if exclude_id:
+        query += " AND d.id != ?"
+        params.append(exclude_id)
+
+    query += " ORDER BY times_used_as_template DESC, d.updated_at DESC LIMIT ?"
+    params.append(limit)
+
+    rows = conn.execute(query, params).fetchall()
+    conn.close()
+
+    result = []
+    for row in rows:
+        doc = dict(row)
+        doc['tags'] = json.loads(doc.get('tags', '[]'))
+        doc['jira_keys'] = json.loads(doc.get('jira_keys', '[]'))
+        result.append(doc)
+
+    return result
 
 
 # Initialize on import
