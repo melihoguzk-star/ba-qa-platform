@@ -707,38 +707,128 @@ elif page == "📝 Create from Template":
             st.session_state['adapter'] = DocumentAdapter()
             st.session_state['adapted_content'] = template['content_json'].copy()
 
-        # Adaptation form
-        col1, col2 = st.columns(2)
+        # Tabs for different editing modes
+        tab1, tab2, tab3 = st.tabs(["📝 Metadata", "✏️ Edit Content (JSON)", "👁️ Preview"])
 
-        with col1:
-            st.markdown("### Template Preview")
-            st.json(template['content_json'])
-
-        with col2:
-            st.markdown("### Adapted Version")
+        # TAB 1: Metadata
+        with tab1:
+            st.markdown("### Document Metadata")
 
             # Basic info
             new_title = st.text_input("New Title*", value=f"{template['title']} (Copy)")
             new_description = st.text_area("Description", value=template.get('description', ''))
 
-            # Tags
-            template_tags = template.get('tags', [])
-            tags_input = st.text_input("Tags (comma separated)", value=", ".join(template_tags))
+            col_a, col_b = st.columns(2)
+            with col_a:
+                # Tags
+                template_tags = template.get('tags', [])
+                tags_input = st.text_input("Tags (comma separated)", value=", ".join(template_tags))
 
-            # JIRA keys
-            jira_input = st.text_input("JIRA Keys (comma separated)", value="")
+            with col_b:
+                # JIRA keys
+                jira_input = st.text_input("JIRA Keys (comma separated)", value="")
 
             # Adaptation notes
             adaptation_notes = st.text_area(
                 "Adaptation Notes",
                 value="",
-                help="Describe what you changed and why"
+                help="Describe what you changed and why",
+                height=100
             )
 
-            st.divider()
+            st.info("💡 Switch to 'Edit Content' tab to modify the document content")
 
-            # Content preview
-            st.json(st.session_state['adapted_content'])
+        # TAB 2: Content Editor
+        with tab2:
+            st.markdown("### Edit Document Content")
+
+            st.warning("⚠️ Edit the JSON below to adapt the template content. Keep valid JSON format!")
+
+            # JSON editor
+            content_str = json.dumps(st.session_state['adapted_content'], indent=2, ensure_ascii=False)
+
+            edited_content = st.text_area(
+                "Content JSON",
+                value=content_str,
+                height=400,
+                help="Edit the JSON structure. Changes will be validated when you continue."
+            )
+
+            # Validate button
+            if st.button("✓ Validate JSON", type="secondary"):
+                try:
+                    validated = json.loads(edited_content)
+                    st.session_state['adapted_content'] = validated
+                    st.success("✅ JSON is valid and saved!")
+                except json.JSONDecodeError as e:
+                    st.error(f"❌ Invalid JSON: {str(e)}")
+
+            # Quick tips
+            with st.expander("💡 Quick Editing Tips"):
+                st.markdown("""
+                **Common Edits:**
+                - Change text values: `"old value"` → `"new value"`
+                - Add array items: Add comma and new item in `[...]`
+                - Remove items: Delete the line (keep commas valid)
+                - Change numbers: Just update the number value
+
+                **JSON Rules:**
+                - Strings in double quotes: `"text"`
+                - Numbers without quotes: `123`
+                - Booleans: `true` or `false`
+                - Arrays: `["item1", "item2"]`
+                - Objects: `{"key": "value"}`
+                - Use commas between items (not after last item)
+
+                **Example:**
+                ```json
+                {
+                  "ekran_adi": "Login Screen",  ← Change this
+                  "fields": [
+                    {"name": "email"},  ← Modify fields
+                    {"name": "password"}
+                  ]
+                }
+                ```
+                """)
+
+        # TAB 3: Preview
+        with tab3:
+            st.markdown("### Preview")
+
+            col_left, col_right = st.columns(2)
+
+            with col_left:
+                st.markdown("**Original Template:**")
+                st.json(template['content_json'])
+
+            with col_right:
+                st.markdown("**Adapted Content:**")
+                st.json(st.session_state['adapted_content'])
+
+            # Show differences
+            st.divider()
+            st.markdown("### 🔍 Changes Summary")
+
+            original_str = json.dumps(template['content_json'], sort_keys=True)
+            adapted_str = json.dumps(st.session_state['adapted_content'], sort_keys=True)
+
+            if original_str == adapted_str:
+                st.info("📝 No content changes yet (only metadata will be different)")
+            else:
+                st.success("✅ Content has been modified")
+
+                # Simple change detection
+                original_keys = set(str(template['content_json']).split())
+                adapted_keys = set(str(st.session_state['adapted_content']).split())
+
+                added = len(adapted_keys - original_keys)
+                removed = len(original_keys - adapted_keys)
+
+                if added > 0:
+                    st.markdown(f"- ➕ ~{added} tokens added")
+                if removed > 0:
+                    st.markdown(f"- ➖ ~{removed} tokens removed")
 
         # Action buttons
         col_a, col_b, col_c = st.columns(3)
@@ -759,6 +849,15 @@ elif page == "📝 Create from Template":
                 if not new_title:
                     st.error("❌ Please provide a title")
                 else:
+                    # Validate JSON one more time from text area
+                    try:
+                        if edited_content:
+                            validated = json.loads(edited_content)
+                            st.session_state['adapted_content'] = validated
+                    except json.JSONDecodeError as e:
+                        st.error(f"❌ Invalid JSON in content editor: {str(e)}")
+                        st.stop()
+
                     st.session_state['new_title'] = new_title
                     st.session_state['new_description'] = new_description
                     st.session_state['new_tags'] = [t.strip() for t in tags_input.split(",")] if tags_input else []
