@@ -709,6 +709,37 @@ instructions = [
 
 ## 📝 Güncellemeler (Changelog)
 
+### v1.3.0 - UI'dan Model Seçimi (2025-02-15)
+
+#### Yeni Özellikler
+- 🎛️ **BRD Pipeline Model Seçimi**: UI'dan generation ve QA modelleri seçilebiliyor
+  - **Generation Model Dropdown** (Anthropic):
+    - Claude Opus 4.6 (En güçlü, en pahalı)
+    - Claude Sonnet 4.5 (Dengeli)
+    - Claude Sonnet 4 (Varsayılan)
+    - Claude Haiku 4.5 (Hızlı, ekonomik)
+
+  - **QA/Hakem Model Dropdown** (Gemini):
+    - Gemini 2.5 Flash (Varsayılan, hızlı)
+    - Gemini 2.5 Pro (Daha güçlü)
+    - Gemini 2.0 Flash (Ekonomik)
+
+  - Model seçimleri session state'e kaydediliyor
+  - Her stage (BA/TA/TC gen + QA) seçilen modelleri kullanıyor
+
+- 💰 **Maliyet-Kalite Dengesi**:
+  - Örnek: Opus (generation) + Flash (QA) = Yüksek kalite + Düşük QA maliyeti
+  - Örnek: Haiku (generation) + Flash (QA) = Maksimum hız + En düşük maliyet
+  - Örnek: Sonnet 4.5 (generation) + Pro (QA) = Dengeli kalite
+
+#### Teknik Değişiklikler
+- **config.py**: ANTHROPIC_MODELS ve GEMINI_MODELS dict'leri eklendi
+- **ai_client.py**: call_sonnet() ve call_gemini() fonksiyonlarına model parametresi eklendi
+- **orchestrator.py**: Tüm generate ve evaluate fonksiyonlarına model parametresi eklendi
+- **BRD_Pipeline.py**: Upload formuna model seçici eklendi, tüm AI çağrılarında model kullanılıyor
+
+---
+
 ### v1.2.3 - BRD Pipeline Database Kayıt Düzeltmesi (2025-02-15)
 
 #### Hata Düzeltmeleri
