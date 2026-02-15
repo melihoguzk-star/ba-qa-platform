@@ -1,8 +1,8 @@
 .streamlit/secrets.toml
 venv/
-data/baqa.db
+# data/baqa.db  # Uncommented to persist data on Streamlit Cloud
 data/custom_models.json
-data/pipeline.db
+# data/pipeline.db  # Uncommented to persist data on Streamlit Cloud
 __pycache__/
 *.pyc
 .idea/
