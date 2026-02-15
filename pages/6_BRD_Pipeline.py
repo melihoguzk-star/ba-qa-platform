@@ -846,20 +846,29 @@ elif step == "figma_upload":
                         st.session_state.figma_files = figma_files
                         st.session_state.screen_analysis = screen_analysis
                         st.success(f"✅ {len(figma_files)} tasarım başarıyla analiz edildi!")
-                        
-                        # Show preview
-                        with st.expander("📋 Screen Analysis Önizleme", expanded=False):
-                            st.markdown(screen_analysis[:1000] + "..." if len(screen_analysis) > 1000 else screen_analysis)
-                        
                         log(f"✅ {len(figma_files)} tasarım analiz edildi")
-                        st.session_state.pipeline_step = "tc_gen"
-                        time.sleep(1)
+                        # Don't auto-proceed, just rerun to show analysis
                         st.rerun()
                     else:
                         st.error("❌ Hiçbir tasarım analiz edilemedi. Lütfen tekrar deneyin veya atlayın.")
                 except Exception as e:
                     st.error(f"❌ Analiz hatası: {str(e)}")
                     log(f"❌ Figma analiz hatası: {str(e)}")
+    
+    # Show analysis results if available
+    if st.session_state.get("screen_analysis"):
+        st.divider()
+        st.subheader("📋 Screen Analysis Sonuçları")
+        
+        with st.expander("🔍 Detaylı Analiz Görüntüle", expanded=True):
+            st.markdown(st.session_state.screen_analysis)
+        
+        st.divider()
+        st.info("💡 Bu analiz test case üretiminde kullanılacak. Devam etmek için butona tıklayın.")
+        
+        if st.button("➡️ Test Case Üretimine Geç", type="primary", use_container_width=True, key="proceed_to_tc"):
+            st.session_state.pipeline_step = "tc_gen"
+            st.rerun()
 
 # ──── TC GENERATE ────
 elif step == "tc_gen":
