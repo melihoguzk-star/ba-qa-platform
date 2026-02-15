@@ -394,12 +394,43 @@ elif step == "ba_review":
     show_log()
     st.divider()
 
+    # Model seçimi - TA için
+    st.markdown("#### 🤖 Teknik Analiz için Model Seçimi")
+    mc1, mc2 = st.columns(2)
+    with mc1:
+        current_gen = st.session_state.get("generation_model", SONNET_MODEL)
+        current_gen_name = [k for k, v in ALL_MODELS.items() if v == current_gen][0] if current_gen in ALL_MODELS.values() else "Claude Sonnet 4"
+        default_gen_idx = list(ALL_MODELS.keys()).index(current_gen_name) if current_gen_name in ALL_MODELS.keys() else 2
+        ta_gen_model = st.selectbox(
+            "TA Generation Model",
+            options=list(ALL_MODELS.keys()),
+            index=default_gen_idx,
+            help="Teknik Analiz üretimi için kullanılacak model",
+            key="ta_gen_model_select"
+        )
+    with mc2:
+        current_qa = st.session_state.get("qa_model", GEMINI_MODEL)
+        current_qa_name = [k for k, v in ALL_MODELS.items() if v == current_qa][0] if current_qa in ALL_MODELS.values() else "Gemini 2.5 Flash"
+        default_qa_idx = list(ALL_MODELS.keys()).index(current_qa_name) if current_qa_name in ALL_MODELS.keys() else 4
+        ta_qa_model = st.selectbox(
+            "TA QA/Hakem Model",
+            options=list(ALL_MODELS.keys()),
+            index=default_qa_idx,
+            help="Teknik Analiz kalite değerlendirmesi için model",
+            key="ta_qa_model_select"
+        )
+    st.divider()
+
     # Hakeme gönderme seçeneği
     skip_qa = st.checkbox("⚡ Hakeme göndermeden devam et (QA'yı atla)", key="skip_ba_qa")
 
     c1, c2 = st.columns(2)
     with c1:
         if st.button("✅ Onayla ve İlerle", type="primary", use_container_width=True):
+            # TA modelleri kaydet
+            st.session_state.generation_model = ALL_MODELS[ta_gen_model]
+            st.session_state.qa_model = ALL_MODELS[ta_qa_model]
+
             if skip_qa:
                 # QA'yı atla, direkt TA'ya geç - Database'e kaydet
                 from pipeline.brd.orchestrator import finalize_stage
@@ -497,12 +528,43 @@ elif step == "ta_review":
     show_log()
     st.divider()
 
+    # Model seçimi - TC için
+    st.markdown("#### 🤖 Test Case için Model Seçimi")
+    mc1, mc2 = st.columns(2)
+    with mc1:
+        current_gen = st.session_state.get("generation_model", SONNET_MODEL)
+        current_gen_name = [k for k, v in ALL_MODELS.items() if v == current_gen][0] if current_gen in ALL_MODELS.values() else "Claude Sonnet 4"
+        default_gen_idx = list(ALL_MODELS.keys()).index(current_gen_name) if current_gen_name in ALL_MODELS.keys() else 2
+        tc_gen_model = st.selectbox(
+            "TC Generation Model",
+            options=list(ALL_MODELS.keys()),
+            index=default_gen_idx,
+            help="Test Case üretimi için kullanılacak model",
+            key="tc_gen_model_select"
+        )
+    with mc2:
+        current_qa = st.session_state.get("qa_model", GEMINI_MODEL)
+        current_qa_name = [k for k, v in ALL_MODELS.items() if v == current_qa][0] if current_qa in ALL_MODELS.values() else "Gemini 2.5 Flash"
+        default_qa_idx = list(ALL_MODELS.keys()).index(current_qa_name) if current_qa_name in ALL_MODELS.keys() else 4
+        tc_qa_model = st.selectbox(
+            "TC QA/Hakem Model",
+            options=list(ALL_MODELS.keys()),
+            index=default_qa_idx,
+            help="Test Case kalite değerlendirmesi için model",
+            key="tc_qa_model_select"
+        )
+    st.divider()
+
     # Hakeme gönderme seçeneği
     skip_qa = st.checkbox("⚡ Hakeme göndermeden devam et (QA'yı atla)", key="skip_ta_qa")
 
     c1, c2 = st.columns(2)
     with c1:
         if st.button("✅ Onayla ve İlerle", type="primary", use_container_width=True, key="ta_ok"):
+            # TC modelleri kaydet
+            st.session_state.generation_model = ALL_MODELS[tc_gen_model]
+            st.session_state.qa_model = ALL_MODELS[tc_qa_model]
+
             if skip_qa:
                 # QA'yı atla, direkt TC'ye geç - Database'e kaydet
                 from pipeline.brd.orchestrator import finalize_stage
