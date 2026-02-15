@@ -200,6 +200,13 @@ def render_custom_sidebar(active_page="home"):
             "section": "tools"
         },
         {
+            "key": "import_merge",
+            "icon": "📥",
+            "label": "Import & Merge",
+            "url": "/Import_Merge",
+            "section": "tools"
+        },
+        {
             "key": "brd_pipeline",
             "icon": "🚀",
             "label": "BRD Pipeline",
@@ -272,6 +279,9 @@ def render_custom_sidebar(active_page="home"):
                 elif page["key"] == "document_library":
                     if st.button(f"{page['icon']} {page['label']}", key=f"nav_{page['key']}", use_container_width=True):
                         st.switch_page("pages/10_Document_Library.py")
+                elif page["key"] == "import_merge":
+                    if st.button(f"{page['icon']} {page['label']}", key=f"nav_{page['key']}", use_container_width=True):
+                        st.switch_page("pages/11_Import_Merge.py")
 
         st.markdown('</div>', unsafe_allow_html=True)
 
