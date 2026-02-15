@@ -70,7 +70,7 @@ def merge_tc(chunk1: dict, chunk2: dict) -> dict:
 # GENERATE FONKSİYONLARI (chunk1 + chunk2 + merge)
 # ═══════════════════════════════════════════════════════════
 
-def generate_ba(brd_text, project_name, anthropic_key, log, previous_feedback=""):
+def generate_ba(brd_text, project_name, anthropic_key, log, previous_feedback="", model=None):
     """BA Chunk1 + Chunk2 üret ve birleştir."""
     import hashlib
     brd_hash = hashlib.md5(brd_text[:5000].encode()).hexdigest()[:8]
@@ -90,13 +90,13 @@ def generate_ba(brd_text, project_name, anthropic_key, log, previous_feedback=""
         user1 = f"ÖNCEKİ DEĞERLENDİRME GERİ BİLDİRİMİ:\n{previous_feedback}\n\nBu geri bildirime göre iyileştir.\n\n" + user1
 
     log("  🤖 BA Chunk1 üretiliyor (Sonnet)...")
-    chunk1 = call_sonnet(BA_CHUNK1_SYSTEM, user1, anthropic_key)
+    chunk1 = call_sonnet(BA_CHUNK1_SYSTEM, user1, anthropic_key, model=model)
 
     modul_names = ", ".join(e.get("ekran_adi", "") for e in chunk1.get("ekranlar", []))
     user2 = f"BRD DOKÜMANI:\n\n{brd_text[:60000]}\n\nEKRANLAR (İlk adımda tanımlanan): {modul_names}"
 
     log("  🤖 BA Chunk2 üretiliyor (Sonnet)...")
-    chunk2 = call_sonnet(BA_CHUNK2_SYSTEM, user2, anthropic_key)
+    chunk2 = call_sonnet(BA_CHUNK2_SYSTEM, user2, anthropic_key, model=model)
 
     log("  🔗 BA birleştiriliyor...")
     result = merge_ba(chunk1, chunk2)
@@ -105,7 +105,7 @@ def generate_ba(brd_text, project_name, anthropic_key, log, previous_feedback=""
     return result
 
 
-def generate_ta(brd_text, ba_content, project_name, anthropic_key, log, previous_feedback=""):
+def generate_ta(brd_text, ba_content, project_name, anthropic_key, log, previous_feedback="", model=None):
     """TA Chunk1 + Chunk2 üret ve birleştir."""
     import hashlib
     brd_hash = hashlib.md5(brd_text[:5000].encode()).hexdigest()[:8]
@@ -126,14 +126,14 @@ def generate_ta(brd_text, ba_content, project_name, anthropic_key, log, previous
     if previous_feedback:
         user1 = f"ÖNCEKİ QA DEĞERLENDİRME GERİ BİLDİRİMİ:\n{previous_feedback}\n\nBu geri bildirime göre teknik analizi iyileştir.\n\n" + user1
     log("  🤖 TA Chunk1 üretiliyor (Sonnet)...")
-    chunk1 = call_sonnet(TA_CHUNK1_SYSTEM, user1, anthropic_key)
+    chunk1 = call_sonnet(TA_CHUNK1_SYSTEM, user1, anthropic_key, model=model)
 
     ta = chunk1.get("teknik_analiz", chunk1)
     endpoints = ", ".join(e.get("endpoint", "") for e in ta.get("api_endpoint_ozeti", []))
     user2 = f"ENDPOINT LİSTESİ:\n{endpoints}\n\nBRD ÖZETİ:\n{brd_text[:40000]}"
 
     log("  🤖 TA Chunk2 üretiliyor (Sonnet)...")
-    chunk2 = call_sonnet(TA_CHUNK2_SYSTEM, user2, anthropic_key)
+    chunk2 = call_sonnet(TA_CHUNK2_SYSTEM, user2, anthropic_key, model=model)
 
     log("  🔗 TA birleştiriliyor...")
     result = merge_ta(chunk1, chunk2)
@@ -142,7 +142,7 @@ def generate_ta(brd_text, ba_content, project_name, anthropic_key, log, previous
     return result
 
 
-def generate_tc(ba_content, ta_content, project_name, jira_key, anthropic_key, log, previous_feedback=""):
+def generate_tc(ba_content, ta_content, project_name, jira_key, anthropic_key, log, previous_feedback="", model=None):
     """TC Chunk1 + Chunk2 üret ve birleştir."""
     import hashlib
     ba_hash = hashlib.md5(json.dumps(ba_content, ensure_ascii=False)[:3000].encode()).hexdigest()[:8]
@@ -166,7 +166,7 @@ def generate_tc(ba_content, ta_content, project_name, jira_key, anthropic_key, l
         user1 = f"ÖNCEKİ QA DEĞERLENDİRME GERİ BİLDİRİMİ:\n{previous_feedback}\n\nBu geri bildirime göre test case'leri iyileştir.\n\n" + user1
 
     log("  🤖 TC Chunk1 üretiliyor (Sonnet)...")
-    chunk1 = call_sonnet(system1, user1, anthropic_key)
+    chunk1 = call_sonnet(system1, user1, anthropic_key, model=model)
 
     tc_count = len(chunk1.get("test_cases", []))
     start_id = str(tc_count + 1).zfill(4)
@@ -174,7 +174,7 @@ def generate_tc(ba_content, ta_content, project_name, jira_key, anthropic_key, l
     user2 = f"İŞ ANALİZİ:\n{ba_json}\n\nTEKNİK ANALİZ:\n{ta_json}"
 
     log(f"  🤖 TC Chunk2 üretiliyor (Sonnet) — {tc_count} TC'den devam...")
-    chunk2 = call_sonnet(system2, user2, anthropic_key)
+    chunk2 = call_sonnet(system2, user2, anthropic_key, model=model)
 
     log("  🔗 TC birleştiriliyor...")
     result = merge_tc(chunk1, chunk2)
@@ -187,39 +187,39 @@ def generate_tc(ba_content, ta_content, project_name, jira_key, anthropic_key, l
 # QA HAKEM DEĞERLENDİRME
 # ═══════════════════════════════════════════════════════════
 
-def evaluate_ba_qa(ba_content, gemini_key, log=None):
+def evaluate_ba_qa(ba_content, gemini_key, log=None, model=None):
     """BA QA Hakem değerlendirmesi."""
     return _evaluate_qa(
         BA_QA_SYSTEM,
         "İŞ ANALİZİ İÇERİĞİ:\n" + json.dumps(ba_content, ensure_ascii=False, indent=2)[:80000],
-        gemini_key, log,
+        gemini_key, log, model=model,
     )
 
 
-def evaluate_ta_qa(ta_content, gemini_key, log=None):
+def evaluate_ta_qa(ta_content, gemini_key, log=None, model=None):
     """TA QA Hakem değerlendirmesi."""
     return _evaluate_qa(
         TA_QA_SYSTEM,
         "TEKNİK ANALİZ:\n" + json.dumps(ta_content, ensure_ascii=False, indent=2)[:80000],
-        gemini_key, log,
+        gemini_key, log, model=model,
     )
 
 
-def evaluate_tc_qa(tc_content, gemini_key, log=None):
+def evaluate_tc_qa(tc_content, gemini_key, log=None, model=None):
     """TC QA Hakem değerlendirmesi."""
     tc_count = len(tc_content.get("test_cases", []))
     qa_system = TC_QA_SYSTEM.format(tc_count=tc_count)
     return _evaluate_qa(
         qa_system,
         f"TEST CASES ({tc_count} adet):\n" + json.dumps(tc_content, ensure_ascii=False, indent=2)[:80000],
-        gemini_key, log,
+        gemini_key, log, model=model,
     )
 
 
-def _evaluate_qa(system_prompt: str, user_content: str, gemini_key: str, log=None) -> dict:
+def _evaluate_qa(system_prompt: str, user_content: str, gemini_key: str, log=None, model=None) -> dict:
     """Gemini Flash ile QA değerlendirme. Hata durumunda fallback döner."""
     try:
-        result = call_gemini(system_prompt, user_content, gemini_key)
+        result = call_gemini(system_prompt, user_content, gemini_key, model=model)
         if log:
             log(f"    → QA raw genel_puan: {result.get('genel_puan', 'YOK')}")
         # genel_puan yoksa veya 0 ise skorlardan hesapla

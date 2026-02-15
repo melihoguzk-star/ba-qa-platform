@@ -12,13 +12,13 @@ from utils.config import SONNET_MODEL, GEMINI_MODEL, CHUNK_OUTPUT_TOKEN_LIMIT, Q
 from pipeline.brd.json_repair import parse_ai_json
 
 
-def call_sonnet(system_prompt: str, user_content: str, api_key: str, max_tokens: int = CHUNK_OUTPUT_TOKEN_LIMIT) -> dict:
-    """Claude Sonnet 4 ile içerik üretimi. JSON döner."""
+def call_sonnet(system_prompt: str, user_content: str, api_key: str, max_tokens: int = CHUNK_OUTPUT_TOKEN_LIMIT, model: str = None) -> dict:
+    """Claude ile içerik üretimi. JSON döner."""
     # Python {{ }} escape'lerini düz { } yap (prompt'lar .format() kullanmıyorsa)
     clean_prompt = system_prompt.replace("{{", "{").replace("}}", "}")
     client = anthropic.Anthropic(api_key=api_key)
     response = client.messages.create(
-        model=SONNET_MODEL,
+        model=model or SONNET_MODEL,
         max_tokens=max_tokens,
         system=clean_prompt,
         messages=[{"role": "user", "content": user_content}],
@@ -28,12 +28,12 @@ def call_sonnet(system_prompt: str, user_content: str, api_key: str, max_tokens:
     return parse_ai_json(content_text, stop_reason)
 
 
-def call_gemini(system_prompt: str, user_content: str, api_key: str, max_tokens: int = QA_OUTPUT_TOKEN_LIMIT) -> dict:
-    """Gemini 2.5 Flash ile QA değerlendirme. JSON döner."""
+def call_gemini(system_prompt: str, user_content: str, api_key: str, max_tokens: int = QA_OUTPUT_TOKEN_LIMIT, model: str = None) -> dict:
+    """Gemini ile QA değerlendirme. JSON döner."""
     clean_prompt = system_prompt.replace("{{", "{").replace("}}", "}")
     client = genai.Client(api_key=api_key)
     response = client.models.generate_content(
-        model=GEMINI_MODEL,
+        model=model or GEMINI_MODEL,
         contents=user_content,
         config=genai_types.GenerateContentConfig(
             system_instruction=clean_prompt,

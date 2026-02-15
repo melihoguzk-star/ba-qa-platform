@@ -100,8 +100,24 @@ TC_PASS_THRESHOLD = 60
 CHECKPOINT_TTL_HOURS = 24
 CHUNK_OUTPUT_TOKEN_LIMIT = 16000
 QA_OUTPUT_TOKEN_LIMIT = 8000
+
+# Default Models
 SONNET_MODEL = "claude-sonnet-4-20250514"
 GEMINI_MODEL = "gemini-2.5-flash"
+
+# Available Models for Selection
+ANTHROPIC_MODELS = {
+    "Claude Opus 4.6": "claude-opus-4-6",
+    "Claude Sonnet 4.5": "claude-sonnet-4-5-20250929",
+    "Claude Sonnet 4": "claude-sonnet-4-20250514",
+    "Claude Haiku 4.5": "claude-haiku-4-5-20251001",
+}
+
+GEMINI_MODELS = {
+    "Gemini 2.5 Flash": "gemini-2.5-flash",
+    "Gemini 2.5 Pro": "gemini-2.5-pro",
+    "Gemini 2.0 Flash": "gemini-2.0-flash",
+}
 
 
 def get_anthropic_key() -> str:
