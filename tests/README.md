@@ -111,9 +111,17 @@ PYTHONPATH=. pytest -m "not slow"
   - Prompt consistency (3 tests)
 - ✅ Validates prompt structure and content
 
+### JSON Repair (Phase 4)
+- ✅ **26 tests** covering:
+  - AI JSON parsing strategies (9 tests)
+  - Edge cases (9 tests)
+  - Repair strategies (4 tests)
+  - Real-world scenarios (4 tests)
+- ✅ Validates JSON repair and recovery
+
 ### Total
-- ✅ **57 unit tests** passing
-- ✅ **30% overall coverage** (improving)
+- ✅ **83 unit tests** passing
+- ✅ **35% overall coverage** (improving)
 
 ## 📝 Writing Tests
 
