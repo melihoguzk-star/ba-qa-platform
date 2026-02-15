@@ -26,6 +26,11 @@ BA-QA Intelligence Platform'u, manuel süreçleri minimize eden, AI-destekli, ot
 
 ### v1.1 Features (In Progress)
 - [ ] **Figma API entegrasyonu** (otomatik frame çekme) - *See Phase 1 below*
+- [ ] **Figma Screen - BA Feature Mapping**: Her ekran görüntüsünü BA'deki ilgili user story/feature ile eşleştirme
+  - Manuel etiketleme UI'ı (her ekran için "Hangi feature ile ilgili?" dropdown)
+  - Semantic similarity ile otomatik öneri
+  - Sadece ilgili ekranların TC generation'a gönderilmesi
+  - Alakasız ekranların filtrelenmesi
 - [ ] **JIRA Webhook desteği** (otomatik tetikleme)
 - [ ] **Multi-tenant proje desteği**
 - [ ] **Kullanıcı yetkilendirme sistemi**
