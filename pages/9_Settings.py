@@ -8,8 +8,10 @@ from datetime import datetime
 import hashlib
 import os
 from pathlib import Path
+from components.sidebar import render_custom_sidebar
 
 st.set_page_config(page_title="Settings", page_icon="⚙️", layout="wide")
+render_custom_sidebar(active_page="ayarlar")
 
 # Initialize session state for keys
 if "gemini_keys" not in st.session_state:
