@@ -46,12 +46,17 @@ def call_gemini(system_prompt: str, user_content: str, api_key: str, max_tokens:
     try:
         clean_prompt = system_prompt.replace("{{", "{").replace("}}", "}")
         client = genai.Client(api_key=api_key)
+        
+        # Gemini 2.5 Flash max output: 8192 tokens
+        # Cap max_tokens to prevent MAX_TOKENS errors
+        capped_max_tokens = min(max_tokens, 8192)
+        
         response = client.models.generate_content(
             model=model or GEMINI_MODEL,
             contents=user_content,
             config=genai_types.GenerateContentConfig(
                 system_instruction=clean_prompt,
-                max_output_tokens=max_tokens,
+                max_output_tokens=capped_max_tokens,
                 temperature=0.3,
             ),
         )
