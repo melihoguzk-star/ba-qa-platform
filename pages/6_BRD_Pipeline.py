@@ -302,7 +302,16 @@ def show_qa_result(qa_result, stage_name):
     st.markdown(f"**Değerlendirme:** {qa_result.get('genel_degerlendirme','')}")
     oneriler = qa_result.get("iyilestirme_onerileri",[])
     if oneriler:
-        st.markdown("**Öneriler:** " + " | ".join(oneriler))
+        # Önerileri string'e çevir (dict olabilir)
+        oneriler_str = []
+        for oneri in oneriler:
+            if isinstance(oneri, dict):
+                oneriler_str.append(str(oneri))
+            elif isinstance(oneri, str):
+                oneriler_str.append(oneri)
+            else:
+                oneriler_str.append(str(oneri))
+        st.markdown("**Öneriler:** " + " | ".join(oneriler_str))
 
 
 # ════════════════════════════════════════════
