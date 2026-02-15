@@ -102,9 +102,18 @@ PYTHONPATH=. pytest -m "not slow"
   - Unified AI interface (4 tests)
 - ✅ **87% coverage** on `agents/ai_client.py`
 
+### Prompt Templates (Phase 3)
+- ✅ **18 tests** covering:
+  - BA evaluation prompts (5 tests)
+  - TC evaluation prompts (4 tests)
+  - JSON parsing (2 tests)
+  - Prompt formatting (4 tests)
+  - Prompt consistency (3 tests)
+- ✅ Validates prompt structure and content
+
 ### Total
-- ✅ **39 unit tests** passing
-- ✅ **25% overall coverage** (improving)
+- ✅ **57 unit tests** passing
+- ✅ **30% overall coverage** (improving)
 
 ## 📝 Writing Tests
 
