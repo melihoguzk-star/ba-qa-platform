@@ -615,6 +615,83 @@ elif step == "ta_qa":
     show_qa_result(qa, "TA")
     show_log()
 
+    # ──── OpenAPI Spec Generation ────
+    st.divider()
+    st.markdown("### 📄 OpenAPI 3.0.4 Specification")
+    
+    # Default model index for OpenAPI generation
+    default_gen_idx = list(ALL_MODELS.keys()).index("Claude 3.5 Sonnet (New)") if "Claude 3.5 Sonnet (New)" in ALL_MODELS.keys() else 0
+    
+    # OpenAPI Generation Settings
+    with st.expander("🤖 OpenAPI Generation Settings", expanded=False):
+        col1, col2 = st.columns(2)
+        with col1:
+            use_ai_openapi = st.checkbox(
+                "AI-Assisted Generation",
+                value=True,
+                help="AI ile daha zengin açıklamalar ve örnekler oluşturur. Validation başarısız olursa code-based'e düşer.",
+                key="use_ai_openapi"
+            )
+        with col2:
+            if use_ai_openapi:
+                # Get default model index
+                current_gen = st.session_state.get("generation_model", SONNET_MODEL)
+                current_gen_name = [k for k, v in ALL_MODELS.items() if v == current_gen][0] if current_gen in ALL_MODELS.values() else "Claude Sonnet 4"
+                default_gen_idx = list(ALL_MODELS.keys()).index(current_gen_name) if current_gen_name in ALL_MODELS.keys() else 2
+
+                openapi_model = st.selectbox(
+                    "OpenAPI Model",
+                    options=list(ALL_MODELS.keys()),
+                    index=default_gen_idx,
+                    help="OpenAPI spec oluşturmak için kullanılacak model",
+                    key="openapi_model_select"
+                )
+            else:
+                st.info("⚙️ Code-based generation kullanılacak")
+    
+    # Generate OpenAPI spec if not already generated
+    if "openapi_spec" not in st.session_state:
+        from pipeline.brd.orchestrator import generate_openapi
+        from data.database import save_openapi_spec
+        
+        with st.spinner("OpenAPI spec oluşturuluyor..."):
+            openapi_result = generate_openapi(
+                st.session_state.ta_content,
+                st.session_state.project_name,
+                log,
+                anthropic_key,
+                gemini_key,
+                base_path=f"/api/v1/bo-{st.session_state.project_name.lower()}",
+                model=ALL_MODELS[openapi_model] if use_ai_openapi else None,
+                use_ai=use_ai_openapi
+            )
+            st.session_state.openapi_spec = openapi_result.get("openapi_spec", {})
+            st.session_state.openapi_json = openapi_result.get("json", "{}")
+            
+            # Save to database
+            save_openapi_spec(st.session_state.run_id, "ta", st.session_state.openapi_json)
+    
+    # Show OpenAPI stats and download
+    openapi_json = st.session_state.get("openapi_json", "{}")
+    openapi_spec = st.session_state.get("openapi_spec", {})
+    
+    if openapi_spec:
+        endpoint_count = len(openapi_spec.get("paths", {}))
+        schema_count = len(openapi_spec.get("components", {}).get("schemas", {}))
+        st.success(f"✅ OpenAPI Spec hazır — {endpoint_count} endpoint, {schema_count} schema")
+        
+        # Download button only (no preview to avoid large JSON display)
+        st.download_button(
+            "📥 OpenAPI Spec İndir (.json)",
+            data=openapi_json,
+            file_name=f"{st.session_state.project_name}_openapi.json",
+            mime="application/json",
+            use_container_width=True,
+            type="primary"
+        )
+    else:
+        st.warning("⚠️ OpenAPI spec oluşturulamadı")
+
     st.divider()
     st.download_button("📥 TA Dokümanı İndir (.docx)",
         data=build_ta_docx(st.session_state.ta_content, st.session_state.project_name),
