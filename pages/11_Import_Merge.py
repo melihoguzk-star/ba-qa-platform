@@ -9,13 +9,16 @@ End-to-end workflow for importing and merging documents:
 """
 import streamlit as st
 import json
+import os
 from datetime import datetime
 from data.database import (
     create_document, get_projects, get_documents_with_content,
-    get_document_by_id, get_latest_version, create_document_version
+    get_document_by_id, get_latest_version, create_document_version,
+    get_recent_pipeline_runs, get_pipeline_run_outputs
 )
 from pipeline.document_matching import find_similar
 from pipeline.document_adaptation import DocumentAdapter
+from agents.ai_client import call_gemini
 
 st.set_page_config(page_title="Import & Merge", page_icon="📥", layout="wide")
 
@@ -135,13 +138,112 @@ if step == 1:
 
     elif import_method == "📄 From BRD Pipeline":
         st.markdown("### Import from BRD Pipeline")
-        st.info("💡 Coming soon: Direct import from pipeline results")
-        st.markdown("""
-        **For now:**
-        1. Run BRD Pipeline
-        2. Copy the BA/TA/TC JSON output
-        3. Use '📋 Paste JSON' option above
-        """)
+        st.info("💡 Select a completed pipeline run to import BA/TA/TC outputs")
+
+        # Get recent pipeline runs
+        with st.spinner("Loading pipeline runs..."):
+            pipeline_runs = get_recent_pipeline_runs(limit=50)
+
+        if not pipeline_runs:
+            st.warning("No pipeline runs found. Run BRD Pipeline first!")
+        else:
+            # Filter to completed runs only
+            completed_runs = [r for r in pipeline_runs if r.get('status') == 'completed']
+
+            if not completed_runs:
+                st.warning("No completed pipeline runs found. Complete a BRD Pipeline run first!")
+            else:
+                # Show pipeline runs in selectbox
+                run_options = {}
+                for run in completed_runs:
+                    run_id = run['id']
+                    project = run.get('project_name', 'Unknown')
+                    jira = run.get('jira_key', 'N/A')
+                    created = run.get('created_at', '')[:16]  # YYYY-MM-DD HH:MM
+                    label = f"Run #{run_id}: {project} ({jira}) - {created}"
+                    run_options[label] = run
+
+                selected_label = st.selectbox(
+                    "Select Pipeline Run",
+                    options=list(run_options.keys()),
+                    help="Choose a completed pipeline run"
+                )
+
+                if selected_label:
+                    selected_run = run_options[selected_label]
+                    run_id = selected_run['id']
+
+                    # Show run details
+                    col1, col2, col3 = st.columns(3)
+                    with col1:
+                        st.metric("BA Score", f"{selected_run.get('ba_score', 0):.0%}")
+                    with col2:
+                        st.metric("TA Score", f"{selected_run.get('ta_score', 0):.0%}")
+                    with col3:
+                        st.metric("TC Score", f"{selected_run.get('tc_score', 0):.0%}")
+
+                    st.divider()
+
+                    # Get outputs for this run
+                    with st.spinner("Loading outputs..."):
+                        outputs = get_pipeline_run_outputs(run_id)
+
+                    if not outputs:
+                        st.warning("No outputs found for this pipeline run")
+                    else:
+                        # Group outputs by stage, get latest revision
+                        stage_outputs = {}
+                        for output in outputs:
+                            stage = output.get('stage')
+                            revision = output.get('revision_number', 0)
+
+                            if stage not in stage_outputs or revision > stage_outputs[stage].get('revision_number', 0):
+                                stage_outputs[stage] = output
+
+                        # Show available stages
+                        st.markdown("### Available Outputs")
+
+                        available_stages = list(stage_outputs.keys())
+                        selected_stage = st.radio(
+                            "Select output to import",
+                            options=available_stages,
+                            format_func=lambda x: f"{x.upper()} (rev {stage_outputs[x].get('revision_number', 0)})",
+                            horizontal=True
+                        )
+
+                        if selected_stage:
+                            output = stage_outputs[selected_stage]
+
+                            # Show preview
+                            st.markdown(f"**{selected_stage.upper()} Output** (Revision {output.get('revision_number', 0)})")
+
+                            try:
+                                content_json = json.loads(output.get('content_json', '{}'))
+                                st.json(content_json)
+                            except:
+                                st.error("Invalid JSON in pipeline output")
+                                content_json = None
+
+                            # Title input
+                            default_title = f"{selected_run.get('project_name', 'Document')} - {selected_stage.upper()}"
+                            title = st.text_input("Document Title*", value=default_title)
+
+                            if st.button("➡️ Import from Pipeline", type="primary"):
+                                if not title or not content_json:
+                                    st.error("❌ Cannot import: missing title or invalid content")
+                                else:
+                                    # Save to session state
+                                    st.session_state['imported_doc'] = {
+                                        'title': title,
+                                        'doc_type': selected_stage.lower(),
+                                        'content_json': content_json,
+                                        'import_method': 'pipeline',
+                                        'pipeline_run_id': run_id
+                                    }
+
+                                    st.success(f"✅ {selected_stage.upper()} imported from pipeline run #{run_id}!")
+                                    st.session_state['import_step'] = 2
+                                    st.rerun()
 
     elif import_method == "📝 Paste Text (AI Parse)":
         st.markdown("### Paste Text Document")
@@ -161,7 +263,148 @@ if step == 1:
             title = st.text_input("Document Title*", placeholder="e.g., Face ID Login Analysis", key="text_title")
 
         if st.button("🤖 Parse with AI", type="primary"):
-            st.warning("⚠️ AI parsing feature coming soon! Please use JSON import for now.")
+            if not text_input or not title:
+                st.error("❌ Please provide both text and title")
+            else:
+                # Check API key
+                gemini_key = st.session_state.get("gemini_key") or os.environ.get("GEMINI_API_KEY", "")
+                if not gemini_key:
+                    st.error("❌ Gemini API key not found. Please set it in Settings.")
+                else:
+                    with st.spinner("🤖 AI is parsing your document..."):
+                        try:
+                            # Build parsing prompt based on document type
+                            if doc_type == "BA":
+                                system_prompt = """You are a Business Analyst documentation expert.
+Parse the given text and convert it into a structured BA (Business Analysis) JSON format.
+
+The JSON structure should follow this schema:
+{
+  "ekranlar": [
+    {
+      "ekran_adi": "Screen name",
+      "aciklama": "Screen description",
+      "fields": [
+        {"name": "field_name", "type": "field_type", "required": true/false, "description": "..."}
+      ],
+      "actions": [
+        {"button": "Button text", "action": "action_name"}
+      ]
+    }
+  ],
+  "backend_islemler": [
+    {
+      "islem": "Operation name",
+      "aciklama": "Operation description",
+      "endpoint": "/api/path",
+      "method": "GET/POST/PUT/DELETE",
+      "request": {...},
+      "response": {...}
+    }
+  ],
+  "guvenlik_gereksinimleri": [
+    {"gereksinim": "Requirement", "aciklama": "Description"}
+  ],
+  "test_senaryolari": [
+    {"senaryo": "Scenario name", "adimlar": ["Step 1", "Step 2", ...]}
+  ]
+}
+
+Return ONLY valid JSON, no markdown formatting or explanations."""
+
+                            elif doc_type == "TA":
+                                system_prompt = """You are a Technical Architect documentation expert.
+Parse the given text and convert it into a structured TA (Technical Analysis) JSON format.
+
+The JSON structure should follow this schema:
+{
+  "servisler": [
+    {
+      "servis_adi": "Service name",
+      "aciklama": "Service description",
+      "teknolojiler": ["tech1", "tech2"],
+      "endpoints": [
+        {"path": "/api/path", "method": "GET/POST/PUT/DELETE", "aciklama": "..."}
+      ]
+    }
+  ],
+  "veri_modeli": [
+    {
+      "entity": "Entity name",
+      "fields": [
+        {"name": "field_name", "type": "data_type", "required": true/false}
+      ]
+    }
+  ],
+  "teknolojik_gereksinimler": [
+    {"kategori": "Category", "gereksinim": "Requirement", "aciklama": "Description"}
+  ]
+}
+
+Return ONLY valid JSON, no markdown formatting or explanations."""
+
+                            else:  # TC
+                                system_prompt = """You are a QA Test Case documentation expert.
+Parse the given text and convert it into a structured TC (Test Cases) JSON format.
+
+The JSON structure should follow this schema:
+{
+  "test_cases": [
+    {
+      "test_id": "TC-001",
+      "test_name": "Test name",
+      "description": "Test description",
+      "priority": "High/Medium/Low",
+      "steps": [
+        {"step": 1, "action": "Action to perform", "expected": "Expected result"}
+      ],
+      "test_data": {...},
+      "prerequisites": ["prerequisite 1", ...]
+    }
+  ],
+  "test_senaryolari": [
+    {"senaryo": "Scenario name", "test_cases": ["TC-001", "TC-002"]}
+  ]
+}
+
+Return ONLY valid JSON, no markdown formatting or explanations."""
+
+                            # Call AI
+                            result = call_gemini(
+                                system_prompt=system_prompt,
+                                user_content=f"Parse this {doc_type} document:\n\n{text_input}",
+                                api_key=gemini_key,
+                                max_tokens=8000
+                            )
+
+                            # Check if we got valid JSON
+                            if result.get('error'):
+                                st.error(f"❌ AI parsing error: {result['error']}")
+                            elif result.get('content'):
+                                parsed_json = result['content']
+
+                                st.success("✅ Document parsed successfully!")
+
+                                # Show preview
+                                with st.expander("📋 Parsed JSON Preview", expanded=True):
+                                    st.json(parsed_json)
+
+                                # Save to session state
+                                st.session_state['imported_doc'] = {
+                                    'title': title,
+                                    'doc_type': doc_type.lower(),
+                                    'content_json': parsed_json,
+                                    'import_method': 'ai_parse'
+                                }
+
+                                st.session_state['import_step'] = 2
+                                st.rerun()
+                            else:
+                                st.error("❌ AI returned empty response")
+
+                        except Exception as e:
+                            st.error(f"❌ Error parsing document: {str(e)}")
+                            st.exception(e)
 
 # ═══════════════════════════════════════════════════════════════
 # STEP 2: DETECT SIMILAR DOCUMENTS

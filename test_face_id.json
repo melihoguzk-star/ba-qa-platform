@@ -1,0 +1,151 @@
+{
+  "ekranlar": [
+    {
+      "ekran_adi": "Face ID Login Screen",
+      "aciklama": "Biometric authentication using Face ID technology",
+      "fields": [
+        {
+          "name": "face_scan",
+          "type": "biometric",
+          "required": true,
+          "description": "Face ID biometric scanner"
+        },
+        {
+          "name": "fallback_password",
+          "type": "password",
+          "required": false,
+          "description": "Fallback password if Face ID fails"
+        }
+      ],
+      "actions": [
+        {
+          "button": "Scan Face",
+          "action": "trigger_face_scan"
+        },
+        {
+          "button": "Use Password Instead",
+          "action": "show_password_field"
+        }
+      ]
+    },
+    {
+      "ekran_adi": "Face ID Setup Screen",
+      "aciklama": "Register and enroll Face ID for the user account",
+      "fields": [
+        {
+          "name": "face_capture",
+          "type": "biometric",
+          "required": true,
+          "description": "Capture multiple angles of user's face"
+        },
+        {
+          "name": "confirmation",
+          "type": "checkbox",
+          "required": true,
+          "description": "User consent for biometric data storage"
+        }
+      ],
+      "actions": [
+        {
+          "button": "Start Face Capture",
+          "action": "begin_enrollment"
+        },
+        {
+          "button": "Skip for Now",
+          "action": "skip_faceid_setup"
+        }
+      ]
+    },
+    {
+      "ekran_adi": "Face ID Success Screen",
+      "aciklama": "Confirmation screen after successful Face ID authentication",
+      "fields": [],
+      "actions": [
+        {
+          "button": "Continue to App",
+          "action": "navigate_to_home"
+        }
+      ]
+    }
+  ],
+  "backend_islemler": [
+    {
+      "islem": "Face ID Authentication",
+      "aciklama": "Verify user identity using Face ID biometric data",
+      "endpoint": "/api/auth/faceid-login",
+      "method": "POST",
+      "request": {
+        "biometric_data": "encrypted_face_template",
+        "device_id": "string"
+      },
+      "response": {
+        "success": "boolean",
+        "token": "string",
+        "user_id": "string"
+      }
+    },
+    {
+      "islem": "Enroll Face ID",
+      "aciklama": "Register and store user's Face ID biometric template",
+      "endpoint": "/api/auth/faceid-enroll",
+      "method": "POST",
+      "request": {
+        "user_id": "string",
+        "biometric_template": "encrypted_data",
+        "consent": "boolean"
+      },
+      "response": {
+        "success": "boolean",
+        "enrollment_id": "string"
+      }
+    },
+    {
+      "islem": "Disable Face ID",
+      "aciklama": "Remove Face ID authentication for user account",
+      "endpoint": "/api/auth/faceid-disable",
+      "method": "DELETE",
+      "request": {
+        "user_id": "string",
+        "password": "string"
+      },
+      "response": {
+        "success": "boolean",
+        "message": "string"
+      }
+    }
+  ],
+  "guvenlik_gereksinimleri": [
+    {
+      "gereksinim": "Biometric Data Encryption",
+      "aciklama": "All Face ID templates must be encrypted at rest and in transit"
+    },
+    {
+      "gereksinim": "Fallback Authentication",
+      "aciklama": "Password fallback must always be available"
+    },
+    {
+      "gereksinim": "User Consent",
+      "aciklama": "Explicit user consent required before enrolling Face ID"
+    }
+  ],
+  "test_senaryolari": [
+    {
+      "senaryo": "Successful Face ID Login",
+      "adimlar": [
+        "User opens app",
+        "Face ID prompt appears",
+        "User scans face successfully",
+        "User is authenticated and logged in"
+      ]
+    },
+    {
+      "senaryo": "Face ID Fail - Password Fallback",
+      "adimlar": [
+        "User attempts Face ID",
+        "Face ID fails after 3 attempts",
+        "Password field is shown",
+        "User enters password and logs in"
+      ]
+    }
+  ]
+}
