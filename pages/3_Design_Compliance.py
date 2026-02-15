@@ -9,7 +9,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 from components.sidebar import render_custom_sidebar
 from pathlib import Path
 from agno.media import Image as AgnoImage
-from utils.config import get_credentials, gemini_available, GEMINI_MODELS, GEMINI_MODEL
+from utils.config import get_credentials, get_gemini_keys, GEMINI_MODELS, GEMINI_MODEL
 from integrations.google_docs import fetch_google_doc_direct
 from agents.agent_definitions import create_design_agents
 from data.database import save_analysis
@@ -346,8 +346,11 @@ with col2:
 st.divider()
 
 # ── Check API ──
-gemini_key, jira_email, jira_token = get_credentials()
-if not gemini_available():
+gemini_keys = get_gemini_keys()
+gemini_key = gemini_keys[0] if gemini_keys else ""
+_, jira_email, jira_token = get_credentials()
+
+if not gemini_key:
     st.error("⚠️ Gemini API Key bulunamadı. Ana sayfadan API key'i girin.")
     st.stop()
 
