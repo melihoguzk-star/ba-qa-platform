@@ -210,7 +210,14 @@ def test_import_merge_workflow():
                     # Check structure
                     assert 'ekranlar' in merged, "Missing 'ekranlar'"
                     assert 'backend_islemler' in merged, "Missing 'backend_islemler'"
-                    assert len(merged['ekranlar']) == 4, f"Expected 4 screens, got {len(merged['ekranlar'])}"
+
+                    # Verify merge increased screen count
+                    original_screens = len(existing_content.get('ekranlar', []))
+                    new_screens = len(new_content.get('ekranlar', []))
+                    merged_screens = len(merged['ekranlar'])
+                    expected_screens = original_screens + new_screens
+
+                    assert merged_screens == expected_screens, f"Expected {expected_screens} screens, got {merged_screens}"
 
                     print("   ✅ Structure validation passed")
 
