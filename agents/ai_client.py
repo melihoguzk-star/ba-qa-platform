@@ -83,6 +83,59 @@ def call_gemini(system_prompt: str, user_content: str, api_key: str, max_tokens:
             raise Exception(f"❌ Gemini API hatası: {error_msg}")
 
 
+def call_gemini_with_rotation(system_prompt: str, user_content: str, max_tokens: int = QA_OUTPUT_TOKEN_LIMIT, model: str | None = None) -> dict:
+    """
+    Gemini with automatic key rotation on quota errors.
+    Uses multiple API keys if available, rotates on quota exceeded.
+    """
+    keys = get_gemini_keys()
+    
+    if not keys:
+        raise Exception("❌ Gemini API key bulunamadı. Lütfen secrets.toml dosyasına GEMINI_API_KEY veya GEMINI_API_KEYS ekleyin.")
+    
+    # If only one key, use regular call_gemini
+    if len(keys) == 1:
+        return call_gemini(system_prompt, user_content, keys[0], max_tokens, model)
+    
+    # Multiple keys: use rotation
+    key_manager = APIKeyManager(keys, provider="gemini")
+    max_retries = len(keys)
+    
+    for attempt in range(max_retries):
+        current_key = key_manager.get_next_key()
+        
+        if not current_key:
+            # All keys exhausted
+            raise Exception(f"❌ Tüm Gemini API keyleri tükendi ({len(keys)} key denendi). Lütfen quota reset'i bekleyin veya yeni key ekleyin.")
+        
+        try:
+            response = call_gemini(system_prompt, user_content, current_key, max_tokens, model)
+            key_manager.record_success(current_key)
+            return response
+        except Exception as e:
+            error_msg = str(e)
+            
+            # Check if it's a quota error
+            if is_quota_error(e):
+                key_manager.mark_key_failed(current_key, error_msg)
+                if attempt < max_retries - 1:
+                    # Try next key
+                    continue
+                else:
+                    # All keys exhausted
+                    raise Exception(f"❌ Tüm Gemini API keyleri quota limitine ulaştı. Lütfen quota reset'i bekleyin veya yeni key ekleyin.\n\nSon hata: {error_msg}")
+            elif is_auth_error(e):
+                # Auth error - mark as invalid and try next
+                key_manager.mark_key_invalid(current_key, error_msg)
+                if attempt < max_retries - 1:
+                    continue
+                else:
+                    raise Exception(f"❌ Tüm Gemini API keyleri geçersiz. Lütfen key'lerinizi kontrol edin.\n\nSon hata: {error_msg}")
+            else:
+                # Other errors - don't rotate, just raise
+                raise e
+
+
 def call_ai(system_prompt: str, user_content: str, anthropic_key: str, gemini_key: str,
             model: str, max_tokens: int = CHUNK_OUTPUT_TOKEN_LIMIT) -> dict:
     """Unified AI call that routes to Anthropic or Gemini based on model ID."""
@@ -91,6 +144,7 @@ def call_ai(system_prompt: str, user_content: str, anthropic_key: str, gemini_ke
     elif is_gemini_model(model):
         # Gemini has 8192 token output limit, cap it
         capped_tokens = min(max_tokens, 8192)
-        return call_gemini(system_prompt, user_content, gemini_key, capped_tokens, model)
+        # Use rotation-enabled function
+        return call_gemini_with_rotation(system_prompt, user_content, capped_tokens, model)
     else:
         raise ValueError(f"Unknown model provider for model: {model}")
