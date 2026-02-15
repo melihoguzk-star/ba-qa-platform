@@ -141,6 +141,73 @@ def is_gemini_model(model_id: str) -> bool:
     return model_id.startswith("gemini-")
 
 
+def load_custom_models():
+    """Load custom models from JSON file and merge with ALL_MODELS."""
+    import json
+    from pathlib import Path
+
+    custom_models_file = Path("data/custom_models.json")
+
+    if custom_models_file.exists():
+        try:
+            with open(custom_models_file, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+                custom_models = data.get("models", {})
+
+                # Merge with ALL_MODELS
+                global ALL_MODELS
+                ALL_MODELS = {
+                    "Claude Opus 4.6": "claude-opus-4-6",
+                    "Claude Sonnet 4.5": "claude-sonnet-4-5-20250929",
+                    "Claude Sonnet 4": "claude-sonnet-4-20250514",
+                    "Claude Haiku 4.5": "claude-haiku-4-5-20251001",
+                    "Gemini 2.5 Flash": "gemini-2.5-flash",
+                    "Gemini 2.5 Pro": "gemini-2.5-pro",
+                    "Gemini 2.0 Flash": "gemini-2.0-flash",
+                }
+                ALL_MODELS.update(custom_models)
+
+                return custom_models
+        except Exception:
+            pass
+
+    return {}
+
+
+def get_all_models():
+    """Get all models (default + custom)."""
+    load_custom_models()  # Ensure custom models are loaded
+    return ALL_MODELS
+
+
+def get_model_api_key(model_id: str) -> str:
+    """Get API key for a specific model (checks custom models first)."""
+    import json
+    from pathlib import Path
+
+    custom_models_file = Path("data/custom_models.json")
+
+    if custom_models_file.exists():
+        try:
+            with open(custom_models_file, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+                api_keys = data.get("api_keys", {})
+
+                if model_id in api_keys:
+                    return api_keys[model_id]
+        except Exception:
+            pass
+
+    # Fallback to default API keys
+    if is_anthropic_model(model_id):
+        return get_anthropic_key()
+    elif is_gemini_model(model_id):
+        g, _, _ = get_credentials()
+        return g
+
+    return ""
+
+
 def get_anthropic_key() -> str:
     """Returns Anthropic API key from session state or secrets"""
     key = st.session_state.get("anthropic_api_key", "")

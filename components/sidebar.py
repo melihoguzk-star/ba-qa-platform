@@ -212,6 +212,13 @@ def render_custom_sidebar(active_page="home"):
             "label": "Pipeline Geçmiş",
             "url": "/Pipeline_Gecmis",
             "section": "pipeline"
+        },
+        {
+            "key": "ayarlar",
+            "icon": "⚙️",
+            "label": "Ayarlar",
+            "url": "/Ayarlar",
+            "section": "settings"
         }
     ]
 
@@ -273,6 +280,18 @@ def render_custom_sidebar(active_page="home"):
                 elif page["key"] == "pipeline_gecmis":
                     if st.button(f"{page['icon']} {page['label']}", key=f"nav_{page['key']}", use_container_width=True):
                         st.switch_page("pages/8_Pipeline_Gecmis.py")
+
+        st.markdown('</div>', unsafe_allow_html=True)
+
+        # Settings section
+        st.markdown('<div class="nav-section">', unsafe_allow_html=True)
+        st.markdown('<div class="nav-section-title">Sistem</div>', unsafe_allow_html=True)
+
+        for page in pages:
+            if page["section"] == "settings":
+                if page["key"] == "ayarlar":
+                    if st.button(f"{page['icon']} {page['label']}", key=f"nav_{page['key']}", use_container_width=True):
+                        st.switch_page("pages/9_Ayarlar.py")
 
         st.markdown('</div>', unsafe_allow_html=True)
 

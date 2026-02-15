@@ -1,6 +1,8 @@
 .streamlit/secrets.toml
 venv/
 data/baqa.db
+data/custom_models.json
+data/pipeline.db
 __pycache__/
 *.pyc
 .idea/
