@@ -176,6 +176,8 @@ with tab1:
                             st.session_state.key_manager = APIKeyManager(st.session_state.gemini_keys, provider="gemini")
                         else:
                             st.session_state.key_manager = None
+                        # Auto-save to secrets.toml
+                        save_keys_to_secrets()
                         st.rerun()
                 
                 st.divider()
@@ -210,7 +212,9 @@ with tab1:
                             st.session_state.gemini_keys.append(new_key)
                             # Recreate key manager
                             st.session_state.key_manager = APIKeyManager(st.session_state.gemini_keys, provider="gemini")
-                            st.success(f"✅ Key added successfully! Total: {len(st.session_state.gemini_keys)} keys")
+                            # Auto-save to secrets.toml
+                            save_keys_to_secrets()
+                            st.success(f"✅ Key added and saved! Total: {len(st.session_state.gemini_keys)} keys")
                             st.rerun()
                         else:
                             st.error(f"Cannot add key: {message}")
@@ -218,7 +222,9 @@ with tab1:
                     st.session_state.gemini_keys.append(new_key)
                     # Recreate key manager
                     st.session_state.key_manager = APIKeyManager(st.session_state.gemini_keys, provider="gemini")
-                    st.success(f"✅ Key added! Total: {len(st.session_state.gemini_keys)} keys")
+                    # Auto-save to secrets.toml
+                    save_keys_to_secrets()
+                    st.success(f"✅ Key added and saved! Total: {len(st.session_state.gemini_keys)} keys")
                     st.rerun()
     
     st.divider()
