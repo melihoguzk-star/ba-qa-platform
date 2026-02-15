@@ -870,7 +870,13 @@ elif step == "figma_upload":
         st.subheader("📋 Screen Analysis Sonuçları")
         
         with st.expander("🔍 Detaylı Analiz Görüntüle", expanded=True):
-            st.markdown(st.session_state.screen_analysis)
+            # Use text_area instead of markdown to prevent horizontal overflow
+            st.text_area(
+                "Screen Analysis",
+                value=st.session_state.screen_analysis,
+                height=400,
+                label_visibility="collapsed"
+            )
         
         st.divider()
         st.info("💡 Bu analiz test case üretiminde kullanılacak. Devam etmek için butona tıklayın.")
