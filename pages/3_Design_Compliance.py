@@ -9,7 +9,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 from components.sidebar import render_custom_sidebar
 from pathlib import Path
 from agno.media import Image as AgnoImage
-from utils.config import get_credentials, get_gemini_keys, GEMINI_MODELS, GEMINI_MODEL
+from utils.config import get_credentials, get_gemini_keys, get_anthropic_key, get_all_models, GEMINI_MODEL
 from integrations.google_docs import fetch_google_doc_direct
 from agents.agent_definitions import create_design_agents
 from data.database import save_analysis
@@ -324,37 +324,60 @@ st.markdown("""
 # ── Model Selection ──
 st.markdown("### ⚙️ Model Ayarları")
 
+ALL_MODELS = get_all_models()
+
 col1, col2 = st.columns(2)
 with col1:
     # Get default model index
     current_model = st.session_state.get("design_eval_model", GEMINI_MODEL)
-    current_model_name = [k for k, v in GEMINI_MODELS.items() if v == current_model][0] if current_model in GEMINI_MODELS.values() else "Gemini 2.5 Flash"
-    default_idx = list(GEMINI_MODELS.keys()).index(current_model_name) if current_model_name in GEMINI_MODELS.keys() else 0
+    current_model_name = [k for k, v in ALL_MODELS.items() if v == current_model][0] if current_model in ALL_MODELS.values() else "Gemini 2.5 Flash"
+    default_idx = list(ALL_MODELS.keys()).index(current_model_name) if current_model_name in ALL_MODELS.keys() else 4
 
     selected_model_name = st.selectbox(
-        "Vision Model (Gemini only)",
-        options=list(GEMINI_MODELS.keys()),
+        "Vision Model",
+        options=list(ALL_MODELS.keys()),
         index=default_idx,
-        help="Design analizi için kullanılacak Gemini vision model (görsel analiz için sadece Gemini destekleniyor)"
+        help="Design analizi için kullanılacak AI model (vision/multimodal yetenekleri olan modeller)"
     )
-    selected_model = GEMINI_MODELS[selected_model_name]
+    selected_model = ALL_MODELS[selected_model_name]
     st.session_state["design_eval_model"] = selected_model
 
 with col2:
-    st.info(f"🤖 **Seçili Model:** {selected_model_name}\n\n👁️ Vision/Multimodal analiz")
+    # Show vision support status
+    is_vision_model = selected_model.startswith("gemini-") or selected_model.startswith("claude-")
+    vision_icon = "👁️" if is_vision_model else "⚠️"
+    vision_text = "Vision/Multimodal analiz" if is_vision_model else "Vision desteği sınırlı"
+    st.info(f"🤖 **Seçili Model:** {selected_model_name}\n\n{vision_icon} {vision_text}")
 
 st.divider()
 
 # ── Check API ──
 gemini_keys = get_gemini_keys()
 gemini_key = gemini_keys[0] if gemini_keys else ""
+anthropic_key = get_anthropic_key()
 _, jira_email, jira_token = get_credentials()
 
-if not gemini_key:
-    st.error("⚠️ Gemini API Key bulunamadı. Ana sayfadan API key'i girin.")
+# Check if we have the right API key for selected model
+if selected_model.startswith("claude-"):
+    if not anthropic_key:
+        st.error("⚠️ Anthropic modeli seçtiniz ama API key girilmemiş. Ana sayfadan Anthropic API Key'i girin.")
+        st.stop()
+    # Note: Currently using agno framework which is Gemini-only
+    # For Anthropic vision support, we recommend using Gemini models
+    st.warning("⚠️ **Not:** Şu anda görsel analiz için Gemini framework'ü kullanılıyor. Anthropic modelleri için sınırlı destek var. En iyi sonuç için Gemini modellerini kullanın.")
+    # Use Gemini key as fallback for now
+    if not gemini_key:
+        st.error("⚠️ Görsel analiz için Gemini API Key gerekli. Ana sayfadan Gemini API Key'i girin.")
+        st.stop()
+elif selected_model.startswith("gemini-"):
+    if not gemini_key:
+        st.error("⚠️ Gemini API Key bulunamadı. Ana sayfadan API key'i girin.")
+        st.stop()
+else:
+    st.error(f"⚠️ Bilinmeyen model tipi: {selected_model}")
     st.stop()
 
-agents = create_design_agents(gemini_key, model=selected_model)
+agents = create_design_agents(gemini_key, model=selected_model if selected_model.startswith("gemini-") else GEMINI_MODEL)
 if not all(agents):
     st.error("Agent'lar başlatılamadı. Lütfen API ayarlarını kontrol edin.")
     st.stop()
