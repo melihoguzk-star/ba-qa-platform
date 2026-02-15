@@ -193,6 +193,13 @@ def render_custom_sidebar(active_page="home"):
             "section": "tools"
         },
         {
+            "key": "document_library",
+            "icon": "📚",
+            "label": "Document Library",
+            "url": "/Document_Library",
+            "section": "tools"
+        },
+        {
             "key": "brd_pipeline",
             "icon": "🚀",
             "label": "BRD Pipeline",
@@ -262,6 +269,9 @@ def render_custom_sidebar(active_page="home"):
                 elif page["key"] == "architecture":
                     if st.button(f"{page['icon']} {page['label']}", key=f"nav_{page['key']}", use_container_width=True):
                         st.switch_page("pages/5_Mimari.py")
+                elif page["key"] == "document_library":
+                    if st.button(f"{page['icon']} {page['label']}", key=f"nav_{page['key']}", use_container_width=True):
+                        st.switch_page("pages/10_Document_Library.py")
 
         st.markdown('</div>', unsafe_allow_html=True)
 
