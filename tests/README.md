@@ -94,6 +94,18 @@ PYTHONPATH=. pytest -m "not slow"
   - Statistics (2 tests)
 - ✅ **50% coverage** on `data/database.py`
 
+### AI Client (Phase 2)
+- ✅ **22 tests** covering:
+  - Anthropic API calls (7 tests)
+  - Gemini API calls (5 tests)
+  - API key rotation (6 tests)
+  - Unified AI interface (4 tests)
+- ✅ **87% coverage** on `agents/ai_client.py`
+
+### Total
+- ✅ **39 unit tests** passing
+- ✅ **25% overall coverage** (improving)
+
 ## 📝 Writing Tests
 
 ### Test Organization
