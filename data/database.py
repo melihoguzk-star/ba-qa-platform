@@ -106,39 +106,132 @@ def save_analysis(jira_key: str, analysis_type: str, genel_puan: float,
     return analysis_id
 
 
-def get_recent_analyses(limit: int = 20, analysis_type: str = None) -> list:
+def get_recent_analyses(limit: int = 20, analysis_type: str = None, time_range: str = "all") -> list:
+    """Get recent analyses with optional time range filter.
+
+    Args:
+        limit: Maximum number of records to return
+        analysis_type: Filter by analysis type (ba, tc, design, full)
+        time_range: Time range filter - "7days", "30days", "90days", or "all"
+    """
     conn = get_db()
+
+    # Build time filter
+    time_filter = ""
+    if time_range == "7days":
+        time_filter = "AND created_at >= date('now', '-7 days')"
+    elif time_range == "30days":
+        time_filter = "AND created_at >= date('now', '-30 days')"
+    elif time_range == "90days":
+        time_filter = "AND created_at >= date('now', '-90 days')"
+
     if analysis_type:
-        rows = conn.execute(
-            "SELECT * FROM analyses WHERE analysis_type=? ORDER BY created_at DESC LIMIT ?",
-            (analysis_type, limit)).fetchall()
+        query = f"SELECT * FROM analyses WHERE analysis_type=? {time_filter} ORDER BY created_at DESC LIMIT ?"
+        rows = conn.execute(query, (analysis_type, limit)).fetchall()
     else:
-        rows = conn.execute(
-            "SELECT * FROM analyses ORDER BY created_at DESC LIMIT ?",
-            (limit,)).fetchall()
+        query = f"SELECT * FROM analyses WHERE 1=1 {time_filter} ORDER BY created_at DESC LIMIT ?"
+        rows = conn.execute(query, (limit,)).fetchall()
+
     conn.close()
     return [dict(r) for r in rows]
 
 
-def get_stats() -> dict:
+def get_stats(time_range: str = "all") -> dict:
+    """Get statistics with optional time range filter.
+
+    Args:
+        time_range: Time range filter - "7days", "30days", "90days", or "all"
+    """
     conn = get_db()
-    total = conn.execute("SELECT COUNT(*) as c FROM analyses").fetchone()["c"]
+
+    # Build time filter
+    time_filter = ""
+    if time_range == "7days":
+        time_filter = "WHERE created_at >= date('now', '-7 days')"
+    elif time_range == "30days":
+        time_filter = "WHERE created_at >= date('now', '-30 days')"
+    elif time_range == "90days":
+        time_filter = "WHERE created_at >= date('now', '-90 days')"
+
+    total = conn.execute(f"SELECT COUNT(*) as c FROM analyses {time_filter}").fetchone()["c"]
+
     by_type = conn.execute(
-        "SELECT analysis_type, COUNT(*) as c, AVG(genel_puan) as avg_puan, "
-        "SUM(CASE WHEN gecti_mi=1 THEN 1 ELSE 0 END) as gecen "
-        "FROM analyses GROUP BY analysis_type"
+        f"SELECT analysis_type, COUNT(*) as c, AVG(genel_puan) as avg_puan, "
+        f"SUM(CASE WHEN gecti_mi=1 THEN 1 ELSE 0 END) as gecen "
+        f"FROM analyses {time_filter} {'WHERE' if not time_filter else 'AND'} 1=1 GROUP BY analysis_type"
     ).fetchall()
+
     recent_7 = conn.execute(
-        "SELECT date(created_at) as gun, analysis_type, COUNT(*) as c, AVG(genel_puan) as avg_puan "
-        "FROM analyses WHERE created_at >= date('now', '-7 days') "
-        "GROUP BY gun, analysis_type ORDER BY gun"
+        f"SELECT date(created_at) as gun, analysis_type, COUNT(*) as c, AVG(genel_puan) as avg_puan "
+        f"FROM analyses {time_filter} "
+        f"GROUP BY gun, analysis_type ORDER BY gun"
     ).fetchall()
+
     conn.close()
     return {
         "total": total,
         "by_type": [dict(r) for r in by_type],
         "recent_7_days": [dict(r) for r in recent_7],
     }
+
+
+def get_dashboard_alerts() -> list:
+    """Get dashboard alerts based on analysis metrics.
+
+    Returns list of alerts with level (error/warning) and message.
+    """
+    conn = get_db()
+    alerts = []
+
+    # Get stats for last 30 days
+    stats_30d = conn.execute(
+        "SELECT analysis_type, COUNT(*) as c, AVG(genel_puan) as avg_puan, "
+        "SUM(CASE WHEN gecti_mi=1 THEN 1 ELSE 0 END) as gecen "
+        "FROM analyses WHERE created_at >= date('now', '-30 days') "
+        "GROUP BY analysis_type"
+    ).fetchall()
+
+    for stat in stats_30d:
+        analysis_type = stat["analysis_type"]
+        count = stat["c"]
+        avg_puan = stat["avg_puan"] or 0
+        gecen = stat["gecen"]
+        pass_rate = (gecen / count * 100) if count > 0 else 0
+
+        type_label = {"ba": "BA", "tc": "TC", "design": "Design"}.get(analysis_type, analysis_type)
+
+        # Alert: Low pass rate
+        if pass_rate < 70 and count >= 5:
+            alerts.append({
+                "level": "error",
+                "message": f"{type_label} geçme oranı düşük: %{pass_rate:.0f} (<70%)",
+                "action": f"{type_label} değerlendirme kriterlerini gözden geçirin",
+                "metric": "pass_rate",
+                "value": pass_rate
+            })
+
+        # Alert: Low average score
+        if avg_puan < 65 and count >= 5:
+            alerts.append({
+                "level": "warning",
+                "message": f"{type_label} ortalama puan düşük: {avg_puan:.0f}/100",
+                "action": f"{type_label} kalitesini artırmak için iyileştirme yapın",
+                "metric": "avg_score",
+                "value": avg_puan
+            })
+
+        # Alert: Low volume
+        if count < 5 and count > 0:
+            alerts.append({
+                "level": "info",
+                "message": f"{type_label} analiz sayısı düşük: Sadece {count} analiz (son 30 gün)",
+                "action": f"Daha fazla {type_label} değerlendirmesi yapın",
+                "metric": "volume",
+                "value": count
+            })
+
+    conn.close()
+    return alerts
 
 
 # ─────────────────────────────────────────────

@@ -224,6 +224,45 @@ st.markdown("""
         opacity: 0.3;
     }
 
+    /* Quick Actions */
+    .stButton > button {
+        font-family: 'DM Sans', sans-serif;
+        font-weight: 500;
+        border-radius: 10px;
+        border: 1px solid #2a3654;
+        transition: all 0.3s;
+        background: linear-gradient(135deg, #1a2236 0%, #1e2742 100%);
+    }
+    .stButton > button:hover {
+        border-color: #3b82f6;
+        transform: translateY(-2px);
+        box-shadow: 0 8px 24px rgba(59,130,246,0.2);
+    }
+    .stButton > button[kind="primary"] {
+        background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+        border-color: #3b82f6;
+    }
+    .stButton > button[kind="primary"]:hover {
+        background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+        box-shadow: 0 8px 24px rgba(59,130,246,0.4);
+    }
+
+    /* Time Range Selector */
+    .stSelectbox {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 13px;
+    }
+
+    /* Alert Styling */
+    .element-container .stAlert {
+        border-radius: 10px;
+        border-left: 4px solid;
+        font-family: 'DM Sans', sans-serif;
+    }
+    .element-container .stAlert[data-baseweb="notification"] {
+        background: #1a2236;
+    }
+
     /* Footer */
     .footer-cta {
         text-align: center;
@@ -287,9 +326,31 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
+# ── Time Range Selector ──
+col1, col2 = st.columns([3, 1])
+with col1:
+    st.markdown('<div class="section-title">📊 Dashboard Genel Bakış</div>', unsafe_allow_html=True)
+with col2:
+    time_range_display = st.selectbox(
+        "Zaman Aralığı",
+        ["Son 7 Gün", "Son 30 Gün", "Son 90 Gün", "Tüm Zamanlar"],
+        index=1,  # Default: Son 30 Gün
+        key="time_range_selector",
+        label_visibility="collapsed"
+    )
+
+# Map display to internal values
+time_range_map = {
+    "Son 7 Gün": "7days",
+    "Son 30 Gün": "30days",
+    "Son 90 Gün": "90days",
+    "Tüm Zamanlar": "all"
+}
+time_range = time_range_map[time_range_display]
+
 # ── Quick Stats ──
-from data.database import get_stats, get_recent_analyses
-stats = get_stats()
+from data.database import get_stats, get_recent_analyses, get_dashboard_alerts
+stats = get_stats(time_range)
 
 ba_s = next((s for s in stats["by_type"] if s["analysis_type"] == "ba"), {})
 tc_s = next((s for s in stats["by_type"] if s["analysis_type"] == "tc"), {})
@@ -320,6 +381,50 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
+# ── Alerts Section ──
+alerts = get_dashboard_alerts()
+if alerts:
+    st.markdown('<div class="section-title">🚨 Uyarılar ve Öneriler</div>', unsafe_allow_html=True)
+
+    error_alerts = [a for a in alerts if a["level"] == "error"]
+    warning_alerts = [a for a in alerts if a["level"] == "warning"]
+    info_alerts = [a for a in alerts if a["level"] == "info"]
+
+    for alert in error_alerts:
+        st.error(f"**{alert['message']}**\n\n💡 Öneri: {alert['action']}")
+
+    for alert in warning_alerts:
+        st.warning(f"**{alert['message']}**\n\n💡 Öneri: {alert['action']}")
+
+    # Info alerts in expandable section
+    if info_alerts:
+        with st.expander(f"ℹ️ Bilgilendirme ({len(info_alerts)})", expanded=False):
+            for alert in info_alerts:
+                st.info(f"**{alert['message']}**\n\n💡 Öneri: {alert['action']}")
+
+# ── Quick Actions Panel ──
+st.markdown('<div class="section-title">⚡ Hızlı İşlemler</div>', unsafe_allow_html=True)
+
+col1, col2, col3, col4 = st.columns(4)
+
+with col1:
+    if st.button("🔍 BA Değerlendir", use_container_width=True, type="primary", help="İş Analizi dokümanı değerlendirmesi yap"):
+        st.switch_page("pages/1_BA_Degerlendirme.py")
+
+with col2:
+    if st.button("🧪 TC Değerlendir", use_container_width=True, help="Test Case kalite değerlendirmesi yap"):
+        st.switch_page("pages/2_TC_Degerlendirme.py")
+
+with col3:
+    if st.button("🎨 Design Check", use_container_width=True, help="Figma tasarım uyumluluk kontrolü"):
+        st.switch_page("pages/3_Design_Compliance.py")
+
+with col4:
+    if st.button("📋 BRD Pipeline", use_container_width=True, help="BRD'den BA/TA/TC üret"):
+        st.switch_page("pages/6_BRD_Pipeline.py")
+
+st.markdown("<br>", unsafe_allow_html=True)
+
 # ── Feature Cards ──
 st.markdown('<div class="section-title">✨ Özellikler</div>', unsafe_allow_html=True)
 
@@ -349,9 +454,9 @@ with col_c:
     </div>""", unsafe_allow_html=True)
 
 # ── Recent Analyses ──
-st.markdown('<div class="section-title">📊 Son Analizler</div>', unsafe_allow_html=True)
+st.markdown(f'<div class="section-title">📊 Son Analizler ({time_range_display})</div>', unsafe_allow_html=True)
 
-recent = get_recent_analyses(limit=10)
+recent = get_recent_analyses(limit=10, time_range=time_range)
 if recent:
     for r in recent:
         puan = r.get("genel_puan", 0)
