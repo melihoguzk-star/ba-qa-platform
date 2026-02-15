@@ -373,8 +373,14 @@ elif step == "ba_review":
     with c1:
         if st.button("✅ Onayla ve İlerle", type="primary", use_container_width=True):
             if skip_qa:
-                # QA'yı atla, direkt TA'ya geç
+                # QA'yı atla, direkt TA'ya geç - Database'e kaydet
+                from pipeline.brd.orchestrator import finalize_stage
+                qa_result = {"genel_puan": 100, "gecti_mi": True, "genel_degerlendirme": "QA atlandı (Force Pass)",
+                           "skorlar": [], "iyilestirme_onerileri": []}
+                finalize_stage(st.session_state.run_id, "ba", st.session_state.ba_content, qa_result,
+                             st.session_state.get("ba_revision_count", 0), True, 0)
                 st.session_state.ba_score = 100  # Force pass
+                st.session_state.ba_qa_result = qa_result
                 st.session_state.pipeline_step = "ta_gen"
                 st.success("⚡ QA atlandı, Teknik Analize geçiliyor...")
             else:
@@ -467,8 +473,14 @@ elif step == "ta_review":
     with c1:
         if st.button("✅ Onayla ve İlerle", type="primary", use_container_width=True, key="ta_ok"):
             if skip_qa:
-                # QA'yı atla, direkt TC'ye geç
+                # QA'yı atla, direkt TC'ye geç - Database'e kaydet
+                from pipeline.brd.orchestrator import finalize_stage
+                qa_result = {"genel_puan": 100, "gecti_mi": True, "genel_degerlendirme": "QA atlandı (Force Pass)",
+                           "skorlar": [], "iyilestirme_onerileri": []}
+                finalize_stage(st.session_state.run_id, "ta", st.session_state.ta_content, qa_result,
+                             st.session_state.get("ta_revision_count", 0), True, 0)
                 st.session_state.ta_score = 100  # Force pass
+                st.session_state.ta_qa_result = qa_result
                 st.session_state.pipeline_step = "tc_gen"
                 st.success("⚡ QA atlandı, Test Case'e geçiliyor...")
             else:
@@ -560,8 +572,16 @@ elif step == "tc_review":
     with c1:
         if st.button("✅ Onayla ve İlerle", type="primary", use_container_width=True, key="tc_ok"):
             if skip_qa:
-                # QA'yı atla, direkt done'a geç
+                # QA'yı atla, direkt done'a geç - Database'e kaydet ve tamamla
+                from pipeline.brd.orchestrator import finalize_stage, complete_run
+                qa_result = {"genel_puan": 100, "gecti_mi": True, "genel_degerlendirme": "QA atlandı (Force Pass)",
+                           "skorlar": [], "iyilestirme_onerileri": []}
+                finalize_stage(st.session_state.run_id, "tc", st.session_state.tc_content, qa_result,
+                             st.session_state.get("tc_revision_count", 0), True, 0)
+                total_time = int(time.time() - st.session_state.get("pipeline_start", time.time()))
+                complete_run(st.session_state.run_id, total_time)
                 st.session_state.tc_score = 100  # Force pass
+                st.session_state.tc_qa_result = qa_result
                 st.session_state.pipeline_step = "done"
                 st.success("⚡ QA atlandı, Pipeline tamamlandı!")
             else:
