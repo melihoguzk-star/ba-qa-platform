@@ -11,10 +11,16 @@ import json
 import time
 from datetime import datetime
 
-from agents.brd_prompts import (
-    BA_CHUNK1_SYSTEM, BA_CHUNK2_SYSTEM, BA_QA_SYSTEM,
-    TA_CHUNK1_SYSTEM, TA_CHUNK2_SYSTEM, TA_QA_SYSTEM,
-    TC_CHUNK1_SYSTEM, TC_CHUNK2_SYSTEM, TC_QA_SYSTEM,
+from agents.brd_prompts_optimized import (
+    BA_CHUNK1_SYSTEM_OPTIMIZED as BA_CHUNK1_SYSTEM,
+    BA_CHUNK2_SYSTEM_OPTIMIZED as BA_CHUNK2_SYSTEM,
+    BA_QA_SYSTEM_OPTIMIZED as BA_QA_SYSTEM,
+    TA_CHUNK1_SYSTEM_OPTIMIZED as TA_CHUNK1_SYSTEM,
+    TA_CHUNK2_SYSTEM_OPTIMIZED as TA_CHUNK2_SYSTEM,
+    TA_QA_SYSTEM_OPTIMIZED as TA_QA_SYSTEM,
+    TC_CHUNK1_SYSTEM_OPTIMIZED as TC_CHUNK1_SYSTEM,
+    TC_CHUNK2_SYSTEM_OPTIMIZED as TC_CHUNK2_SYSTEM,
+    TC_QA_SYSTEM_OPTIMIZED as TC_QA_SYSTEM,
 )
 from agents.ai_client import call_ai
 from pipeline.brd.checkpoint import save_checkpoint, load_checkpoint, clear_checkpoint
