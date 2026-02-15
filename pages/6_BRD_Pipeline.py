@@ -655,8 +655,8 @@ elif step == "ta_review":
                              st.session_state.get("ta_revision_count", 0), True, 0)
                 st.session_state.ta_score = 100  # Force pass
                 st.session_state.ta_qa_result = qa_result
-                st.session_state.pipeline_step = "tc_gen"
-                st.success("⚡ QA atlandı, Test Case'e geçiliyor...")
+                st.session_state.pipeline_step = "figma_upload"
+                st.success("⚡ QA atlandı, Figma Upload'a geçiliyor...")
             else:
                 # Normal akış, QA'ya gönder
                 st.session_state.pipeline_step = "ta_qa"
@@ -774,8 +774,8 @@ elif step == "ta_qa":
 
     st.divider()
     if score >= TA_PASS_THRESHOLD:
-        if st.button("➡️ Test Case'e Geç", type="primary", use_container_width=True):
-            st.session_state.pipeline_step = "tc_gen"
+        if st.button("➡️ Figma Upload'a Geç", type="primary", use_container_width=True):
+            st.session_state.pipeline_step = "figma_upload"
             st.rerun()
     else:
         rev = st.session_state.get("ta_revision_count",0)
@@ -792,7 +792,7 @@ elif step == "ta_qa":
                     st.rerun()
             with c2:
                 if st.button("➡️ Yine de Devam Et", use_container_width=True, key="ta_fp"):
-                    st.session_state.pipeline_step = "tc_gen"
+                    st.session_state.pipeline_step = "figma_upload"
                     st.rerun()
         else:
             st.warning("Max revizyon.")
