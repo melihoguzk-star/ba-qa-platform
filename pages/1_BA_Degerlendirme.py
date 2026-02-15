@@ -7,11 +7,11 @@ import sys, os, time
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 from components.sidebar import render_custom_sidebar
-from utils.config import get_credentials, all_creds_available, BA_CRITERIA, emoji_score, get_gemini_keys
+from utils.config import get_credentials, all_creds_available, BA_CRITERIA, emoji_score, get_gemini_keys, get_anthropic_key, get_all_models, GEMINI_MODEL
 from integrations.jira_client import jira_search, jira_add_label, jira_update_labels, jira_add_comment
 from integrations.google_docs import fetch_google_doc_via_proxy, extract_doc_id
-from agents.agent_definitions import create_ba_agents
 from agents.prompts import build_ba_evaluation_prompt, parse_json_response, format_ba_report
+from agents.ai_client import call_ai
 from data.database import save_analysis
 
 st.set_page_config(page_title="BA Değerlendirme — BA&QA", page_icon="📋", layout="wide")
@@ -280,13 +280,47 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
+# ── Model Selection ──
+st.markdown("### ⚙️ Model Ayarları")
+ALL_MODELS = get_all_models()
+
+col1, col2 = st.columns(2)
+with col1:
+    # Get default model index
+    current_model = st.session_state.get("ba_eval_model", GEMINI_MODEL)
+    current_model_name = [k for k, v in ALL_MODELS.items() if v == current_model][0] if current_model in ALL_MODELS.values() else "Gemini 2.5 Flash"
+    default_idx = list(ALL_MODELS.keys()).index(current_model_name) if current_model_name in ALL_MODELS.keys() else 4
+
+    selected_model_name = st.selectbox(
+        "Evaluation Model",
+        options=list(ALL_MODELS.keys()),
+        index=default_idx,
+        help="BA değerlendirme için kullanılacak AI modeli"
+    )
+    selected_model = ALL_MODELS[selected_model_name]
+    st.session_state["ba_eval_model"] = selected_model
+
+with col2:
+    st.info(f"🤖 **Seçili Model:** {selected_model_name}")
+
+st.divider()
+
 # ── Credential Check ──
 gemini_keys = get_gemini_keys()
-gemini_key = gemini_keys[0] if gemini_keys else ""  # Use first key for backward compatibility
+gemini_key = gemini_keys[0] if gemini_keys else ""
+anthropic_key = get_anthropic_key()
 _, jira_email, jira_token = get_credentials()
 
-if not gemini_key or not jira_email or not jira_token:
-    st.warning("⚠️ Ana sayfadan Gemini API Key ve JIRA bilgilerini girin.")
+if not jira_email or not jira_token:
+    st.warning("⚠️ Ana sayfadan JIRA bilgilerini girin.")
+    st.stop()
+
+# Check if we have the right API key for selected model
+if selected_model.startswith("claude-") and not anthropic_key:
+    st.warning("⚠️ Anthropic modeli seçtiniz ama API key girilmemiş. Ana sayfadan Anthropic API Key'i girin.")
+    st.stop()
+elif selected_model.startswith("gemini-") and not gemini_key:
+    st.warning("⚠️ Gemini modeli seçtiniz ama API key girilmemiş. Ana sayfadan Gemini API Key'i girin.")
     st.stop()
 
 
@@ -367,7 +401,6 @@ def fetch_ba_queue():
 
 
 def run_ba_pipeline(selected_task: dict = None):
-    _, _, agent3, _ = create_ba_agents(gemini_key)
     status_container = st.container()
     result_container = st.container()
 
@@ -405,25 +438,52 @@ def run_ba_pipeline(selected_task: dict = None):
 
         with st.status("🧠 Adım 3: Kalite Değerlendirici", expanded=True) as step3:
             eval_prompt = build_ba_evaluation_prompt(ba_text)
+
+            # Build system prompt
+            system_prompt = """Sen son derece deneyimli bir iş analizi kalite kontrol uzmanısın.
+
+ÖNEMLI: Bu bir İŞ ANALİZİ dokümanıdır, TEKNİK TASARIM değil.
+
+PUANLAMA KURALLARI:
+- Varsayılan başlangıç: 5/10
+- 8+ puan = MÜKEMMEL kalite
+- Eksik modül varsa = MAX 3/10
+- Her belirsiz ifade = -0.5 puan
+- Genel puan = (9 kriter ortalaması × 100) / 90
+- Geçme eşiği = 60+
+
+TÜM çıktılar TÜRKÇE olmalı.
+Sadece JSON formatında yanıt ver."""
+
             eval_data = None
             for attempt in range(3):
                 try:
-                    eval_response = agent3.run(eval_prompt)
-                    content = eval_response.content if eval_response else ""
-                    if "429" in content or "RESOURCE_EXHAUSTED" in content:
-                        wait = 30 * (attempt + 1)
-                        st.warning(f"⏳ Rate limit — {wait}s bekleniyor...")
-                        time.sleep(wait)
-                        continue
-                    eval_data = parse_json_response(content)
+                    result = call_ai(
+                        system_prompt=system_prompt,
+                        user_content=eval_prompt,
+                        anthropic_key=anthropic_key,
+                        gemini_key=gemini_key,
+                        model=selected_model,
+                        max_tokens=8000
+                    )
+
+                    if result.get("stop_reason") == "max_tokens":
+                        st.warning("⚠️ Yanıt token limitine ulaştı, devam ediyor...")
+
+                    eval_data = result
                     if eval_data and eval_data.get("skorlar"):
                         break
                 except Exception as e:
-                    if "429" in str(e) or "RESOURCE_EXHAUSTED" in str(e):
-                        time.sleep(30 * (attempt + 1))
+                    error_msg = str(e)
+                    if "429" in error_msg or "rate" in error_msg.lower() or "limit" in error_msg.lower():
+                        wait = 30 * (attempt + 1)
+                        st.warning(f"⏳ Rate limit — {wait}s bekleniyor...")
+                        time.sleep(wait)
                     else:
                         st.error(f"AI hatası: {e}")
-                        return None
+                        if attempt == 2:
+                            return None
+
             if not eval_data or not eval_data.get("skorlar"):
                 st.error("AI yanıtı parse edilemedi.")
                 return None
