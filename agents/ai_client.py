@@ -13,16 +13,39 @@ from utils.key_manager import APIKeyManager, is_quota_error, is_auth_error
 from pipeline.brd.json_repair import parse_ai_json
 
 
-def call_sonnet(system_prompt: str, user_content: str, api_key: str, max_tokens: int = CHUNK_OUTPUT_TOKEN_LIMIT, model: str | None = None) -> dict:
-    """Claude ile içerik üretimi. JSON döner."""
+def call_sonnet(system_prompt: str, user_content: str, api_key: str, max_tokens: int = CHUNK_OUTPUT_TOKEN_LIMIT, model: str | None = None, use_caching: bool = True) -> dict:
+    """Claude ile içerik üretimi. JSON döner.
+
+    Args:
+        system_prompt: System prompt metni
+        user_content: User message metni
+        api_key: Anthropic API key
+        max_tokens: Maksimum output token sayısı
+        model: Model adı (opsiyonel)
+        use_caching: Prompt caching kullan (default: True)
+    """
     try:
         # Python {{ }} escape'lerini düz { } yap (prompt'lar .format() kullanmıyorsa)
         clean_prompt = system_prompt.replace("{{", "{").replace("}}", "}")
         client = anthropic.Anthropic(api_key=api_key)
+
+        # Anthropic Prompt Caching: System prompt'u cache'le
+        # Bu, tekrarlanan system prompt'lar için maliyeti %90 düşürür
+        if use_caching:
+            system_blocks = [
+                {
+                    "type": "text",
+                    "text": clean_prompt,
+                    "cache_control": {"type": "ephemeral"}
+                }
+            ]
+        else:
+            system_blocks = clean_prompt
+
         response = client.messages.create(
             model=model or SONNET_MODEL,
             max_tokens=max_tokens,
-            system=clean_prompt,
+            system=system_blocks,
             messages=[{"role": "user", "content": user_content}],
         )
         content_text = response.content[0].text
@@ -137,10 +160,20 @@ def call_gemini_with_rotation(system_prompt: str, user_content: str, max_tokens:
 
 
 def call_ai(system_prompt: str, user_content: str, anthropic_key: str, gemini_key: str,
-            model: str, max_tokens: int = CHUNK_OUTPUT_TOKEN_LIMIT) -> dict:
-    """Unified AI call that routes to Anthropic or Gemini based on model ID."""
+            model: str, max_tokens: int = CHUNK_OUTPUT_TOKEN_LIMIT, use_caching: bool = True) -> dict:
+    """Unified AI call that routes to Anthropic or Gemini based on model ID.
+
+    Args:
+        system_prompt: System prompt metni
+        user_content: User message metni
+        anthropic_key: Anthropic API key
+        gemini_key: Gemini API key
+        model: Model ID (anthropic veya gemini)
+        max_tokens: Maksimum output token sayısı
+        use_caching: Anthropic için prompt caching kullan (default: True)
+    """
     if is_anthropic_model(model):
-        return call_sonnet(system_prompt, user_content, anthropic_key, max_tokens, model)
+        return call_sonnet(system_prompt, user_content, anthropic_key, max_tokens, model, use_caching)
     elif is_gemini_model(model):
         # Gemini has 8192 token output limit, cap it
         capped_tokens = min(max_tokens, 8192)
