@@ -395,12 +395,6 @@ def fetch_tc_queue():
         if "tc-qa-tamamlandi" in labels or "tc-qa-devam-ediyor" in labels:
             continue
 
-        # Skip test/dummy tasks
-        if "test" in labels or "test-task" in labels:
-            continue
-        if "TEST TEST" in summary or summary.endswith("(Test)"):
-            continue
-
         desc = issue.get("fields", {}).get("description", "")
         tc_doc_id, tc_url = extract_spreadsheet_id(desc)
         if not tc_doc_id:
