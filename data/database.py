@@ -234,6 +234,150 @@ def get_dashboard_alerts() -> list:
     return alerts
 
 
+def get_quality_trend_data(time_range: str = "30days") -> dict:
+    """Get quality score trends over time.
+
+    Args:
+        time_range: Time range filter - "7days", "30days", "90days", or "all"
+
+    Returns:
+        Dictionary with dates and scores by analysis type
+    """
+    conn = get_db()
+
+    # Build time filter
+    time_filter = ""
+    if time_range == "7days":
+        time_filter = "WHERE created_at >= date('now', '-7 days')"
+    elif time_range == "30days":
+        time_filter = "WHERE created_at >= date('now', '-30 days')"
+    elif time_range == "90days":
+        time_filter = "WHERE created_at >= date('now', '-90 days')"
+
+    # Get daily averages by type
+    query = f"""
+        SELECT
+            date(created_at) as date,
+            analysis_type,
+            AVG(genel_puan) as avg_score,
+            COUNT(*) as count
+        FROM analyses
+        {time_filter}
+        GROUP BY date(created_at), analysis_type
+        ORDER BY date(created_at)
+    """
+
+    rows = conn.execute(query).fetchall()
+    conn.close()
+
+    # Organize by type
+    result = {
+        "dates": [],
+        "ba_scores": [],
+        "tc_scores": [],
+        "design_scores": []
+    }
+
+    # Group by date
+    from collections import defaultdict
+    by_date = defaultdict(dict)
+
+    for row in rows:
+        date = row["date"]
+        atype = row["analysis_type"]
+        score = row["avg_score"]
+
+        by_date[date][atype] = score
+
+    # Build arrays
+    all_dates = sorted(by_date.keys())
+    result["dates"] = all_dates
+
+    for date in all_dates:
+        result["ba_scores"].append(by_date[date].get("ba", None))
+        result["tc_scores"].append(by_date[date].get("tc", None))
+        result["design_scores"].append(by_date[date].get("design", None))
+
+    return result
+
+
+def get_score_distribution(time_range: str = "30days") -> dict:
+    """Get score distribution for histogram.
+
+    Args:
+        time_range: Time range filter - "7days", "30days", "90days", or "all"
+
+    Returns:
+        Dictionary with scores by analysis type
+    """
+    conn = get_db()
+
+    # Build time filter
+    time_filter = ""
+    if time_range == "7days":
+        time_filter = "WHERE created_at >= date('now', '-7 days')"
+    elif time_range == "30days":
+        time_filter = "WHERE created_at >= date('now', '-30 days')"
+    elif time_range == "90days":
+        time_filter = "WHERE created_at >= date('now', '-90 days')"
+
+    query = f"""
+        SELECT analysis_type, genel_puan
+        FROM analyses
+        {time_filter}
+        ORDER BY created_at DESC
+    """
+
+    rows = conn.execute(query).fetchall()
+    conn.close()
+
+    result = {
+        "ba_scores": [],
+        "tc_scores": [],
+        "design_scores": []
+    }
+
+    for row in rows:
+        score = row["genel_puan"]
+        atype = row["analysis_type"]
+
+        if atype == "ba":
+            result["ba_scores"].append(score)
+        elif atype == "tc":
+            result["tc_scores"].append(score)
+        elif atype == "design":
+            result["design_scores"].append(score)
+
+    return result
+
+
+def get_sparkline_data(analysis_type: str, days: int = 7) -> list:
+    """Get recent scores for sparkline chart.
+
+    Args:
+        analysis_type: Type of analysis (ba, tc, design)
+        days: Number of days to look back
+
+    Returns:
+        List of scores
+    """
+    conn = get_db()
+
+    query = """
+        SELECT genel_puan
+        FROM analyses
+        WHERE analysis_type = ?
+        AND created_at >= date('now', '-' || ? || ' days')
+        ORDER BY created_at ASC
+        LIMIT 10
+    """
+
+    rows = conn.execute(query, (analysis_type, days)).fetchall()
+    conn.close()
+
+    return [row["genel_puan"] for row in rows]
+
+
 # ─────────────────────────────────────────────
 # BRD Pipeline Functions
 # ─────────────────────────────────────────────

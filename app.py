@@ -5,6 +5,8 @@ Streamlit Multi-Page App
 import streamlit as st
 import os
 import sys
+import plotly.graph_objects as go
+from plotly.subplots import make_subplots
 
 # Proje kök dizinini path'e ekle
 sys.path.insert(0, os.path.dirname(__file__))
@@ -349,34 +351,84 @@ time_range_map = {
 time_range = time_range_map[time_range_display]
 
 # ── Quick Stats ──
-from data.database import get_stats, get_recent_analyses, get_dashboard_alerts
+from data.database import (
+    get_stats, get_recent_analyses, get_dashboard_alerts,
+    get_quality_trend_data, get_score_distribution, get_sparkline_data
+)
 stats = get_stats(time_range)
 
 ba_s = next((s for s in stats["by_type"] if s["analysis_type"] == "ba"), {})
 tc_s = next((s for s in stats["by_type"] if s["analysis_type"] == "tc"), {})
 design_s = next((s for s in stats["by_type"] if s["analysis_type"] == "design"), {})
 
+# Get sparkline data
+ba_sparkline = get_sparkline_data("ba", days=7)
+tc_sparkline = get_sparkline_data("tc", days=7)
+design_sparkline = get_sparkline_data("design", days=7)
+
+# Helper function to generate SVG sparkline
+def generate_sparkline_svg(scores, color="#3b82f6", width=100, height=30):
+    if not scores or len(scores) < 2:
+        return ""
+
+    min_score = min(scores)
+    max_score = max(scores)
+    score_range = max_score - min_score if max_score > min_score else 1
+
+    points = []
+    for i, score in enumerate(scores):
+        x = (i / (len(scores) - 1)) * width
+        y = height - ((score - min_score) / score_range * (height - 5))
+        points.append(f"{x:.1f},{y:.1f}")
+
+    polyline = " ".join(points)
+
+    return f"""
+        <svg width="{width}" height="{height}" style="margin-top: 8px;">
+            <polyline points="{polyline}" stroke="{color}" fill="none" stroke-width="2" opacity="0.7"/>
+        </svg>
+    """
+
+ba_svg = generate_sparkline_svg(ba_sparkline, "#8b5cf6")
+tc_svg = generate_sparkline_svg(tc_sparkline, "#10b981")
+design_svg = generate_sparkline_svg(design_sparkline, "#f59e0b")
+
+# Calculate pass rates
+ba_pass_rate = (ba_s.get('gecen', 0) / max(ba_s.get('c', 1), 1) * 100) if ba_s.get('c', 0) > 0 else 0
+tc_pass_rate = (tc_s.get('gecen', 0) / max(tc_s.get('c', 1), 1) * 100) if tc_s.get('c', 0) > 0 else 0
+
 st.markdown(f"""
 <div class="stats-grid">
     <div class="stat-card blue">
         <div class="stat-number">{stats['total']}</div>
         <div class="stat-label">Toplam Analiz</div>
-        <div class="stat-detail">Tüm tipler</div>
+        <div class="stat-detail">{time_range_display}</div>
     </div>
     <div class="stat-card purple">
         <div class="stat-number">{ba_s.get('c', 0)}</div>
-        <div class="stat-label">BA Analiz</div>
-        <div class="stat-detail">Ort: {ba_s.get('avg_puan', 0) or 0:.0f} | Geçen: {ba_s.get('gecen', 0)}</div>
+        <div class="stat-label">BA Değerlendirme</div>
+        <div class="stat-detail">
+            Ort: {ba_s.get('avg_puan', 0) or 0:.0f}/100 |
+            Geçme: %{ba_pass_rate:.0f} ({ba_s.get('gecen', 0)}/{ba_s.get('c', 0)})
+        </div>
+        {ba_svg}
     </div>
     <div class="stat-card green">
         <div class="stat-number">{tc_s.get('c', 0)}</div>
-        <div class="stat-label">TC Analiz</div>
-        <div class="stat-detail">Ort: {tc_s.get('avg_puan', 0) or 0:.0f} | Geçen: {tc_s.get('gecen', 0)}</div>
+        <div class="stat-label">TC Değerlendirme</div>
+        <div class="stat-detail">
+            Ort: {tc_s.get('avg_puan', 0) or 0:.0f}/100 |
+            Geçme: %{tc_pass_rate:.0f} ({tc_s.get('gecen', 0)}/{tc_s.get('c', 0)})
+        </div>
+        {tc_svg}
     </div>
     <div class="stat-card orange">
         <div class="stat-number">{design_s.get('c', 0)}</div>
-        <div class="stat-label">Design Analiz</div>
-        <div class="stat-detail">Uyumluluk kontrolleri</div>
+        <div class="stat-label">Design Compliance</div>
+        <div class="stat-detail">
+            Ort: {design_s.get('avg_puan', 0) or 0:.0f}/100
+        </div>
+        {design_svg}
     </div>
 </div>
 """, unsafe_allow_html=True)
@@ -422,6 +474,183 @@ with col3:
 with col4:
     if st.button("📋 BRD Pipeline", use_container_width=True, help="BRD'den BA/TA/TC üret"):
         st.switch_page("pages/6_BRD_Pipeline.py")
+
+st.markdown("<br>", unsafe_allow_html=True)
+
+# ── Quality Trend Chart ──
+st.markdown(f'<div class="section-title">📈 Kalite Trend Analizi ({time_range_display})</div>', unsafe_allow_html=True)
+
+trend_data = get_quality_trend_data(time_range)
+
+if trend_data["dates"]:
+    # Create trend chart
+    fig = go.Figure()
+
+    # BA Trend
+    fig.add_trace(go.Scatter(
+        x=trend_data['dates'],
+        y=trend_data['ba_scores'],
+        name='BA Quality',
+        line=dict(color='#8b5cf6', width=3),
+        mode='lines+markers',
+        marker=dict(size=8),
+        hovertemplate='<b>BA</b><br>Date: %{x}<br>Score: %{y:.1f}<extra></extra>'
+    ))
+
+    # TC Trend
+    fig.add_trace(go.Scatter(
+        x=trend_data['dates'],
+        y=trend_data['tc_scores'],
+        name='TC Quality',
+        line=dict(color='#10b981', width=3),
+        mode='lines+markers',
+        marker=dict(size=8),
+        hovertemplate='<b>TC</b><br>Date: %{x}<br>Score: %{y:.1f}<extra></extra>'
+    ))
+
+    # Design Trend
+    fig.add_trace(go.Scatter(
+        x=trend_data['dates'],
+        y=trend_data['design_scores'],
+        name='Design Quality',
+        line=dict(color='#f59e0b', width=3),
+        mode='lines+markers',
+        marker=dict(size=8),
+        hovertemplate='<b>Design</b><br>Date: %{x}<br>Score: %{y:.1f}<extra></extra>'
+    ))
+
+    # Threshold line
+    fig.add_hline(
+        y=60,
+        line_dash="dash",
+        line_color="rgba(239, 68, 68, 0.5)",
+        annotation_text="Pass Threshold (60)",
+        annotation_position="right",
+        annotation_font_color="#ef4444"
+    )
+
+    # Target line
+    fig.add_hline(
+        y=80,
+        line_dash="dot",
+        line_color="rgba(16, 185, 129, 0.3)",
+        annotation_text="Target (80)",
+        annotation_position="right",
+        annotation_font_color="#10b981"
+    )
+
+    fig.update_layout(
+        xaxis_title="",
+        yaxis_title="Quality Score",
+        hovermode='x unified',
+        plot_bgcolor='#0a0e17',
+        paper_bgcolor='#1a2236',
+        font=dict(color='#f1f5f9', family='DM Sans'),
+        height=350,
+        showlegend=True,
+        legend=dict(
+            orientation="h",
+            yanchor="bottom",
+            y=1.02,
+            xanchor="right",
+            x=1,
+            bgcolor='rgba(26, 34, 54, 0.8)',
+            bordercolor='#2a3654',
+            borderwidth=1
+        ),
+        margin=dict(l=50, r=50, t=50, b=50),
+        yaxis=dict(
+            gridcolor='#1e2742',
+            range=[0, 105]
+        ),
+        xaxis=dict(
+            gridcolor='#1e2742'
+        )
+    )
+
+    st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
+else:
+    st.info("Seçilen zaman aralığında trend verisi bulunamadı.")
+
+# ── Score Distribution Chart ──
+st.markdown('<div class="section-title">📊 Puan Dağılımı</div>', unsafe_allow_html=True)
+
+score_dist = get_score_distribution(time_range)
+
+if any([score_dist["ba_scores"], score_dist["tc_scores"], score_dist["design_scores"]]):
+    # Create subplots for distributions
+    fig = make_subplots(
+        rows=1, cols=3,
+        subplot_titles=('BA Scores', 'TC Scores', 'Design Scores'),
+        horizontal_spacing=0.12
+    )
+
+    # BA Distribution
+    if score_dist["ba_scores"]:
+        fig.add_trace(
+            go.Histogram(
+                x=score_dist['ba_scores'],
+                name='BA',
+                marker_color='#8b5cf6',
+                opacity=0.7,
+                nbinsx=10,
+                hovertemplate='Score: %{x}<br>Count: %{y}<extra></extra>'
+            ),
+            row=1, col=1
+        )
+
+    # TC Distribution
+    if score_dist["tc_scores"]:
+        fig.add_trace(
+            go.Histogram(
+                x=score_dist['tc_scores'],
+                name='TC',
+                marker_color='#10b981',
+                opacity=0.7,
+                nbinsx=10,
+                hovertemplate='Score: %{x}<br>Count: %{y}<extra></extra>'
+            ),
+            row=1, col=2
+        )
+
+    # Design Distribution
+    if score_dist["design_scores"]:
+        fig.add_trace(
+            go.Histogram(
+                x=score_dist['design_scores'],
+                name='Design',
+                marker_color='#f59e0b',
+                opacity=0.7,
+                nbinsx=10,
+                hovertemplate='Score: %{x}<br>Count: %{y}<extra></extra>'
+            ),
+            row=1, col=3
+        )
+
+    # Add threshold line to each subplot
+    for col in [1, 2, 3]:
+        fig.add_vline(
+            x=60,
+            line_dash="dash",
+            line_color="rgba(239, 68, 68, 0.5)",
+            row=1, col=col
+        )
+
+    fig.update_layout(
+        plot_bgcolor='#0a0e17',
+        paper_bgcolor='#1a2236',
+        font=dict(color='#f1f5f9', family='DM Sans'),
+        height=300,
+        showlegend=False,
+        margin=dict(l=40, r=40, t=60, b=40)
+    )
+
+    fig.update_xaxes(title_text="Score", gridcolor='#1e2742', range=[0, 105])
+    fig.update_yaxes(title_text="Count", gridcolor='#1e2742')
+
+    st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
+else:
+    st.info("Seçilen zaman aralığında dağılım verisi bulunamadı.")
 
 st.markdown("<br>", unsafe_allow_html=True)
 
