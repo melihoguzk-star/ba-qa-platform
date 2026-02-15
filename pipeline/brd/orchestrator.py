@@ -143,10 +143,10 @@ def generate_ta(brd_text, ba_content, project_name, anthropic_key, gemini_key, l
     return result
 
 
-def generate_tc(ba_content, ta_content, project_name, jira_key, anthropic_key, gemini_key, log, previous_feedback="", model=None):
-    """TC Chunk1 + Chunk2 üret ve birleştir."""
+def generate_tc(ba_content, ta_content, project_name, jira_key, anthropic_key, gemini_key, log, previous_feedback="", model=None, screen_analysis=""):
+    """TC Chunk1 + Chunk2 üret ve birleştir. Opsiyonel screen_analysis eklenebilir."""
     import hashlib
-    ba_hash = hashlib.md5(json.dumps(ba_content, ensure_ascii=False)[:3000].encode()).hexdigest()[:8]
+    ba_hash = hashlib.md5(json.dumps(ba_content, ensure_ascii=False)[:5000].encode()).hexdigest()[:8]
 
     cached = load_checkpoint(project_name, "tc")
     if cached:
@@ -163,6 +163,11 @@ def generate_tc(ba_content, ta_content, project_name, jira_key, anthropic_key, g
 
     system1 = TC_CHUNK1_SYSTEM.format(today_date=today)
     user1 = f"İŞ ANALİZİ:\n{ba_json}\n\nTEKNİK ANALİZ:\n{ta_json}"
+    
+    # ADD SCREEN ANALYSIS IF PROVIDED
+    if screen_analysis:
+        user1 += f"\n\n{screen_analysis}\n\nÖNEMLİ: Yukarıdaki Figma tasarım analizini kullanarak UI-specific test case'ler ekle:\n- Her ekran için UI validation test case'leri\n- Form field validation test case'leri (field name'leri kullan)\n- Button/interaction test case'leri (button label'ları kullan)\n- Visual regression test case'leri"
+    
     if previous_feedback:
         user1 = f"ÖNCEKİ QA DEĞERLENDİRME GERİ BİLDİRİMİ:\n{previous_feedback}\n\nBu geri bildirime göre test case'leri iyileştir.\n\n" + user1
 
@@ -173,6 +178,10 @@ def generate_tc(ba_content, ta_content, project_name, jira_key, anthropic_key, g
     start_id = str(tc_count + 1).zfill(4)
     system2 = TC_CHUNK2_SYSTEM.format(start_id=start_id, today_date=today)
     user2 = f"İŞ ANALİZİ:\n{ba_json}\n\nTEKNİK ANALİZ:\n{ta_json}"
+    
+    # ADD SCREEN ANALYSIS TO CHUNK2 AS WELL
+    if screen_analysis:
+        user2 += f"\n\n{screen_analysis}\n\nÖNEMLİ: Yukarıdaki Figma tasarım analizini kullanarak UI-specific test case'ler ekle."
 
     log(f"  🤖 TC Chunk2 üretiliyor (Sonnet) — {tc_count} TC'den devam...")
     chunk2 = call_ai(system2, user2, anthropic_key, gemini_key, model, CHUNK_OUTPUT_TOKEN_LIMIT)

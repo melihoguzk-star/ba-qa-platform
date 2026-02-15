@@ -49,6 +49,12 @@ st.session_state["gemini_key"] = gemini_key
 if "pipeline_step" not in st.session_state:
     st.session_state.pipeline_step = "upload"
 
+# Figma design integration
+if "figma_files" not in st.session_state:
+    st.session_state.figma_files = []
+if "screen_analysis" not in st.session_state:
+    st.session_state.screen_analysis = ""
+
 
 # ════════════════════════════════════════════
 # LOG HELPERS
@@ -68,7 +74,7 @@ def show_log():
             for m in msgs:
                 st.text(m)
 
-STEP_ORDER = ["upload", "ba_gen", "ba_review", "ba_qa", "ta_gen", "ta_review", "ta_qa", "tc_gen", "tc_review", "tc_qa", "done"]
+STEP_ORDER = ["upload", "ba_gen", "ba_review", "ba_qa", "ta_gen", "ta_review", "ta_qa", "figma_upload", "tc_gen", "tc_review", "tc_qa", "done"]
 def show_progress():
     step = st.session_state.pipeline_step
     if step in STEP_ORDER:
@@ -272,6 +278,72 @@ def show_ta_preview(ta_content):
         with st.expander(f"**Endpoints ({ep})**", expanded=True):
             for e, d in list(ta["endpoint_detaylari"].items())[:5]:
                 st.markdown(f"- `{d.get('method','GET')} {e}` — {d.get('aciklama','')[:80]}")
+
+
+def analyze_figma_designs(figma_files, gemini_key, log_func):
+    """
+    Analyze Figma designs using screen_agent from Design Compliance.
+    
+    Args:
+        figma_files: List of uploaded file objects
+        gemini_key: Gemini API key
+        log_func: Logging function
+        
+    Returns:
+        Combined screen analysis text
+    """
+    import os
+    import tempfile
+    from pathlib import Path
+    from agno.media import Image as AgnoImage
+    from agents.agent_definitions import create_design_agents
+    
+    # Create screen agent
+    _, screen_agent, _, _ = create_design_agents(gemini_key)
+    
+    analyses = []
+    
+    for idx, figma_file in enumerate(figma_files, 1):
+        try:
+            log_func(f"📸 Ekran {idx}/{len(figma_files)} analiz ediliyor: {figma_file.name}")
+            
+            # Save to temp file
+            tmp_path = os.path.join(tempfile.gettempdir(), f"figma_{figma_file.name}")
+            with open(tmp_path, 'wb') as f:
+                f.write(figma_file.getvalue())
+            
+            # Analyze with screen agent
+            agno_image = AgnoImage(filepath=Path(tmp_path))
+            prompt = f"""Bu ekran görüntüsünü detaylı analiz et: {figma_file.name}
+
+Ekranda gördüğün:
+1. TÜM UI bileşenlerini listele (button, input, dropdown, vb.)
+2. Her bileşenin üzerindeki metni/label'ı AYNEN yaz
+3. Form alanlarının tipini belirt
+4. Görünür iş kurallarını tespit et
+5. Kullanıcı akışını değerlendir
+
+Türkçe ve detaylı cevap ver."""
+            
+            response = screen_agent.run(prompt, images=[agno_image])
+            
+            analyses.append(f"## Ekran {idx}: {figma_file.name}\n\n{response.content}\n\n---\n")
+            
+            # Cleanup
+            os.remove(tmp_path)
+            
+        except Exception as e:
+            log_func(f"⚠️ {figma_file.name} analiz edilemedi: {str(e)}")
+            continue
+    
+    if not analyses:
+        return ""
+    
+    combined = "# FIGMA TASARIM ANALİZİ\n\n" + "\n".join(analyses)
+    log_func(f"✅ Toplam {len(analyses)} ekran başarıyla analiz edildi")
+    
+    return combined
+
 
 def show_tc_preview(tc_content):
     tcs = tc_content.get("test_cases",[])
@@ -725,8 +797,69 @@ elif step == "ta_qa":
         else:
             st.warning("Max revizyon.")
             if st.button("➡️ Test Case'e Geç", type="primary", use_container_width=True):
-                st.session_state.pipeline_step = "tc_gen"
+                st.session_state.pipeline_step = "figma_upload"
                 st.rerun()
+
+# ──── FIGMA UPLOAD (NEW STEP) ────
+elif step == "figma_upload":
+    st.subheader("🎨 Figma Tasarım Yükleme (Opsiyonel)")
+    st.write("Test case'lerin daha detaylı ve UI-specific olması için Figma tasarımlarını yükleyebilirsiniz.")
+    st.info("💡 Screen analyzer her görseli analiz edip UI bileşenlerini, metinleri ve iş kurallarını tespit edecek.")
+    
+    figma_files = st.file_uploader(
+        "Figma Ekran Görüntüleri (PNG, JPG)",
+        type=["jpg", "jpeg", "png"],
+        accept_multiple_files=True,
+        key="figma_uploader",
+        help="Birden fazla ekran görüntüsü yükleyebilirsiniz"
+    )
+    
+    if figma_files:
+        st.success(f"✅ {len(figma_files)} ekran yüklendi")
+        
+        # Preview
+        st.markdown("**Yüklenen Ekranlar:**")
+        cols = st.columns(min(len(figma_files), 3))
+        for idx, f in enumerate(figma_files):
+            with cols[idx % 3]:
+                st.image(f, caption=f.name, use_column_width=True)
+    
+    st.divider()
+    
+    col1, col2 = st.columns(2)
+    with col1:
+        if st.button("⏭️ Tasarım Olmadan Devam Et", use_container_width=True):
+            st.session_state.figma_files = []
+            st.session_state.screen_analysis = ""
+            log("⏭️ Figma tasarımları atlandı")
+            st.session_state.pipeline_step = "tc_gen"
+            st.rerun()
+    
+    with col2:
+        if st.button("🚀 Tasarımları Analiz Et ve Devam Et", type="primary", disabled=not figma_files, use_container_width=True):
+            # Analyze with screen_agent
+            with st.spinner(f"🔍 {len(figma_files)} tasarım analiz ediliyor... (Bu işlem 1-2 dakika sürebilir)"):
+                try:
+                    screen_analysis = analyze_figma_designs(figma_files, gemini_key, log)
+                    
+                    if screen_analysis:
+                        st.session_state.figma_files = figma_files
+                        st.session_state.screen_analysis = screen_analysis
+                        st.success(f"✅ {len(figma_files)} tasarım başarıyla analiz edildi!")
+                        
+                        # Show preview
+                        with st.expander("📋 Screen Analysis Önizleme", expanded=False):
+                            st.markdown(screen_analysis[:1000] + "..." if len(screen_analysis) > 1000 else screen_analysis)
+                        
+                        log(f"✅ {len(figma_files)} tasarım analiz edildi")
+                        st.session_state.pipeline_step = "tc_gen"
+                        time.sleep(1)
+                        st.rerun()
+                    else:
+                        st.error("❌ Hiçbir tasarım analiz edilemedi. Lütfen tekrar deneyin veya atlayın.")
+                except Exception as e:
+                    st.error(f"❌ Analiz hatası: {str(e)}")
+                    log(f"❌ Figma analiz hatası: {str(e)}")
 
 # ──── TC GENERATE ────
 elif step == "tc_gen":
@@ -735,7 +868,7 @@ elif step == "tc_gen":
     gen_model = st.session_state.get("generation_model")
     with st.status("🤖 TC üretiliyor...", expanded=True) as s:
         tc = generate_tc(st.session_state.ba_content, st.session_state.ta_content, st.session_state.project_name,
-                        st.session_state.jira_key, anthropic_key, gemini_key, log, st.session_state.get("tc_feedback",""), model=gen_model)
+                        st.session_state.jira_key, anthropic_key, gemini_key, log, st.session_state.get("tc_feedback",""), model=gen_model, screen_analysis=st.session_state.get("screen_analysis", ""))
         s.update(label="✅ TC hazır!", state="complete")
     st.session_state.tc_content = tc
     st.session_state.pipeline_step = "tc_review"

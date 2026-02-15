@@ -12,7 +12,7 @@ from utils.config import SONNET_MODEL, GEMINI_MODEL, CHUNK_OUTPUT_TOKEN_LIMIT, Q
 from pipeline.brd.json_repair import parse_ai_json
 
 
-def call_sonnet(system_prompt: str, user_content: str, api_key: str, max_tokens: int = CHUNK_OUTPUT_TOKEN_LIMIT, model: str = None) -> dict:
+def call_sonnet(system_prompt: str, user_content: str, api_key: str, max_tokens: int = CHUNK_OUTPUT_TOKEN_LIMIT, model: str | None = None) -> dict:
     """Claude ile içerik üretimi. JSON döner."""
     try:
         # Python {{ }} escape'lerini düz { } yap (prompt'lar .format() kullanmıyorsa)
@@ -41,7 +41,7 @@ def call_sonnet(system_prompt: str, user_content: str, api_key: str, max_tokens:
         raise Exception(f"❌ Claude API hatası: {str(e)}")
 
 
-def call_gemini(system_prompt: str, user_content: str, api_key: str, max_tokens: int = QA_OUTPUT_TOKEN_LIMIT, model: str = None) -> dict:
+def call_gemini(system_prompt: str, user_content: str, api_key: str, max_tokens: int = QA_OUTPUT_TOKEN_LIMIT, model: str | None = None) -> dict:
     """Gemini ile QA değerlendirme. JSON döner."""
     try:
         clean_prompt = system_prompt.replace("{{", "{").replace("}}", "}")
