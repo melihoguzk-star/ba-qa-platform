@@ -7,7 +7,7 @@ Katkıda bulunduğunuz için teşekkürler! 🎉
 ### 1. Repository'yi Clone Edin
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/ba-qa-platform.git
+git clone https://github.com/melihoguzk-star/ba-qa-platform.git
 cd ba-qa-platform
 ```
 
