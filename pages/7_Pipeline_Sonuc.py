@@ -171,7 +171,7 @@ def build_tc_csv(tc_content):
 
 
 def render_pipeline_result(ba_content, ta_content, tc_content, ba_qa, ta_qa, tc_qa,
-                           ba_score, ta_score, tc_score, project_name, result_index):
+                           ba_score, ta_score, tc_score, project_name, result_index, openapi_spec=None):
     """Tek bir pipeline sonucunu render et."""
 
     # SKOR KARTLARI
@@ -418,7 +418,7 @@ def render_pipeline_result(ba_content, ta_content, tc_content, ba_qa, ta_qa, tc_
             else:
                 st.info("BA verisi mevcut değil.")
 
-        # TA → DOCX
+        # TA → DOCX + OpenAPI
         with col2:
             st.markdown("### ⚙️ Teknik Analiz")
             if ta_content:
@@ -431,6 +431,18 @@ def render_pipeline_result(ba_content, ta_content, tc_content, ba_qa, ta_qa, tc_
                     use_container_width=True,
                     key=f"ta_download_{result_index}"
                 )
+
+                # OpenAPI Spec export (if available)
+                if openapi_spec:
+                    openapi_json = json.dumps(openapi_spec, ensure_ascii=False, indent=2) if isinstance(openapi_spec, dict) else openapi_spec
+                    st.download_button(
+                        "📥 OpenAPI Spec (.json)",
+                        data=openapi_json,
+                        file_name=f"{project_name}_openapi.json",
+                        mime="application/json",
+                        use_container_width=True,
+                        key=f"openapi_download_{result_index}"
+                    )
             else:
                 st.info("TA verisi mevcut değil.")
 
@@ -539,6 +551,17 @@ try:
     # Son çalıştırma (session state'ten)
     if current_run:
         st.subheader("🔥 Son Çalıştırma")
+
+        # OpenAPI spec'i session state'ten veya database'den al
+        openapi_spec = None
+        if st.session_state.get("openapi_spec"):
+            openapi_spec = st.session_state.get("openapi_spec")
+        elif st.session_state.get("openapi_json"):
+            try:
+                openapi_spec = json.loads(st.session_state.get("openapi_json"))
+            except:
+                openapi_spec = None
+
         with st.expander(f"**{current_run['project_name']}** — BA:{current_run['ba_score']:.0f} | TA:{current_run['ta_score']:.0f} | TC:{current_run['tc_score']:.0f}", expanded=True):
             render_pipeline_result(
                 current_run["ba_content"],
@@ -551,7 +574,8 @@ try:
                 current_run["ta_score"],
                 current_run["tc_score"],
                 current_run["project_name"],
-                "current"
+                "current",
+                openapi_spec
             )
         st.divider()
 
@@ -593,6 +617,14 @@ try:
                 ta_qa_db = json.loads(ta_output["qa_result_json"]) if ta_output and ta_output["qa_result_json"] else {}
                 tc_qa_db = json.loads(tc_output["qa_result_json"]) if tc_output and tc_output["qa_result_json"] else {}
 
+                # OpenAPI spec'i parse et
+                openapi_spec_db = None
+                if ta_output and ta_output.get("openapi_spec_json"):
+                    try:
+                        openapi_spec_db = json.loads(ta_output["openapi_spec_json"])
+                    except:
+                        openapi_spec_db = None
+
                 # Render et
                 if ba_content_db or ta_content_db or tc_content_db:
                     render_pipeline_result(
@@ -606,7 +638,8 @@ try:
                         run["ta_score"],
                         run["tc_score"],
                         run["project_name"],
-                        f"past_{idx}"
+                        f"past_{idx}",
+                        openapi_spec_db
                     )
                 else:
                     st.warning("Bu pipeline çalıştırmasına ait çıktı bulunamadı.")
@@ -614,6 +647,16 @@ try:
 except ImportError:
     # Database yok, sadece session state'i göster
     if current_run:
+        # OpenAPI spec'i session state'ten al
+        openapi_spec = None
+        if st.session_state.get("openapi_spec"):
+            openapi_spec = st.session_state.get("openapi_spec")
+        elif st.session_state.get("openapi_json"):
+            try:
+                openapi_spec = json.loads(st.session_state.get("openapi_json"))
+            except:
+                openapi_spec = None
+
         render_pipeline_result(
             current_run["ba_content"],
             current_run["ta_content"],
@@ -625,7 +668,8 @@ except ImportError:
             current_run["ta_score"],
             current_run["tc_score"],
             current_run["project_name"],
-            "current"
+            "current",
+            openapi_spec
         )
     else:
         st.info("Henüz pipeline çalıştırılmadı veya tamamlanmadı. Önce **BRD Pipeline** sayfasından çalıştırın.")
