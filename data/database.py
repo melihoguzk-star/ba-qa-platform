@@ -78,6 +78,7 @@ def init_db():
             revision_number INTEGER DEFAULT 0,
             forced_pass INTEGER DEFAULT 0,
             generation_time_sec INTEGER DEFAULT 0,
+            openapi_spec_json TEXT DEFAULT NULL,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (pipeline_run_id) REFERENCES pipeline_runs(id)
         );
@@ -200,6 +201,53 @@ def get_pipeline_run_outputs(run_id: int) -> list:
     ).fetchall()
     conn.close()
     return [dict(r) for r in rows]
+
+
+def save_openapi_spec(run_id: int, stage: str, openapi_json: str):
+    """Save OpenAPI spec for a specific pipeline stage.
+    
+    Args:
+        run_id: Pipeline run ID
+        stage: Stage name ('ta' typically)
+        openapi_json: OpenAPI spec as JSON string
+    """
+    conn = get_db()
+    # SQLite doesn't support ORDER BY in UPDATE, so we need to find the ID first
+    row = conn.execute(
+        """SELECT id FROM stage_outputs 
+           WHERE pipeline_run_id = ? AND stage = ? 
+           ORDER BY created_at DESC LIMIT 1""",
+        (run_id, stage)
+    ).fetchone()
+    
+    if row:
+        conn.execute(
+            "UPDATE stage_outputs SET openapi_spec_json = ? WHERE id = ?",
+            (openapi_json, row["id"])
+        )
+        conn.commit()
+    conn.close()
+
+
+def get_openapi_spec(run_id: int, stage: str = 'ta') -> str:
+    """Get OpenAPI spec for a specific pipeline stage.
+    
+    Args:
+        run_id: Pipeline run ID
+        stage: Stage name (default: 'ta')
+    
+    Returns:
+        OpenAPI spec as JSON string, or None if not found
+    """
+    conn = get_db()
+    row = conn.execute(
+        """SELECT openapi_spec_json FROM stage_outputs 
+           WHERE pipeline_run_id = ? AND stage = ? 
+           ORDER BY created_at DESC LIMIT 1""",
+        (run_id, stage)
+    ).fetchone()
+    conn.close()
+    return row["openapi_spec_json"] if row else None
 
 
 # Initialize on import
