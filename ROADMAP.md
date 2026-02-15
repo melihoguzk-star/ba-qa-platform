@@ -20,6 +20,28 @@ BA-QA Intelligence Platform'u, manuel süreçleri minimize eden, AI-destekli, ot
 
 ## 🚀 Gelecek Özellikler
 
+---
+
+## 🎯 Near-term Priorities (v1.1 - v1.2)
+
+### v1.1 Features (In Progress)
+- [ ] **Figma API entegrasyonu** (otomatik frame çekme) - *See Phase 1 below*
+- [ ] **JIRA Webhook desteği** (otomatik tetikleme)
+- [ ] **Multi-tenant proje desteği**
+- [ ] **Kullanıcı yetkilendirme sistemi**
+- [ ] **Email bildirimleri**
+- [ ] **Slack entegrasyonu**
+
+### v1.2 Features (Planned)
+- [ ] **BA + TC + Design combo analizi** (full pipeline)
+- [ ] **Custom kriter tanımlama**
+- [ ] **Agent prompt'ları UI'dan düzenleme**
+- [ ] **PostgreSQL desteği** (SQLite yerine)
+- [ ] **Docker containerization**
+- [ ] **CI/CD pipeline**
+
+---
+
 ### Phase 1: Figma API Entegrasyonu (Q2 2026)
 
 #### 🎨 **Otomatik Wireframe & Mockup Çekme**
