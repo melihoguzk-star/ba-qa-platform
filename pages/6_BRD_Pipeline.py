@@ -74,6 +74,13 @@ def show_log():
             for m in msgs:
                 st.text(m)
 
+def show_terminate_button():
+    """Show a button to manually terminate the pipeline at current step."""
+    st.divider()
+    if st.button("🛑 Pipeline'ı Bitir", help="Mevcut durumu kaydedip pipeline'ı sonlandır", use_container_width=True, type="secondary"):
+        st.session_state.pipeline_step = "done"
+        st.rerun()
+
 STEP_ORDER = ["upload", "ba_gen", "ba_review", "ba_qa", "ta_gen", "ta_review", "ta_qa", "figma_upload", "tc_gen", "tc_review", "tc_qa", "done"]
 def show_progress():
     step = st.session_state.pipeline_step
@@ -533,6 +540,8 @@ elif step == "ba_review":
             clear_checkpoint(st.session_state.project_name, "ba")
             st.session_state.pipeline_step = "ba_gen"
             st.rerun()
+    
+    show_terminate_button()
 
 # ──── BA QA ────
 elif step == "ba_qa":
