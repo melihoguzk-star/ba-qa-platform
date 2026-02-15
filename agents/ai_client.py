@@ -8,7 +8,7 @@ import anthropic
 from google import genai
 from google.genai import types as genai_types
 
-from utils.config import SONNET_MODEL, GEMINI_MODEL, CHUNK_OUTPUT_TOKEN_LIMIT, QA_OUTPUT_TOKEN_LIMIT
+from utils.config import SONNET_MODEL, GEMINI_MODEL, CHUNK_OUTPUT_TOKEN_LIMIT, QA_OUTPUT_TOKEN_LIMIT, is_anthropic_model, is_gemini_model
 from pipeline.brd.json_repair import parse_ai_json
 
 
@@ -50,3 +50,14 @@ def call_gemini(system_prompt: str, user_content: str, api_key: str, max_tokens:
         elif str(fr) == "2" or "MAX_TOKENS" in str(fr):
             stop_reason = "max_tokens"
     return parse_ai_json(content_text, stop_reason)
+
+
+def call_ai(system_prompt: str, user_content: str, anthropic_key: str, gemini_key: str,
+            model: str, max_tokens: int = CHUNK_OUTPUT_TOKEN_LIMIT) -> dict:
+    """Unified AI call that routes to Anthropic or Gemini based on model ID."""
+    if is_anthropic_model(model):
+        return call_sonnet(system_prompt, user_content, anthropic_key, max_tokens, model)
+    elif is_gemini_model(model):
+        return call_gemini(system_prompt, user_content, gemini_key, max_tokens, model)
+    else:
+        raise ValueError(f"Unknown model provider for model: {model}")

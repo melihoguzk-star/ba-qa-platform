@@ -8,7 +8,7 @@ import time
 import io
 import streamlit as st
 from utils.config import (BA_PASS_THRESHOLD, TA_PASS_THRESHOLD, TC_PASS_THRESHOLD, MAX_REVISIONS,
-                          ANTHROPIC_MODELS, GEMINI_MODELS, SONNET_MODEL, GEMINI_MODEL)
+                          ANTHROPIC_MODELS, GEMINI_MODELS, ALL_MODELS, SONNET_MODEL, GEMINI_MODEL)
 from components.sidebar import render_custom_sidebar
 
 st.set_page_config(page_title="BRD Pipeline", page_icon="📋", layout="wide")
@@ -329,21 +329,21 @@ if step == "upload":
         c3, c4 = st.columns(2)
         with c3:
             # Get default model index
-            default_gen_idx = list(ANTHROPIC_MODELS.values()).index(SONNET_MODEL) if SONNET_MODEL in ANTHROPIC_MODELS.values() else 2
+            default_gen_idx = list(ALL_MODELS.values()).index(SONNET_MODEL) if SONNET_MODEL in ALL_MODELS.values() else 2
             generation_model = st.selectbox(
                 "Generation Model (BA/TA/TC)",
-                options=list(ANTHROPIC_MODELS.keys()),
+                options=list(ALL_MODELS.keys()),
                 index=default_gen_idx,
-                help="Doküman üretimi için kullanılacak Anthropic model"
+                help="Doküman üretimi için kullanılacak model (Anthropic veya Gemini)"
             )
         with c4:
             # Get default model index
-            default_qa_idx = list(GEMINI_MODELS.values()).index(GEMINI_MODEL) if GEMINI_MODEL in GEMINI_MODELS.values() else 0
+            default_qa_idx = list(ALL_MODELS.values()).index(GEMINI_MODEL) if GEMINI_MODEL in ALL_MODELS.values() else 4
             qa_model = st.selectbox(
                 "QA/Hakem Model",
-                options=list(GEMINI_MODELS.keys()),
+                options=list(ALL_MODELS.keys()),
                 index=default_qa_idx,
-                help="Kalite değerlendirmesi için kullanılacak Gemini model"
+                help="Kalite değerlendirmesi için kullanılacak model (Anthropic veya Gemini)"
             )
 
         use_cp = st.checkbox("Checkpoint kullan (24h cache)", value=True)
@@ -366,8 +366,8 @@ if step == "upload":
         st.session_state.project_name = project_name
         st.session_state.jira_key = jira_key or project_name
         st.session_state.priority = priority
-        st.session_state.generation_model = ANTHROPIC_MODELS[generation_model]
-        st.session_state.qa_model = GEMINI_MODELS[qa_model]
+        st.session_state.generation_model = ALL_MODELS[generation_model]
+        st.session_state.qa_model = ALL_MODELS[qa_model]
         st.session_state.run_id = init_run(project_name, jira_key or project_name, priority, uploaded_file.name)
         st.session_state.pipeline_start = time.time()
         st.session_state.pipeline_step = "ba_gen"
@@ -380,7 +380,7 @@ elif step == "ba_gen":
     from pipeline.brd.orchestrator import generate_ba
     gen_model = st.session_state.get("generation_model")
     with st.status("🤖 BA üretiliyor...", expanded=True) as s:
-        ba = generate_ba(st.session_state.brd_text, st.session_state.project_name, anthropic_key, log,
+        ba = generate_ba(st.session_state.brd_text, st.session_state.project_name, anthropic_key, gemini_key, log,
                         st.session_state.get("ba_feedback",""), model=gen_model)
         s.update(label="✅ BA hazır!", state="complete")
     st.session_state.ba_content = ba
@@ -430,7 +430,7 @@ elif step == "ba_qa":
         from pipeline.brd.checkpoint import clear_checkpoint
         qa_model = st.session_state.get("qa_model")
         with st.status("🔍 BA QA değerlendiriyor...", expanded=True):
-            qa = evaluate_ba_qa(st.session_state.ba_content, gemini_key, log, model=qa_model)
+            qa = evaluate_ba_qa(st.session_state.ba_content, anthropic_key, gemini_key, log, model=qa_model)
         finalize_stage(st.session_state.run_id, "ba", st.session_state.ba_content, qa, st.session_state.get("ba_revision_count",0), False, 0)
         clear_checkpoint(st.session_state.project_name, "ba")
         st.session_state.ba_qa_result = qa
@@ -481,8 +481,10 @@ elif step == "ba_qa":
 elif step == "ta_gen":
     st.subheader("⚙️ Adım 2/3 — Teknik Analiz Üretimi")
     from pipeline.brd.orchestrator import generate_ta
+    gen_model = st.session_state.get("generation_model")
     with st.status("🤖 TA üretiliyor...", expanded=True) as s:
-        ta = generate_ta(st.session_state.brd_text, st.session_state.ba_content, st.session_state.project_name, anthropic_key, log, st.session_state.get("ta_feedback",""))
+        ta = generate_ta(st.session_state.brd_text, st.session_state.ba_content, st.session_state.project_name,
+                        anthropic_key, gemini_key, log, st.session_state.get("ta_feedback",""), model=gen_model)
         s.update(label="✅ TA hazır!", state="complete")
     st.session_state.ta_content = ta
     st.session_state.pipeline_step = "ta_review"
@@ -531,7 +533,7 @@ elif step == "ta_qa":
         from pipeline.brd.checkpoint import clear_checkpoint
         qa_model = st.session_state.get("qa_model")
         with st.status("🔍 TA QA değerlendiriyor...", expanded=True):
-            qa = evaluate_ta_qa(st.session_state.ta_content, gemini_key, log, model=qa_model)
+            qa = evaluate_ta_qa(st.session_state.ta_content, anthropic_key, gemini_key, log, model=qa_model)
         finalize_stage(st.session_state.run_id, "ta", st.session_state.ta_content, qa, st.session_state.get("ta_revision_count",0), False, 0)
         clear_checkpoint(st.session_state.project_name, "ta")
         st.session_state.ta_qa_result = qa
@@ -581,8 +583,10 @@ elif step == "ta_qa":
 elif step == "tc_gen":
     st.subheader("🧪 Adım 3/3 — Test Case Üretimi")
     from pipeline.brd.orchestrator import generate_tc
+    gen_model = st.session_state.get("generation_model")
     with st.status("🤖 TC üretiliyor...", expanded=True) as s:
-        tc = generate_tc(st.session_state.ba_content, st.session_state.ta_content, st.session_state.project_name, st.session_state.jira_key, anthropic_key, log, st.session_state.get("tc_feedback",""))
+        tc = generate_tc(st.session_state.ba_content, st.session_state.ta_content, st.session_state.project_name,
+                        st.session_state.jira_key, anthropic_key, gemini_key, log, st.session_state.get("tc_feedback",""), model=gen_model)
         s.update(label="✅ TC hazır!", state="complete")
     st.session_state.tc_content = tc
     st.session_state.pipeline_step = "tc_review"
@@ -633,7 +637,7 @@ elif step == "tc_qa":
         from pipeline.brd.checkpoint import clear_checkpoint
         qa_model = st.session_state.get("qa_model")
         with st.status("🔍 TC QA değerlendiriyor...", expanded=True):
-            qa = evaluate_tc_qa(st.session_state.tc_content, gemini_key, log, model=qa_model)
+            qa = evaluate_tc_qa(st.session_state.tc_content, anthropic_key, gemini_key, log, model=qa_model)
         finalize_stage(st.session_state.run_id, "tc", st.session_state.tc_content, qa, st.session_state.get("tc_revision_count",0), False, 0)
         clear_checkpoint(st.session_state.project_name, "tc")
         total_time = int(time.time() - st.session_state.get("pipeline_start", time.time()))

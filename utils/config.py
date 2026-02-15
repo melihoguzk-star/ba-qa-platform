@@ -119,6 +119,27 @@ GEMINI_MODELS = {
     "Gemini 2.0 Flash": "gemini-2.0-flash",
 }
 
+# Combined models for flexible selection
+ALL_MODELS = {
+    "Claude Opus 4.6": "claude-opus-4-6",
+    "Claude Sonnet 4.5": "claude-sonnet-4-5-20250929",
+    "Claude Sonnet 4": "claude-sonnet-4-20250514",
+    "Claude Haiku 4.5": "claude-haiku-4-5-20251001",
+    "Gemini 2.5 Flash": "gemini-2.5-flash",
+    "Gemini 2.5 Pro": "gemini-2.5-pro",
+    "Gemini 2.0 Flash": "gemini-2.0-flash",
+}
+
+
+def is_anthropic_model(model_id: str) -> bool:
+    """Check if a model ID belongs to Anthropic."""
+    return model_id.startswith("claude-")
+
+
+def is_gemini_model(model_id: str) -> bool:
+    """Check if a model ID belongs to Google Gemini."""
+    return model_id.startswith("gemini-")
+
 
 def get_anthropic_key() -> str:
     """Returns Anthropic API key from session state or secrets"""
