@@ -15,6 +15,16 @@ st.set_page_config(page_title="Settings", page_icon="⚙️", layout="wide")
 if "gemini_keys" not in st.session_state:
     st.session_state.gemini_keys = get_gemini_keys()
 
+# Initialize Anthropic key from secrets if not in session
+if "anthropic_key" not in st.session_state:
+    try:
+        if "ANTHROPIC_API_KEY" in st.secrets:
+            st.session_state.anthropic_key = st.secrets["ANTHROPIC_API_KEY"]
+        else:
+            st.session_state.anthropic_key = ""
+    except:
+        st.session_state.anthropic_key = ""
+
 if "key_manager" not in st.session_state:
     if st.session_state.gemini_keys:
         st.session_state.key_manager = APIKeyManager(st.session_state.gemini_keys, provider="gemini")
