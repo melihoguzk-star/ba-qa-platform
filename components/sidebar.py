@@ -216,8 +216,8 @@ def render_custom_sidebar(active_page="home"):
         {
             "key": "ayarlar",
             "icon": "⚙️",
-            "label": "Ayarlar",
-            "url": "/Ayarlar",
+            "label": "Settings",
+            "url": "/Settings",
             "section": "settings"
         }
     ]
@@ -291,7 +291,7 @@ def render_custom_sidebar(active_page="home"):
             if page["section"] == "settings":
                 if page["key"] == "ayarlar":
                     if st.button(f"{page['icon']} {page['label']}", key=f"nav_{page['key']}", use_container_width=True):
-                        st.switch_page("pages/9_Ayarlar.py")
+                        st.switch_page("pages/9_Settings.py")
 
         st.markdown('</div>', unsafe_allow_html=True)
 
