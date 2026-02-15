@@ -709,6 +709,27 @@ instructions = [
 
 ## 📝 Güncellemeler (Changelog)
 
+### v1.2.3 - BRD Pipeline Database Kayıt Düzeltmesi (2025-02-15)
+
+#### Hata Düzeltmeleri
+- 🐛 **Skip QA Database Kayıt**: QA atlandığında pipeline sonuçları database'e kaydediliyorNow
+  - **Problem**: "Hakeme göndermeden devam et" seçeneği kullanıldığında sonuçlar sadece session state'e kaydediliyordu, database'e yazılmıyordu
+  - **Sonuç**: Pipeline Sonuç ve Pipeline Geçmiş sayfalarında sonuçlar görünmüyordu
+  - **Çözüm**:
+    - BA Review: Skip QA seçildiğinde `finalize_stage()` çağrılıyor
+    - TA Review: Skip QA seçildiğinde `finalize_stage()` çağrılıyor
+    - TC Review: Skip QA seçildiğinde `finalize_stage()` + `complete_run()` çağrılıyor
+    - Force pass QA result oluşturuluyor (score=100, forced_pass=True)
+    - Tüm content, QA result, revision count database'e kaydediliyor
+
+- ✅ **Artık Tüm Pipeline Çalıştırmaları Görünüyor**:
+  - QA atlanmış pipeline'lar Pipeline Sonuç sayfasında görünüyor
+  - QA atlanmış pipeline'lar Pipeline Geçmiş sayfasında görünüyor
+  - Force pass badge'i (⚡ QA Atlandı) gösteriliyor
+  - Tam çalıştırma geçmişi korunuyor
+
+---
+
 ### v1.2.2 - QA Hakem Değerlendirme Detayları (2025-02-15)
 
 #### Yeni Özellikler
