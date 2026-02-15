@@ -873,15 +873,63 @@ elif step == "figma_upload":
 # ──── TC GENERATE ────
 elif step == "tc_gen":
     st.subheader("🧪 Adım 3/3 — Test Case Üretimi")
-    from pipeline.brd.orchestrator import generate_tc
-    gen_model = st.session_state.get("generation_model")
-    with st.status("🤖 TC üretiliyor...", expanded=True) as s:
-        tc = generate_tc(st.session_state.ba_content, st.session_state.ta_content, st.session_state.project_name,
-                        st.session_state.jira_key, anthropic_key, gemini_key, log, st.session_state.get("tc_feedback",""), model=gen_model, screen_analysis=st.session_state.get("screen_analysis", ""))
-        s.update(label="✅ TC hazır!", state="complete")
-    st.session_state.tc_content = tc
-    st.session_state.pipeline_step = "tc_review"
-    st.rerun()
+    
+    # Check if there's a previous error
+    if "tc_gen_error" in st.session_state:
+        st.error(f"❌ Önceki deneme başarısız oldu:\n\n{st.session_state.tc_gen_error}")
+        st.warning("⚠️ Model değiştirip tekrar deneyebilirsiniz.")
+        
+        # Show model selector
+        st.divider()
+        st.subheader("🔄 Model Değiştir ve Tekrar Dene")
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            current_gen = st.session_state.get("generation_model", SONNET_MODEL)
+            current_gen_name = [k for k, v in ALL_MODELS.items() if v == current_gen][0] if current_gen in ALL_MODELS.values() else "Claude Sonnet 4"
+            default_gen_idx = list(ALL_MODELS.keys()).index(current_gen_name) if current_gen_name in ALL_MODELS.keys() else 2
+            
+            new_gen_model_name = st.selectbox(
+                "Generation Model",
+                options=list(ALL_MODELS.keys()),
+                index=default_gen_idx,
+                help="Test case üretmek için kullanılacak model",
+                key="retry_gen_model"
+            )
+            new_gen_model = ALL_MODELS[new_gen_model_name]
+        
+        with col2:
+            st.info(f"💡 Mevcut model: **{current_gen_name}**\n\nGemini modelleri daha hızlı ama token limiti düşük.\n\nClaude modelleri daha yavaş ama daha güçlü.")
+        
+        col_retry1, col_retry2 = st.columns(2)
+        with col_retry1:
+            if st.button("🔄 Yeni Model ile Tekrar Dene", type="primary", use_container_width=True):
+                st.session_state.generation_model = new_gen_model
+                del st.session_state["tc_gen_error"]
+                st.rerun()
+        with col_retry2:
+            if st.button("⬅️ Geri Dön", use_container_width=True):
+                del st.session_state["tc_gen_error"]
+                st.session_state.pipeline_step = "figma_upload"
+                st.rerun()
+    else:
+        # Normal TC generation flow
+        from pipeline.brd.orchestrator import generate_tc
+        gen_model = st.session_state.get("generation_model")
+        
+        try:
+            with st.status("🤖 TC üretiliyor...", expanded=True) as s:
+                tc = generate_tc(st.session_state.ba_content, st.session_state.ta_content, st.session_state.project_name,
+                                st.session_state.jira_key, anthropic_key, gemini_key, log, st.session_state.get("tc_feedback",""), model=gen_model, screen_analysis=st.session_state.get("screen_analysis", ""))
+                s.update(label="✅ TC hazır!", state="complete")
+            
+            st.session_state.tc_content = tc
+            st.session_state.pipeline_step = "tc_review"
+            st.rerun()
+        except Exception as e:
+            error_msg = str(e)
+            st.session_state.tc_gen_error = error_msg
+            st.rerun()
 
 # ──── TC REVIEW ────
 elif step == "tc_review":
