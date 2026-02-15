@@ -780,6 +780,75 @@ def get_latest_version(doc_id: int) -> dict:
     return None
 
 
+def get_documents_with_content(project_id: int = None, doc_type: str = None,
+                                status: str = "active", limit: int = 100) -> list:
+    """
+    Get documents WITH their latest version content.
+    Useful for document matching and similarity analysis.
+
+    Args:
+        project_id: Filter by project ID (optional)
+        doc_type: Filter by document type (optional)
+        status: Filter by status (default: 'active')
+        limit: Maximum number of documents to return (default: 100)
+
+    Returns:
+        List of documents with 'content_json' field populated
+    """
+    conn = get_db()
+
+    query = """
+        SELECT
+            d.*,
+            v.content_json
+        FROM documents d
+        LEFT JOIN (
+            SELECT document_id, content_json,
+                   ROW_NUMBER() OVER (PARTITION BY document_id ORDER BY version_number DESC) as rn
+            FROM document_versions
+        ) v ON d.id = v.document_id AND v.rn = 1
+        WHERE 1=1
+    """
+    params = []
+
+    if project_id:
+        query += " AND d.project_id = ?"
+        params.append(project_id)
+
+    if doc_type:
+        query += " AND d.doc_type = ?"
+        params.append(doc_type)
+
+    if status:
+        query += " AND d.status = ?"
+        params.append(status)
+
+    query += " ORDER BY d.updated_at DESC LIMIT ?"
+    params.append(limit)
+
+    rows = conn.execute(query, params).fetchall()
+    conn.close()
+
+    result = []
+    for row in rows:
+        doc = dict(row)
+        doc['tags'] = json.loads(doc.get('tags', '[]'))
+        doc['jira_keys'] = json.loads(doc.get('jira_keys', '[]'))
+
+        # Parse content_json if exists
+        if doc.get('content_json'):
+            try:
+                doc['content_json'] = json.loads(doc['content_json'])
+            except (json.JSONDecodeError, TypeError):
+                doc['content_json'] = {}
+        else:
+            doc['content_json'] = {}
+
+        result.append(doc)
+
+    return result
+
+
 def create_document_sections(version_id: int, sections: list):
     """Create document sections for a version.
 

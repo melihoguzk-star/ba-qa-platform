@@ -11,8 +11,9 @@ from data.database import (
     create_project, get_projects, get_project_by_id,
     create_document, get_documents, get_document_by_id, update_document,
     create_document_version, get_document_versions, get_latest_version,
-    get_document_stats
+    get_document_stats, get_documents_with_content
 )
+from pipeline.document_matching import find_similar
 
 st.set_page_config(page_title="Document Library", page_icon="📚", layout="wide")
 
@@ -320,6 +321,9 @@ elif page == "📄 Documents":
                     if st.button("Version History", key=f"history_{doc['id']}", use_container_width=True):
                         st.session_state['history_doc_id'] = doc['id']
 
+                    if st.button("🔍 Find Similar", key=f"similar_{doc['id']}", use_container_width=True):
+                        st.session_state['similar_doc_id'] = doc['id']
+
                 # View content
                 if st.session_state.get('view_doc_id') == doc['id']:
                     st.divider()
@@ -343,6 +347,92 @@ elif page == "📄 Documents":
                         **v{version['version_number']}** — {version['created_at'][:16]} by {version['created_by']}
                         {version.get('change_summary', 'No summary')}
                         """)
+
+                # Similar documents
+                if st.session_state.get('similar_doc_id') == doc['id']:
+                    st.divider()
+                    st.subheader("🔍 Similar Documents")
+
+                    with st.spinner("Finding similar documents..."):
+                        # Get current document with content
+                        current_doc_full = get_document_by_id(doc['id'])
+                        latest_version = get_latest_version(doc['id'])
+
+                        if latest_version:
+                            current_doc_full['content_json'] = latest_version['content_json']
+
+                            # Get all candidate documents with content (same type)
+                            candidates = get_documents_with_content(
+                                doc_type=doc['doc_type'],
+                                limit=100
+                            )
+
+                            # Find similar
+                            similar_docs = find_similar(
+                                target_doc=current_doc_full,
+                                candidate_docs=candidates,
+                                top_n=5
+                            )
+
+                            if similar_docs:
+                                st.markdown(f"**Found {len(similar_docs)} similar documents:**")
+
+                                for sim_doc, score, breakdown in similar_docs:
+                                    # Get project name
+                                    sim_project = get_project_by_id(sim_doc['project_id'])
+                                    sim_project_name = sim_project['name'] if sim_project else "Unknown"
+
+                                    # Score breakdown
+                                    score_pct = int(score * 100)
+                                    tfidf_pct = int(breakdown['tfidf_score'] * 100)
+                                    meta_pct = int(breakdown['metadata_score'] * 100)
+
+                                    # Color based on score
+                                    if score >= 0.7:
+                                        score_color = "#10b981"  # Green
+                                    elif score >= 0.4:
+                                        score_color = "#f59e0b"  # Orange
+                                    else:
+                                        score_color = "#6b7280"  # Gray
+
+                                    st.markdown(f"""
+                                    <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                                                padding: 1rem; border-radius: 8px; margin-bottom: 0.5rem;">
+                                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                                            <div style="flex: 1;">
+                                                <div style="color: white; font-weight: 600; margin-bottom: 0.3rem;">
+                                                    📄 {sim_doc['title']}
+                                                </div>
+                                                <div style="color: rgba(255,255,255,0.8); font-size: 0.85rem;">
+                                                    📁 {sim_project_name} • v{sim_doc['current_version']} • {sim_doc['updated_at'][:10]}
+                                                </div>
+                                                <div style="color: rgba(255,255,255,0.7); font-size: 0.8rem; margin-top: 0.3rem;">
+                                                    Content: {tfidf_pct}% • Metadata: {meta_pct}%
+                                                </div>
+                                            </div>
+                                            <div style="text-align: center; margin-left: 1rem;">
+                                                <div style="background: {score_color}; color: white;
+                                                           padding: 0.5rem 1rem; border-radius: 8px;
+                                                           font-weight: bold; font-size: 1.1rem;">
+                                                    {score_pct}%
+                                                </div>
+                                                <div style="color: rgba(255,255,255,0.8); font-size: 0.75rem; margin-top: 0.2rem;">
+                                                    Match
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    """, unsafe_allow_html=True)
+
+                                    # View button
+                                    if st.button(f"View Document", key=f"view_similar_{sim_doc['id']}", use_container_width=True):
+                                        st.session_state['view_doc_id'] = sim_doc['id']
+                                        st.rerun()
+
+                            else:
+                                st.info("No similar documents found. This document is unique!")
+                        else:
+                            st.warning("No content available for similarity matching")
     else:
         st.info("No documents found. Upload your first document to get started!")
 
@@ -449,8 +539,8 @@ elif page == "⬆️ Upload Document":
 st.divider()
 st.markdown("""
 <div style="text-align: center; color: #666; font-size: 0.9rem;">
-    <strong>Phase 1: Document Repository</strong> — Storage, organization, and retrieval<br>
-    Coming in Phase 2: Smart Matching & Recommendations<br>
-    Coming in Phase 3: Incremental Updates & Evolution
+    <strong>✅ Phase 1:</strong> Document Repository — Storage, organization, and retrieval<br>
+    <strong>✅ Phase 2:</strong> Smart Matching & Recommendations — Hybrid TF-IDF + Metadata matching<br>
+    <strong>Coming in Phase 3:</strong> Incremental Updates & Evolution
 </div>
 """, unsafe_allow_html=True)
