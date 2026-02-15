@@ -7,7 +7,7 @@ import sys, os, time
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 from components.sidebar import render_custom_sidebar
-from utils.config import get_credentials, all_creds_available, BA_CRITERIA, emoji_score
+from utils.config import get_credentials, all_creds_available, BA_CRITERIA, emoji_score, get_gemini_keys
 from integrations.jira_client import jira_search, jira_add_label, jira_update_labels, jira_add_comment
 from integrations.google_docs import fetch_google_doc_via_proxy, extract_doc_id
 from agents.agent_definitions import create_ba_agents
@@ -281,10 +281,11 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ── Credential Check ──
-gemini_key, jira_email, jira_token = get_credentials()
-all_creds = all_creds_available()
+gemini_keys = get_gemini_keys()
+gemini_key = gemini_keys[0] if gemini_keys else ""  # Use first key for backward compatibility
+_, jira_email, jira_token = get_credentials()
 
-if not all_creds:
+if not gemini_key or not jira_email or not jira_token:
     st.warning("⚠️ Ana sayfadan Gemini API Key ve JIRA bilgilerini girin.")
     st.stop()
 
