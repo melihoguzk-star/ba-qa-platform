@@ -60,14 +60,10 @@ st.markdown("""
         margin: 0 auto;
     }
 
-    /* Stats Grid */
-    .stats-grid {
-        display: grid;
-        grid-template-columns: repeat(4, 1fr);
-        gap: 16px;
-        margin: 2rem 0;
-    }
+    /* Stat Cards */
     .stat-card {
+        width: 100%;
+        margin-bottom: 0;
         background: #1a2236;
         border: 1px solid #2a3654;
         border-radius: 12px;
@@ -361,49 +357,24 @@ ba_s = next((s for s in stats["by_type"] if s["analysis_type"] == "ba"), {})
 tc_s = next((s for s in stats["by_type"] if s["analysis_type"] == "tc"), {})
 design_s = next((s for s in stats["by_type"] if s["analysis_type"] == "design"), {})
 
-# Get sparkline data
-ba_sparkline = get_sparkline_data("ba", days=7)
-tc_sparkline = get_sparkline_data("tc", days=7)
-design_sparkline = get_sparkline_data("design", days=7)
-
-# Helper function to generate SVG sparkline
-def generate_sparkline_svg(scores, color="#3b82f6", width=100, height=30):
-    if not scores or len(scores) < 2:
-        return ""
-
-    min_score = min(scores)
-    max_score = max(scores)
-    score_range = max_score - min_score if max_score > min_score else 1
-
-    points = []
-    for i, score in enumerate(scores):
-        x = (i / (len(scores) - 1)) * width
-        y = height - ((score - min_score) / score_range * (height - 5))
-        points.append(f"{x:.1f},{y:.1f}")
-
-    polyline = " ".join(points)
-
-    return f"""
-        <svg width="{width}" height="{height}" style="margin-top: 8px;">
-            <polyline points="{polyline}" stroke="{color}" fill="none" stroke-width="2" opacity="0.7"/>
-        </svg>
-    """
-
-ba_svg = generate_sparkline_svg(ba_sparkline, "#8b5cf6")
-tc_svg = generate_sparkline_svg(tc_sparkline, "#10b981")
-design_svg = generate_sparkline_svg(design_sparkline, "#f59e0b")
-
 # Calculate pass rates
 ba_pass_rate = (ba_s.get('gecen', 0) / max(ba_s.get('c', 1), 1) * 100) if ba_s.get('c', 0) > 0 else 0
 tc_pass_rate = (tc_s.get('gecen', 0) / max(tc_s.get('c', 1), 1) * 100) if tc_s.get('c', 0) > 0 else 0
 
-st.markdown(f"""
-<div class="stats-grid">
+# Create stat cards in columns for better control
+col1, col2, col3, col4 = st.columns(4)
+
+with col1:
+    st.markdown(f"""
     <div class="stat-card blue">
         <div class="stat-number">{stats['total']}</div>
         <div class="stat-label">Toplam Analiz</div>
         <div class="stat-detail">{time_range_display}</div>
     </div>
+    """, unsafe_allow_html=True)
+
+with col2:
+    st.markdown(f"""
     <div class="stat-card purple">
         <div class="stat-number">{ba_s.get('c', 0)}</div>
         <div class="stat-label">BA Değerlendirme</div>
@@ -411,8 +382,11 @@ st.markdown(f"""
             Ort: {ba_s.get('avg_puan', 0) or 0:.0f}/100 |
             Geçme: %{ba_pass_rate:.0f} ({ba_s.get('gecen', 0)}/{ba_s.get('c', 0)})
         </div>
-        {ba_svg}
     </div>
+    """, unsafe_allow_html=True)
+
+with col3:
+    st.markdown(f"""
     <div class="stat-card green">
         <div class="stat-number">{tc_s.get('c', 0)}</div>
         <div class="stat-label">TC Değerlendirme</div>
@@ -420,18 +394,19 @@ st.markdown(f"""
             Ort: {tc_s.get('avg_puan', 0) or 0:.0f}/100 |
             Geçme: %{tc_pass_rate:.0f} ({tc_s.get('gecen', 0)}/{tc_s.get('c', 0)})
         </div>
-        {tc_svg}
     </div>
+    """, unsafe_allow_html=True)
+
+with col4:
+    st.markdown(f"""
     <div class="stat-card orange">
         <div class="stat-number">{design_s.get('c', 0)}</div>
         <div class="stat-label">Design Compliance</div>
         <div class="stat-detail">
             Ort: {design_s.get('avg_puan', 0) or 0:.0f}/100
         </div>
-        {design_svg}
     </div>
-</div>
-""", unsafe_allow_html=True)
+    """, unsafe_allow_html=True)
 
 # ── Alerts Section ──
 alerts = get_dashboard_alerts()
