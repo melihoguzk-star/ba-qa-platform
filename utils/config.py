@@ -77,6 +77,50 @@ def gemini_available():
     return bool(g)
 
 
+def get_gemini_keys():
+    """
+    Returns list of Gemini API keys for rotation.
+    Supports both single key (GEMINI_API_KEY) and multiple keys (GEMINI_API_KEYS).
+    
+    Returns:
+        List of Gemini API keys
+    """
+    keys = []
+    
+    # Try session state first
+    if "gemini_keys" in st.session_state:
+        keys = st.session_state.gemini_keys
+    elif "gemini_key" in st.session_state and st.session_state.gemini_key:
+        keys = [st.session_state.gemini_key]
+    
+    # Fallback to secrets
+    if not keys:
+        try:
+            # Try multiple keys first (new format)
+            if "GEMINI_API_KEYS" in st.secrets:
+                keys_raw = st.secrets["GEMINI_API_KEYS"]
+                if isinstance(keys_raw, list):
+                    keys = keys_raw
+                elif isinstance(keys_raw, str):
+                    # Support comma-separated string
+                    keys = [k.strip() for k in keys_raw.split(",") if k.strip()]
+            # Fallback to single key (old format - backward compatible)
+            elif "GEMINI_API_KEY" in st.secrets:
+                single_key = st.secrets["GEMINI_API_KEY"]
+                if single_key:
+                    keys = [single_key]
+        except:
+            pass
+    
+    # Final fallback: environment variable
+    if not keys:
+        env_key = os.environ.get("GEMINI_API_KEY", "")
+        if env_key:
+            keys = [env_key]
+    
+    return keys
+
+
 # ─────────────────────────────────────────────
 # SHARED UI HELPERS
 # ─────────────────────────────────────────────
