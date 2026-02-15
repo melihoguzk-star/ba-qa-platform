@@ -8,7 +8,8 @@ import anthropic
 from google import genai
 from google.genai import types as genai_types
 
-from utils.config import SONNET_MODEL, GEMINI_MODEL, CHUNK_OUTPUT_TOKEN_LIMIT, QA_OUTPUT_TOKEN_LIMIT, is_anthropic_model, is_gemini_model
+from utils.config import SONNET_MODEL, GEMINI_MODEL, CHUNK_OUTPUT_TOKEN_LIMIT, QA_OUTPUT_TOKEN_LIMIT, is_anthropic_model, is_gemini_model, get_gemini_keys
+from utils.key_manager import APIKeyManager, is_quota_error, is_auth_error
 from pipeline.brd.json_repair import parse_ai_json
 
 
