@@ -261,6 +261,87 @@ def finalize_stage(run_id, stage, content, qa_result, revision_count, forced_pas
     save_stage_output(run_id, stage, content, qa_result, revision_count, forced_pass, gen_time)
 
 
+def generate_openapi(ta_content, project_name, log, anthropic_key, gemini_key, 
+                     base_path="/api/v1", model=None, use_ai=True):
+    """TA içeriğinden OpenAPI 3.0.4 spec oluşturur.
+    
+    Args:
+        ta_content: Teknik Analiz JSON içeriği
+        project_name: Proje adı
+        log: Log fonksiyonu
+        anthropic_key: Anthropic API key
+        gemini_key: Gemini API key
+        base_path: API base path (örn: /api/v1/bo-myservice)
+        model: AI model (None ise default)
+        use_ai: True ise AI-assisted, False ise code-based
+    
+    Returns:
+        dict: {
+            "openapi_spec": dict,
+            "json": str
+        }
+    """
+    from pipeline.brd.openapi_generator import (
+        generate_openapi_spec_hybrid,
+        generate_openapi_spec,
+        export_to_json,
+        validate_openapi_spec
+    )
+    
+    log("  📄 OpenAPI 3.0.4 Spec oluşturuluyor...")
+    
+    try:
+        # AI-assisted veya code-based generation
+        if use_ai:
+            log("    🤖 AI-assisted generation...")
+            spec = generate_openapi_spec_hybrid(
+                ta_content=ta_content,
+                project_name=project_name,
+                anthropic_key=anthropic_key,
+                gemini_key=gemini_key,
+                version="1.0.0",
+                base_path=base_path,
+                model=model,
+                log=log
+            )
+        else:
+            log("    ⚙️ Code-based generation...")
+            spec = generate_openapi_spec(
+                ta_content=ta_content,
+                project_name=project_name,
+                version="1.0.0",
+                base_path=base_path
+            )
+        
+        # Validate
+        is_valid, message = validate_openapi_spec(spec)
+        if not is_valid:
+            log(f"    ⚠️ OpenAPI validation warning: {message}")
+        else:
+            log(f"    ✅ {message}")
+        
+        # JSON export
+        json_output = export_to_json(spec, indent=2)
+        
+        # İstatistikler
+        endpoint_count = len(spec.get("paths", {}))
+        schema_count = len(spec.get("components", {}).get("schemas", {}))
+        log(f"    → {endpoint_count} endpoint, {schema_count} schema")
+        
+        return {
+            "openapi_spec": spec,
+            "json": json_output
+        }
+    
+    except Exception as e:
+        log(f"    ❌ OpenAPI oluşturma hatası: {str(e)[:200]}")
+        return {
+            "openapi_spec": {},
+            "json": json.dumps({"error": str(e)}, ensure_ascii=False, indent=2)
+        }
+
+
 def complete_run(run_id, total_time):
     """Pipeline'ı tamamla."""
     update_run(run_id, status="completed", total_time_sec=total_time)
+
