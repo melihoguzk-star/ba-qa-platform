@@ -386,14 +386,24 @@ def fetch_ba_queue():
     queue = []
     for issue in issues:
         labels = issue.get("fields", {}).get("labels", [])
+        summary = issue["fields"].get("summary", "")
+
+        # Skip completed/in-progress tasks
         if "qa-tamamlandi" in labels or "qa-devam-ediyor" in labels:
             continue
+
+        # Skip test/dummy tasks
+        if "test" in labels or "test-task" in labels:
+            continue
+        if "TEST TEST" in summary or summary.endswith("(Test)"):
+            continue
+
         desc = issue.get("fields", {}).get("description", "")
         doc_id, doc_url = extract_doc_id(desc)
         if doc_id:
             queue.append({
                 "key": issue["key"],
-                "summary": issue["fields"].get("summary", ""),
+                "summary": summary,
                 "assignee": (issue["fields"].get("assignee") or {}).get("displayName", ""),
                 "doc_id": doc_id, "doc_url": doc_url,
             })

@@ -389,8 +389,18 @@ def fetch_tc_queue():
     queue = []
     for issue in issues:
         labels = issue.get("fields", {}).get("labels", [])
+        summary = issue["fields"].get("summary", "")
+
+        # Skip completed/in-progress tasks
         if "tc-qa-tamamlandi" in labels or "tc-qa-devam-ediyor" in labels:
             continue
+
+        # Skip test/dummy tasks
+        if "test" in labels or "test-task" in labels:
+            continue
+        if "TEST TEST" in summary or summary.endswith("(Test)"):
+            continue
+
         desc = issue.get("fields", {}).get("description", "")
         tc_doc_id, tc_url = extract_spreadsheet_id(desc)
         if not tc_doc_id:
@@ -399,7 +409,7 @@ def fetch_tc_queue():
             ba_key = find_linked_ba_key(issue)
             queue.append({
                 "key": issue["key"],
-                "summary": issue["fields"].get("summary", ""),
+                "summary": summary,
                 "assignee": (issue["fields"].get("assignee") or {}).get("displayName", ""),
                 "tc_doc_id": tc_doc_id, "tc_url": tc_url,
                 "linked_ba_key": ba_key,
