@@ -16,15 +16,6 @@ st.set_page_config(page_title="BRD Pipeline", page_icon="📋", layout="wide")
 render_custom_sidebar(active_page="brd_pipeline")
 st.title("📋 BRD Pipeline — Adım Adım")
 
-# ── API Key kontrolü ──
-anthropic_key = get_anthropic_key()
-gemini_keys = get_gemini_keys()
-
-# Hala yoksa hata ver
-if not anthropic_key or not gemini_keys:
-    st.error("⚠️ API Key'ler bulunamadı!")
-    st.info("🔑 Lütfen `.streamlit/secrets.toml` dosyasına ANTHROPIC_API_KEY ve GEMINI_API_KEY ekleyin.")
-    st.code("""# .streamlit/secrets.toml
 ANTHROPIC_API_KEY = "your-key-here"
 GEMINI_API_KEYS = [
     "key-1",
@@ -37,7 +28,8 @@ GEMINI_API_KEYS = [
 # Session state'e yaz (diğer sayfalar için)
 st.session_state["anthropic_api_key"] = anthropic_key
 st.session_state["gemini_keys"] = gemini_keys
-st.session_state["gemini_key"] = gemini_keys[0] if gemini_keys else ""  # Backward compatibility
+st.session_state["gemini_key"] = gemini_key  # Backward compatibility
+
 
 
 if "pipeline_step" not in st.session_state:
