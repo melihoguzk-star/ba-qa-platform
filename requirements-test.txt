@@ -1,0 +1,22 @@
+# Testing dependencies for BA-QA Platform
+
+# Core testing framework
+pytest==8.0.0
+pytest-cov==4.1.0           # Coverage reporting
+pytest-mock==3.12.0         # Mocking utilities
+pytest-asyncio==0.23.3      # Async test support
+
+# Test utilities
+faker==22.6.0               # Generate fake data for tests
+freezegun==1.4.0            # Mock datetime for tests
+responses==0.24.1           # Mock HTTP requests
+factory-boy==3.3.0          # Test data factories
+
+# Code quality
+pytest-flake8==1.1.1        # Linting in tests
+pytest-mypy==0.10.3         # Type checking in tests
+pytest-timeout==2.2.0       # Timeout for slow tests
+
+# Debugging
+pytest-pdb==0.3.1           # PDB integration
+pytest-sugar==0.9.7         # Better test output
