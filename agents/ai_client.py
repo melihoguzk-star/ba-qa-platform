@@ -88,6 +88,8 @@ def call_ai(system_prompt: str, user_content: str, anthropic_key: str, gemini_ke
     if is_anthropic_model(model):
         return call_sonnet(system_prompt, user_content, anthropic_key, max_tokens, model)
     elif is_gemini_model(model):
-        return call_gemini(system_prompt, user_content, gemini_key, max_tokens, model)
+        # Gemini has 8192 token output limit, cap it
+        capped_tokens = min(max_tokens, 8192)
+        return call_gemini(system_prompt, user_content, gemini_key, capped_tokens, model)
     else:
         raise ValueError(f"Unknown model provider for model: {model}")
