@@ -9,7 +9,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 from components.sidebar import render_custom_sidebar
 from pathlib import Path
 from agno.media import Image as AgnoImage
-from utils.config import get_credentials, gemini_available
+from utils.config import get_credentials, gemini_available, GEMINI_MODELS, GEMINI_MODEL
 from integrations.google_docs import fetch_google_doc_direct
 from agents.agent_definitions import create_design_agents
 from data.database import save_analysis
@@ -321,13 +321,37 @@ st.markdown("""
 </button>
 """, unsafe_allow_html=True)
 
+# ── Model Selection ──
+st.markdown("### ⚙️ Model Ayarları")
+
+col1, col2 = st.columns(2)
+with col1:
+    # Get default model index
+    current_model = st.session_state.get("design_eval_model", GEMINI_MODEL)
+    current_model_name = [k for k, v in GEMINI_MODELS.items() if v == current_model][0] if current_model in GEMINI_MODELS.values() else "Gemini 2.5 Flash"
+    default_idx = list(GEMINI_MODELS.keys()).index(current_model_name) if current_model_name in GEMINI_MODELS.keys() else 0
+
+    selected_model_name = st.selectbox(
+        "Vision Model (Gemini only)",
+        options=list(GEMINI_MODELS.keys()),
+        index=default_idx,
+        help="Design analizi için kullanılacak Gemini vision model (görsel analiz için sadece Gemini destekleniyor)"
+    )
+    selected_model = GEMINI_MODELS[selected_model_name]
+    st.session_state["design_eval_model"] = selected_model
+
+with col2:
+    st.info(f"🤖 **Seçili Model:** {selected_model_name}\n\n👁️ Vision/Multimodal analiz")
+
+st.divider()
+
 # ── Check API ──
 gemini_key, jira_email, jira_token = get_credentials()
 if not gemini_available():
     st.error("⚠️ Gemini API Key bulunamadı. Ana sayfadan API key'i girin.")
     st.stop()
 
-agents = create_design_agents(gemini_key)
+agents = create_design_agents(gemini_key, model=selected_model)
 if not all(agents):
     st.error("Agent'lar başlatılamadı. Lütfen API ayarlarını kontrol edin.")
     st.stop()

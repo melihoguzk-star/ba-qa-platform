@@ -6,8 +6,8 @@ from agno.agent import Agent
 from agno.models.google import Gemini
 
 
-def create_model(api_key: str):
-    return Gemini(id="gemini-2.5-flash", api_key=api_key)
+def create_model(api_key: str, model_id: str = "gemini-2.5-flash"):
+    return Gemini(id=model_id, api_key=api_key)
 
 
 # ─────────────────────────────────────────────
@@ -80,11 +80,11 @@ def create_tc_agents(api_key: str):
 # Design Compliance Agent'ları
 # ─────────────────────────────────────────────
 
-def create_design_agents(api_key: str):
-    model = create_model(api_key)
+def create_design_agents(api_key: str, model: str = "gemini-2.5-flash"):
+    gemini_model = create_model(api_key, model)
 
     requirements_agent = Agent(
-        name="Requirements Extractor", model=model,
+        name="Requirements Extractor", model=gemini_model,
         instructions=[
             "Sen bir İş Analizi uzmanısın. Görevin, verilen iş analizi dokümanından "
             "gereksinimleri yapılandırılmış biçimde çıkarmak.",
@@ -112,7 +112,7 @@ def create_design_agents(api_key: str):
     )
 
     screen_agent = Agent(
-        name="Screen Analyzer", model=model,
+        name="Screen Analyzer", model=gemini_model,
         instructions=[
             "Sen bir UI/UX analiz uzmanısın. Görevin, verilen tasarım ekran görüntüsünü "
             "detaylı biçimde analiz etmek.",
@@ -131,7 +131,7 @@ def create_design_agents(api_key: str):
     )
 
     compliance_agent = Agent(
-        name="Compliance Checker", model=model,
+        name="Compliance Checker", model=gemini_model,
         instructions=[
             "Sen bir Kalite Güvence (QA) uzmanısın. Görevin, iş analizi gereksinimlerini "
             "tasarım ekranı analiziyle karşılaştırarak uyumluluk kontrolü yapmak.",
@@ -149,7 +149,7 @@ def create_design_agents(api_key: str):
     )
 
     report_agent = Agent(
-        name="Report Generator", model=model,
+        name="Report Generator", model=gemini_model,
         instructions=[
             "Sen bir BA&QA raporlama uzmanısın. Görevin, uyumluluk kontrol sonuçlarını "
             "yapılandırılmış bir rapora dönüştürmek.",
