@@ -468,10 +468,12 @@ class HeadingBasedParser:
         if any(kw in heading for kw in keywords):
             return True
 
+        # Security indicators list (used for items and subsections)
+        security_indicators = ["güvenlik", "security", "encryption", "hash", "token", "authentication", "şifreleme"]
+
         # Check items content for security-related terms
         items = section.get("items", [])
         if items:
-            security_indicators = ["güvenlik", "security", "encryption", "hash", "token", "authentication", "şifreleme"]
             item_text = " ".join(items).lower()
             if any(indicator in item_text for indicator in security_indicators):
                 return True
