@@ -652,6 +652,32 @@ def create_document(project_id: int, doc_type: str, title: str, content_json: di
 
     conn.commit()
     conn.close()
+
+    # Phase 2A: Auto-index in ChromaDB
+    if os.getenv('ENABLE_AUTO_INDEXING', 'true').lower() == 'true':
+        try:
+            from pipeline.embedding_pipeline import index_document_async
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.info(f"Auto-indexing document {doc_id} in vector store")
+
+            # Extract metadata for indexing
+            metadata = {
+                'project_id': project_id,
+                'title': title,
+                'description': description,
+                'tags': tags or [],
+                'jira_keys': jira_keys or [],
+                'created_by': created_by
+            }
+
+            index_document_async(doc_id, content_json, doc_type, metadata)
+        except Exception as e:
+            # Don't fail document creation if indexing fails
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Failed to auto-index document {doc_id}: {e}")
+
     return doc_id
 
 
@@ -764,8 +790,41 @@ def create_document_version(doc_id: int, content_json: dict, change_summary: str
         (new_version, datetime.now().isoformat(), doc_id)
     )
 
+    # Get document info for indexing
+    doc_row = conn.execute(
+        "SELECT doc_type, project_id, title, description, tags, jira_keys FROM documents WHERE id = ?",
+        (doc_id,)
+    ).fetchone()
+
     conn.commit()
     conn.close()
+
+    # Phase 2A: Re-index in ChromaDB on version update
+    if doc_row and os.getenv('ENABLE_AUTO_INDEXING', 'true').lower() == 'true':
+        try:
+            from pipeline.embedding_pipeline import index_document_async
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.info(f"Re-indexing document {doc_id} (new version: {new_version})")
+
+            # Extract metadata for indexing
+            metadata = {
+                'project_id': doc_row['project_id'],
+                'title': doc_row['title'],
+                'description': doc_row['description'],
+                'tags': json.loads(doc_row.get('tags', '[]')),
+                'jira_keys': json.loads(doc_row.get('jira_keys', '[]')),
+                'created_by': created_by,
+                'version_number': new_version
+            }
+
+            index_document_async(doc_id, content_json, doc_row['doc_type'], metadata)
+        except Exception as e:
+            # Don't fail version creation if indexing fails
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Failed to re-index document {doc_id}: {e}")
+
     return version_id
 
 

@@ -118,7 +118,7 @@ st.title("⚙️ Settings")
 st.markdown("Manage API keys, rotation settings, and view usage statistics.")
 
 # Tabs
-tab1, tab2, tab3 = st.tabs(["🔑 API Keys", "⚙️ Rotation Settings", "📊 Statistics"])
+tab1, tab2, tab3, tab4 = st.tabs(["🔑 API Keys", "⚙️ Rotation Settings", "📊 Statistics", "🔍 Vector Store"])
 
 # ============================================================================
 # TAB 1: API KEYS MANAGEMENT
@@ -327,6 +327,162 @@ with tab3:
             }
             
             st.bar_chart(chart_data)
+
+# ============================================================================
+# TAB 4: VECTOR STORE (Phase 2B)
+# ============================================================================
+with tab4:
+    st.header("🔍 Vector Store Status")
+    st.markdown("Monitor semantic search infrastructure and ChromaDB collections.")
+
+    try:
+        from pipeline.vector_store import get_vector_store
+        import os
+
+        # Check if semantic search is enabled
+        semantic_enabled = os.getenv('ENABLE_SEMANTIC_SEARCH', 'true').lower() == 'true'
+        auto_indexing = os.getenv('ENABLE_AUTO_INDEXING', 'true').lower() == 'true'
+
+        # Feature status
+        st.subheader("⚙️ Configuration")
+        col1, col2 = st.columns(2)
+
+        with col1:
+            if semantic_enabled:
+                st.success("✅ Semantic Search: Enabled")
+            else:
+                st.warning("⚠️ Semantic Search: Disabled")
+
+        with col2:
+            if auto_indexing:
+                st.success("✅ Auto-Indexing: Enabled")
+            else:
+                st.warning("⚠️ Auto-Indexing: Disabled")
+
+        st.divider()
+
+        # Get vector store stats
+        with st.spinner("Loading vector store statistics..."):
+            vector_store = get_vector_store()
+            stats = vector_store.get_collection_stats()
+
+        # Collection statistics
+        st.subheader("📊 Collection Statistics")
+
+        col1, col2, col3 = st.columns(3)
+
+        with col1:
+            ba_stats = stats.get('ba', {})
+            chunk_count = ba_stats.get('chunk_count', 0)
+            status = ba_stats.get('status', 'unknown')
+            status_icon = '✅' if status == 'active' else '❌'
+
+            st.metric(
+                "BA Documents",
+                f"{chunk_count} chunks",
+                help="Business Analysis document chunks indexed"
+            )
+            st.caption(f"{status_icon} {status.title()}")
+
+        with col2:
+            ta_stats = stats.get('ta', {})
+            chunk_count = ta_stats.get('chunk_count', 0)
+            status = ta_stats.get('status', 'unknown')
+            status_icon = '✅' if status == 'active' else '❌'
+
+            st.metric(
+                "TA Documents",
+                f"{chunk_count} chunks",
+                help="Technical Analysis document chunks indexed"
+            )
+            st.caption(f"{status_icon} {status.title()}")
+
+        with col3:
+            tc_stats = stats.get('tc', {})
+            chunk_count = tc_stats.get('chunk_count', 0)
+            status = tc_stats.get('status', 'unknown')
+            status_icon = '✅' if status == 'active' else '❌'
+
+            st.metric(
+                "TC Documents",
+                f"{chunk_count} chunks",
+                help="Test Case document chunks indexed"
+            )
+            st.caption(f"{status_icon} {status.title()}")
+
+        # Total chunks
+        total_chunks = sum(s.get('chunk_count', 0) for s in stats.values())
+        st.info(f"📦 **Total indexed chunks:** {total_chunks}")
+
+        st.divider()
+
+        # Model information
+        st.subheader("🤖 Embedding Model")
+
+        model_name = os.getenv('EMBEDDING_MODEL', 'intfloat/multilingual-e5-base')
+        st.code(model_name, language="text")
+        st.caption("Multilingual support: Turkish + English")
+
+        st.divider()
+
+        # Test semantic search
+        st.subheader("🧪 Test Semantic Search")
+
+        with st.form("test_semantic_search"):
+            test_query = st.text_input(
+                "Enter test query",
+                placeholder="kullanıcı giriş ekranı",
+                help="Test semantic search with a sample query"
+            )
+
+            test_doc_type = st.selectbox(
+                "Document type",
+                options=['ba', 'ta', 'tc'],
+                format_func=lambda x: {'ba': 'Business Analysis', 'ta': 'Technical Analysis', 'tc': 'Test Cases'}[x]
+            )
+
+            if st.form_submit_button("🔍 Search", use_container_width=True):
+                if test_query:
+                    with st.spinner(f"Searching {test_doc_type} documents..."):
+                        try:
+                            results = vector_store.search(
+                                query_text=test_query,
+                                doc_type=test_doc_type,
+                                top_k=5
+                            )
+
+                            if results:
+                                st.success(f"✅ Found {len(results)} results!")
+
+                                for i, result in enumerate(results, 1):
+                                    with st.expander(f"{i}. Document {result['document_id']} - Similarity: {result['similarity']:.1%}"):
+                                        st.write(f"**Matched Chunk:**")
+                                        st.text(result['chunk_text'][:200] + "..." if len(result['chunk_text']) > 200 else result['chunk_text'])
+
+                                        metadata = result.get('metadata', {})
+                                        st.caption(f"Chunk Type: {metadata.get('chunk_type', 'unknown')}")
+                            else:
+                                st.warning("No results found. Try a different query.")
+
+                        except Exception as e:
+                            st.error(f"❌ Search failed: {str(e)}")
+                else:
+                    st.warning("Please enter a query.")
+
+        st.divider()
+
+        # ChromaDB location
+        st.subheader("💾 Storage")
+        st.code(vector_store.persist_directory, language="bash")
+        st.caption("ChromaDB persistent storage location")
+
+    except ImportError:
+        st.error("❌ Vector Store module not available. Make sure Phase 2A is installed.")
+        st.code("pip install chromadb sentence-transformers torch", language="bash")
+
+    except Exception as e:
+        st.error(f"❌ Error loading vector store: {str(e)}")
+        st.info("💡 Make sure you're using Python 3.12 (not 3.14) for ChromaDB compatibility.")
 
 # Footer
 st.divider()

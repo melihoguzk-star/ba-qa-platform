@@ -20,6 +20,8 @@ __pycache__/
 # data/baqa.db  # Uncommented to persist data on Streamlit Cloud
 data/custom_models.json
 # data/pipeline.db  # Uncommented to persist data on Streamlit Cloud
+data/chroma_db/  # ChromaDB vector store (Phase 2A)
+data/reindex_checkpoint.json  # Reindexing progress checkpoint
 
 # IDE
 .idea/

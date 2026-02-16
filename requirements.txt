@@ -31,3 +31,13 @@ openpyxl>=3.1.0
 
 # Utilities
 python-dateutil>=2.8.2
+
+# Phase 2A & 2B: Semantic Search & Vector Database
+# Updated to ChromaDB 0.5.x with Pydantic v2 for compatibility with google-genai
+chromadb>=0.5.0,<0.6.0
+pydantic>=2.0
+numpy>=1.22.5,<2.0
+sentence-transformers>=2.5.0
+torch>=2.1.0
+tqdm>=4.66.0
+# Note: Use Python 3.12 (venv_py312) for compatibility

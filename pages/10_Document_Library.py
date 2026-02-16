@@ -17,6 +17,13 @@ from data.database import (
 from pipeline.document_matching import find_similar
 from pipeline.document_adaptation import DocumentAdapter
 
+# Phase 2B: Semantic Search
+try:
+    from pipeline.vector_store import get_vector_store
+    SEMANTIC_SEARCH_AVAILABLE = True
+except ImportError:
+    SEMANTIC_SEARCH_AVAILABLE = False
+
 st.set_page_config(page_title="Document Library", page_icon="📚", layout="wide")
 
 # Custom CSS
@@ -278,14 +285,164 @@ elif page == "📄 Documents":
     with col3:
         search = st.text_input("🔍 Search", placeholder="Search documents...")
 
-    # Get documents
-    documents = get_documents(
-        project_id=selected_project_id,
-        doc_type=doc_type,
-        search=search
-    )
+    # Phase 2B: Semantic Search & Hybrid Mode
+    use_semantic = False
+    use_hybrid = False
+    if SEMANTIC_SEARCH_AVAILABLE and search:
+        import os
+        semantic_enabled = os.getenv('ENABLE_SEMANTIC_SEARCH', 'true').lower() == 'true'
+        hybrid_enabled = os.getenv('ENABLE_HYBRID_SEARCH', 'true').lower() == 'true'
 
-    st.markdown(f"**Found {len(documents)} documents**")
+        if semantic_enabled:
+            col_s1, col_s2 = st.columns(2)
+            with col_s1:
+                use_semantic = st.checkbox(
+                    "🔍 Use Semantic Search (AI-powered)",
+                    value=False,
+                    help="Find documents by meaning, not just keywords. Supports Turkish + English."
+                )
+            with col_s2:
+                if hybrid_enabled and use_semantic:
+                    use_hybrid = st.checkbox(
+                        "⚡ Hybrid Mode (Best Results)",
+                        value=True,
+                        help="Combines keyword + semantic search. Exact matches ranked higher."
+                    )
+
+    # Get documents
+    documents = []
+    similarity_scores = {}  # Store similarity scores for semantic/hybrid results
+    chunk_info = {}  # Store chunk information (text, type) for semantic results
+    search_mode = "keyword"  # Track which search mode was used
+
+    if use_semantic and search:
+        try:
+            if use_hybrid:
+                # Hybrid search (TF-IDF + Semantic fusion)
+                search_mode = "hybrid"
+                with st.spinner("Searching with hybrid AI..."):
+                    from pipeline.hybrid_search import hybrid_search
+
+                    # Search across document types
+                    doc_types_to_search = [doc_type] if doc_type else ['ba', 'ta', 'tc']
+                    all_results = []
+
+                    for dt in doc_types_to_search:
+                        results = hybrid_search(
+                            query_text=search,
+                            doc_type=dt,
+                            top_k=20,
+                            alpha=float(os.getenv('HYBRID_SEARCH_ALPHA', '0.6'))
+                        )
+                        all_results.extend(results)
+
+                    # Get unique document IDs with scores and chunk info
+                    doc_ids_with_data = {}
+                    for result in all_results:
+                        doc_id = result['document_id']
+                        score = result.get('hybrid_score', result.get('similarity', 0))
+
+                        # Keep the result with highest score for each document
+                        if doc_id not in doc_ids_with_data or score > doc_ids_with_data[doc_id]['score']:
+                            doc_ids_with_data[doc_id] = {
+                                'score': score,
+                                'chunk_text': result.get('chunk_text', ''),
+                                'chunk_type': result.get('metadata', {}).get('chunk_type', 'unknown'),
+                                'result': result  # Store full result for context
+                            }
+
+                    # Fetch full documents
+                    for doc_id, data in doc_ids_with_data.items():
+                        doc = get_document_by_id(doc_id)
+                        if doc and doc['status'] == 'active':
+                            documents.append(doc)
+                            similarity_scores[doc_id] = data['score']
+                            chunk_info[doc_id] = {
+                                'text': data['chunk_text'],
+                                'type': data['chunk_type'],
+                                'result': data['result']
+                            }
+
+                    # Sort by hybrid score (highest first)
+                    documents.sort(key=lambda d: similarity_scores.get(d['id'], 0), reverse=True)
+
+            else:
+                # Pure semantic search using vector store
+                search_mode = "semantic"
+                with st.spinner("Searching with AI..."):
+                    vector_store = get_vector_store()
+
+                    # Search across document types
+                    doc_types_to_search = [doc_type] if doc_type else ['ba', 'ta', 'tc']
+                    all_results = []
+
+                    for dt in doc_types_to_search:
+                        results = vector_store.search(
+                            query_text=search,
+                            doc_type=dt,
+                            top_k=20,
+                            filter_metadata={'project_id': selected_project_id} if selected_project_id else None
+                        )
+                        all_results.extend(results)
+
+                    # Get unique document IDs with scores and chunk info
+                    doc_ids_with_data = {}
+                    for result in all_results:
+                        doc_id = result['document_id']
+                        similarity = result['similarity']
+
+                        # Keep the result with highest similarity for each document
+                        if doc_id not in doc_ids_with_data or similarity > doc_ids_with_data[doc_id]['score']:
+                            doc_ids_with_data[doc_id] = {
+                                'score': similarity,
+                                'chunk_text': result.get('chunk_text', ''),
+                                'chunk_type': result.get('metadata', {}).get('chunk_type', 'unknown'),
+                                'result': result  # Store full result for context
+                            }
+
+                    # Fetch full documents
+                    for doc_id, data in doc_ids_with_data.items():
+                        doc = get_document_by_id(doc_id)
+                        if doc and doc['status'] == 'active':
+                            documents.append(doc)
+                            similarity_scores[doc_id] = data['score']
+                            chunk_info[doc_id] = {
+                                'text': data['chunk_text'],
+                                'type': data['chunk_type'],
+                                'result': data['result']
+                            }
+
+                    # Sort by similarity score (highest first)
+                    documents.sort(key=lambda d: similarity_scores.get(d['id'], 0), reverse=True)
+
+        except Exception as e:
+            st.error(f"❌ {search_mode.capitalize()} search failed: {str(e)}")
+            st.info("Falling back to keyword search...")
+            search_mode = "keyword"
+            # Fall back to regular search
+            documents = get_documents(
+                project_id=selected_project_id,
+                doc_type=doc_type,
+                search=search
+            )
+    else:
+        # Regular keyword search
+        documents = get_documents(
+            project_id=selected_project_id,
+            doc_type=doc_type,
+            search=search
+        )
+
+    # Display document count and search mode
+    if search:
+        if search_mode == "hybrid":
+            st.markdown(f"**Found {len(documents)} documents** ⚡ *Hybrid Search Mode (Keyword + AI)*")
+        elif search_mode == "semantic":
+            st.markdown(f"**Found {len(documents)} documents** 🔍 *Semantic Search Mode (AI)*")
+        else:
+            st.markdown(f"**Found {len(documents)} documents** 🔤 *Keyword Search*")
+    else:
+        st.markdown(f"**Found {len(documents)} documents**")
 
     # Display documents
     if documents:
@@ -298,7 +455,14 @@ elif page == "📄 Documents":
             project = get_project_by_id(doc['project_id'])
             project_name = project['name'] if project else "Unknown"
 
-            with st.expander(f"📄 {doc['title']}", expanded=False):
+            # Build title with similarity score if available
+            doc_title = f"📄 {doc['title']}"
+            if doc['id'] in similarity_scores:
+                similarity = similarity_scores[doc['id']]
+                similarity_pct = f"{similarity:.0%}"
+                doc_title = f"📄 {doc['title']} 💡 Similarity: {similarity_pct}"
+
+            with st.expander(doc_title, expanded=False):
                 col_a, col_b = st.columns([3, 1])
 
                 with col_a:
@@ -315,6 +479,44 @@ elif page == "📄 Documents":
 
                     if doc_tags:
                         st.markdown("**Tags:** " + " ".join([f'<span class="tag">{tag}</span>' for tag in doc_tags]), unsafe_allow_html=True)
+
+                    # Phase 2B: Show matched chunk info for semantic/hybrid search
+                    if doc['id'] in chunk_info and search_mode in ['semantic', 'hybrid']:
+                        chunk = chunk_info[doc['id']]
+                        chunk_text = chunk.get('text', '')
+                        chunk_type = chunk.get('type', 'unknown')
+
+                        # Only show if we have actual chunk info (from semantic search)
+                        if chunk_text and chunk_type != 'unknown':
+                            # Chunk type with icon (match chunking_strategy.py types)
+                            type_icons = {
+                                'ekran': '🖥️',
+                                'screen': '🖥️',
+                                'backend_operation': '⚙️',
+                                'backend_islem': '⚙️',
+                                'endpoint': '🔌',
+                                'test_case': '🧪',
+                                'test_scenario': '🧪',
+                                'data_entity': '📊',
+                                'unknown': '📄'
+                            }
+                            icon = type_icons.get(chunk_type.lower(), '📄')
+
+                            st.divider()
+                            st.markdown(f"**{icon} Matched Chunk:** *{chunk_type}*")
+
+                            # Show chunk preview (max 200 chars)
+                            preview = chunk_text[:200] + "..." if len(chunk_text) > 200 else chunk_text
+                            st.info(f"💡 \"{preview}\"")
+
+                            # "View Full Context" expander
+                            if len(chunk_text) > 200:
+                                with st.expander("📖 View Full Matched Text"):
+                                    st.text(chunk_text)
+                        elif search_mode == 'hybrid' and not chunk_text:
+                            # Hybrid mode but no semantic match - show TF-IDF only indicator
+                            st.divider()
+                            st.caption("🔤 Matched via keyword search (TF-IDF)")
 
                     # Phase 3: Lineage information
                     if doc.get('source_document_id'):

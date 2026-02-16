@@ -362,22 +362,17 @@ if selected_model.startswith("claude-"):
     if not anthropic_key:
         st.error("⚠️ Anthropic modeli seçtiniz ama API key girilmemiş. Ana sayfadan Anthropic API Key'i girin.")
         st.stop()
-    # Note: Currently using agno framework which is Gemini-only
-    # For Anthropic vision support, we recommend using Gemini models
-    st.warning("⚠️ **Not:** Şu anda görsel analiz için Gemini framework'ü kullanılıyor. Anthropic modelleri için sınırlı destek var. En iyi sonuç için Gemini modellerini kullanın.")
-    # Use Gemini key as fallback for now
-    if not gemini_key:
-        st.error("⚠️ Görsel analiz için Gemini API Key gerekli. Ana sayfadan Gemini API Key'i girin.")
-        st.stop()
+    api_key_to_use = anthropic_key
 elif selected_model.startswith("gemini-"):
     if not gemini_key:
         st.error("⚠️ Gemini API Key bulunamadı. Ana sayfadan API key'i girin.")
         st.stop()
+    api_key_to_use = gemini_key
 else:
     st.error(f"⚠️ Bilinmeyen model tipi: {selected_model}")
     st.stop()
 
-agents = create_design_agents(gemini_key, model=selected_model if selected_model.startswith("gemini-") else GEMINI_MODEL)
+agents = create_design_agents(api_key_to_use, model=selected_model)
 if not all(agents):
     st.error("Agent'lar başlatılamadı. Lütfen API ayarlarını kontrol edin.")
     st.stop()

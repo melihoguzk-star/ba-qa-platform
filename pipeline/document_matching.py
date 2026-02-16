@@ -356,3 +356,129 @@ def find_similar(target_doc: Dict, candidate_docs: List[Dict], top_n: int = 5) -
     """
     matcher = DocumentMatcher()
     return matcher.find_similar_documents(target_doc, candidate_docs, top_n=top_n)
+
+
+def search_documents_tfidf(
+    query_text: str,
+    doc_type: Optional[str] = None,
+    top_k: int = 20,
+    min_score: float = 0.0
+) -> List[Dict]:
+    """
+    Search documents using TF-IDF keyword matching.
+
+    Args:
+        query_text: Search query string
+        doc_type: Document type filter ('ba', 'ta', 'tc', or None for all)
+        top_k: Number of results to return
+        min_score: Minimum TF-IDF score threshold
+
+    Returns:
+        List of documents with tfidf_score field, sorted by relevance
+
+    Example:
+        >>> results = search_documents_tfidf("enliq login", "ba", top_k=10)
+        >>> for r in results:
+        ...     print(f"Doc {r['document_id']}: {r['tfidf_score']:.2f}")
+    """
+    from data.database import get_documents_with_content
+
+    # Fetch all documents of the specified type WITH content
+    try:
+        if doc_type:
+            documents = get_documents_with_content(doc_type=doc_type, limit=1000)
+        else:
+            # Get all document types
+            all_docs = []
+            for dt in ['ba', 'ta', 'tc']:
+                all_docs.extend(get_documents_with_content(doc_type=dt, limit=1000))
+            documents = all_docs
+    except Exception as e:
+        print(f"Error fetching documents: {e}")
+        return []
+
+    if not documents:
+        return []
+
+    # Initialize matcher
+    matcher = DocumentMatcher()
+
+    # Tokenize query
+    query_tokens = matcher.tokenize(query_text)
+    if not query_tokens:
+        return []
+
+    # Extract all document texts and tokenize
+    # IMPORTANT: Include title, tags, and content for better keyword matching
+    doc_tokens_list = []
+    for doc in documents:
+        content_json = doc.get('content_json', {})
+        if isinstance(content_json, str):
+            import json
+            content_json = json.loads(content_json)
+
+        # Combine title + tags + content for comprehensive search
+        text_parts = []
+
+        # Add title (repeat 3x for higher weight)
+        title = doc.get('title', '')
+        if title:
+            text_parts.extend([title, title, title])
+
+        # Add tags (repeat 2x for medium weight)
+        tags = doc.get('tags', [])
+        if tags:
+            tag_text = ' '.join(tags)
+            text_parts.extend([tag_text, tag_text])
+
+        # Add content (normal weight)
+        content_text = matcher.extract_text_from_json(content_json)
+        text_parts.append(content_text)
+
+        # Combine all parts
+        full_text = ' '.join(text_parts)
+        tokens = matcher.tokenize(full_text)
+        doc_tokens_list.append(tokens)
+
+    # Compute IDF across query + all documents
+    all_tokens = [query_tokens] + doc_tokens_list
+    idf = matcher.compute_idf(all_tokens)
+
+    # Compute query TF-IDF vector
+    query_tf = matcher.compute_tf(query_tokens)
+    query_tfidf = matcher.compute_tfidf_vector(query_tf, idf)
+
+    # Score each document
+    results = []
+    for i, doc in enumerate(documents):
+        # Compute document TF-IDF vector
+        doc_tf = matcher.compute_tf(doc_tokens_list[i])
+        doc_tfidf = matcher.compute_tfidf_vector(doc_tf, idf)
+
+        # Compute cosine similarity
+        tfidf_score = matcher.cosine_similarity(query_tfidf, doc_tfidf)
+
+        # Filter by minimum score
+        if tfidf_score < min_score:
+            continue
+
+        # Add result with standardized format
+        result = {
+            'document_id': doc.get('id'),
+            'title': doc.get('title', 'Untitled'),
+            'doc_type': doc.get('doc_type'),
+            'project_id': doc.get('project_id'),
+            'tfidf_score': round(tfidf_score, 4),
+            'content_json': doc.get('content_json'),
+            'metadata': {
+                'tags': doc.get('tags', []),
+                'jira_keys': doc.get('jira_keys', [])
+            }
+        }
+        results.append(result)
+
+    # Sort by TF-IDF score (descending)
+    results.sort(key=lambda x: x['tfidf_score'], reverse=True)
+
+    # Return top_k results
+    return results[:top_k]

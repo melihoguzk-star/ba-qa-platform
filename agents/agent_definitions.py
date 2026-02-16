@@ -4,10 +4,15 @@ Tüm agent'lar: BA, TC, Design Compliance
 """
 from agno.agent import Agent
 from agno.models.google import Gemini
+from agno.models.anthropic import Claude
 
 
 def create_model(api_key: str, model_id: str = "gemini-2.5-flash"):
-    return Gemini(id=model_id, api_key=api_key)
+    """Create a model instance based on the model ID."""
+    if model_id.startswith("claude-"):
+        return Claude(id=model_id, api_key=api_key)
+    else:
+        return Gemini(id=model_id, api_key=api_key)
 
 
 # ─────────────────────────────────────────────
@@ -81,10 +86,11 @@ def create_tc_agents(api_key: str):
 # ─────────────────────────────────────────────
 
 def create_design_agents(api_key: str, model: str = "gemini-2.5-flash"):
-    gemini_model = create_model(api_key, model)
+    """Create design compliance agents with specified model (Gemini or Claude)."""
+    vision_model = create_model(api_key, model)
 
     requirements_agent = Agent(
-        name="Requirements Extractor", model=gemini_model,
+        name="Requirements Extractor", model=vision_model,
         instructions=[
             "Sen bir İş Analizi uzmanısın. Görevin, verilen iş analizi dokümanından "
             "gereksinimleri yapılandırılmış biçimde çıkarmak.",
@@ -112,7 +118,7 @@ def create_design_agents(api_key: str, model: str = "gemini-2.5-flash"):
     )
 
     screen_agent = Agent(
-        name="Screen Analyzer", model=gemini_model,
+        name="Screen Analyzer", model=vision_model,
         instructions=[
             "Sen bir UI/UX analiz uzmanısın. Görevin, verilen tasarım ekran görüntüsünü "
             "detaylı biçimde analiz etmek.",
@@ -131,7 +137,7 @@ def create_design_agents(api_key: str, model: str = "gemini-2.5-flash"):
     )
 
     compliance_agent = Agent(
-        name="Compliance Checker", model=gemini_model,
+        name="Compliance Checker", model=vision_model,
         instructions=[
             "Sen bir Kalite Güvence (QA) uzmanısın. Görevin, iş analizi gereksinimlerini "
             "tasarım ekranı analiziyle karşılaştırarak uyumluluk kontrolü yapmak.",
@@ -149,7 +155,7 @@ def create_design_agents(api_key: str, model: str = "gemini-2.5-flash"):
     )
 
     report_agent = Agent(
-        name="Report Generator", model=gemini_model,
+        name="Report Generator", model=vision_model,
         instructions=[
             "Sen bir BA&QA raporlama uzmanısın. Görevin, uyumluluk kontrol sonuçlarını "
             "yapılandırılmış bir rapora dönüştürmek.",
