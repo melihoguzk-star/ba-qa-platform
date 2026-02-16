@@ -798,7 +798,7 @@ Return ONLY valid JSON."""
             key="n8n_drive_url"
         )
 
-        if drive_url and n8n_webhook_url:
+        if drive_url and docs_webhook and sheets_webhook:
             col1, col2 = st.columns(2)
             with col1:
                 doc_type = st.selectbox("Document Type", ["BA", "TA", "TC"], key="n8n_doc_type")
