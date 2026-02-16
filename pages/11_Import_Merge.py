@@ -19,6 +19,7 @@ from data.database import (
 from pipeline.document_matching import find_similar
 from pipeline.document_adaptation import DocumentAdapter
 from pipeline.document_parser_v2 import parse_text_to_json
+from pipeline.document_reader import read_docx, read_document_from_drive, export_google_doc_as_text
 from agents.ai_client import call_gemini
 
 st.set_page_config(page_title="Import & Merge", page_icon="📥", layout="wide")
@@ -93,7 +94,8 @@ if step == 1:
 
     import_method = st.radio(
         "How would you like to import?",
-        ["📋 Paste JSON", "📄 From BRD Pipeline", "📝 Paste Text (AI Parse)"],
+        ["📋 Paste JSON", "📄 From BRD Pipeline", "📝 Paste Text (AI Parse)",
+         "📎 Upload Word Document", "☁️ Import from Google Drive"],
         horizontal=True
     )
 
@@ -477,6 +479,286 @@ Return ONLY valid JSON, no markdown formatting or explanations."""
                                 st.error(f"❌ Error parsing document: {str(e)}")
                                 st.exception(e)
                                 st.info("💡 Try rule-based parsing as alternative")
+
+    elif import_method == "📎 Upload Word Document":
+        st.markdown("### Upload Word Document")
+        st.info("💡 Upload a .docx file and we'll extract the text and parse it")
+
+        uploaded_file = st.file_uploader(
+            "Choose a Word document",
+            type=['docx'],
+            help="Upload a .docx file (Microsoft Word format)"
+        )
+
+        if uploaded_file is not None:
+            # Show file info
+            st.success(f"✅ Uploaded: {uploaded_file.name} ({uploaded_file.size / 1024:.1f} KB)")
+
+            col1, col2 = st.columns(2)
+            with col1:
+                doc_type = st.selectbox("Document Type", ["BA", "TA", "TC"], key="word_doc_type")
+            with col2:
+                default_title = uploaded_file.name.replace('.docx', '')
+                title = st.text_input("Document Title*", value=default_title, key="word_title")
+
+            # Choose parsing method
+            parse_method = st.radio(
+                "Choose parsing method:",
+                ["⚡ Rule-based (Fast, Free)", "🤖 AI-powered (Flexible, Requires API Key)"],
+                help="Rule-based parser works best with structured documents",
+                key="word_parse_method"
+            )
+
+            if st.button("📄 Extract & Parse", type="primary"):
+                if not title:
+                    st.error("❌ Please provide a title")
+                else:
+                    try:
+                        # Read Word document
+                        with st.spinner("📄 Reading Word document..."):
+                            file_content = uploaded_file.read()
+                            extracted_text = read_docx(file_content)
+
+                        st.success(f"✅ Extracted {len(extracted_text)} characters from Word document")
+
+                        # Show preview
+                        with st.expander("📝 Extracted Text Preview", expanded=False):
+                            st.text_area("Text", extracted_text[:1000] + "..." if len(extracted_text) > 1000 else extracted_text, height=200, disabled=True)
+
+                        # Parse the extracted text
+                        if parse_method.startswith("⚡"):
+                            # Rule-based parsing
+                            with st.spinner("⚡ Parsing with rule-based parser..."):
+                                parsed_json = parse_text_to_json(extracted_text, doc_type.lower())
+
+                                # Check if parsing produced meaningful results
+                                has_content = any(isinstance(v, list) and len(v) > 0 for v in parsed_json.values())
+
+                                if not has_content:
+                                    st.warning("⚠️ Rule-based parser couldn't find structured content. Try AI-powered parsing.")
+                                else:
+                                    st.success("✅ Document parsed successfully!")
+
+                                    with st.expander("📋 Parsed JSON Preview", expanded=True):
+                                        st.json(parsed_json)
+
+                                    st.session_state['imported_doc'] = {
+                                        'title': title,
+                                        'doc_type': doc_type.lower(),
+                                        'content_json': parsed_json,
+                                        'import_method': 'word_upload'
+                                    }
+
+                                    st.session_state['import_step'] = 2
+                                    st.rerun()
+
+                        else:
+                            # AI parsing
+                            gemini_key = st.session_state.get("gemini_key") or os.environ.get("GEMINI_API_KEY", "")
+                            if not gemini_key:
+                                st.error("❌ Gemini API key not found. Please set it in Settings.")
+                            else:
+                                with st.spinner("🤖 AI is parsing your document..."):
+                                    # Use the same prompts as text parsing
+                                    if doc_type == "BA":
+                                        system_prompt = """You are a Business Analyst documentation expert.
+Parse the given text and convert it into a structured BA (Business Analysis) JSON format.
+
+The JSON structure should follow this schema:
+{
+  "ekranlar": [...],
+  "backend_islemler": [...],
+  "guvenlik_gereksinimleri": [...],
+  "test_senaryolari": [...]
+}
+
+Return ONLY valid JSON, no markdown formatting or explanations."""
+                                    elif doc_type == "TA":
+                                        system_prompt = """You are a Technical Architect documentation expert.
+Parse the given text into structured TA (Technical Analysis) JSON format.
+Return ONLY valid JSON."""
+                                    else:  # TC
+                                        system_prompt = """You are a Test Engineer documentation expert.
+Parse the given text into structured TC (Test Cases) JSON format.
+Return ONLY valid JSON."""
+
+                                    result = call_gemini(
+                                        system_prompt=system_prompt,
+                                        user_content=f"Parse this {doc_type} document:\n\n{extracted_text}",
+                                        api_key=gemini_key,
+                                        max_tokens=8000
+                                    )
+
+                                    if result.get('error'):
+                                        st.error(f"❌ AI parsing error: {result['error']}")
+                                    elif result.get('content'):
+                                        parsed_json = result['content']
+                                        st.success("✅ Document parsed successfully with AI!")
+
+                                        with st.expander("📋 Parsed JSON Preview", expanded=True):
+                                            st.json(parsed_json)
+
+                                        st.session_state['imported_doc'] = {
+                                            'title': title,
+                                            'doc_type': doc_type.lower(),
+                                            'content_json': parsed_json,
+                                            'import_method': 'word_upload_ai'
+                                        }
+
+                                        st.session_state['import_step'] = 2
+                                        st.rerun()
+                                    else:
+                                        st.error("❌ AI returned empty response")
+
+                    except Exception as e:
+                        st.error(f"❌ Error processing Word document: {str(e)}")
+                        st.exception(e)
+
+    elif import_method == "☁️ Import from Google Drive":
+        st.markdown("### Import from Google Drive")
+        st.info("💡 Paste a Google Drive share link to import the document")
+
+        st.markdown("""
+        **How to get a shareable link:**
+        1. Open your document in Google Drive
+        2. Click "Share" button
+        3. Change access to "Anyone with the link can view"
+        4. Copy the link and paste below
+        """)
+
+        drive_url = st.text_input(
+            "Google Drive Link",
+            placeholder="https://drive.google.com/file/d/.../view or https://docs.google.com/document/d/.../edit",
+            help="Paste a Google Drive or Google Docs share link"
+        )
+
+        if drive_url:
+            col1, col2 = st.columns(2)
+            with col1:
+                doc_type = st.selectbox("Document Type", ["BA", "TA", "TC"], key="drive_doc_type")
+            with col2:
+                title = st.text_input("Document Title*", placeholder="e.g., Face ID Login Analysis", key="drive_title")
+
+            # Choose parsing method
+            parse_method = st.radio(
+                "Choose parsing method:",
+                ["⚡ Rule-based (Fast, Free)", "🤖 AI-powered (Flexible, Requires API Key)"],
+                help="Rule-based parser works best with structured documents",
+                key="drive_parse_method"
+            )
+
+            if st.button("☁️ Download & Parse", type="primary"):
+                if not title:
+                    st.error("❌ Please provide a title")
+                else:
+                    try:
+                        # Download from Google Drive
+                        with st.spinner("☁️ Downloading from Google Drive..."):
+                            # Try Google Docs export first if it's a Google Doc
+                            if 'docs.google.com/document' in drive_url:
+                                extracted_text = export_google_doc_as_text(drive_url)
+                            else:
+                                extracted_text = read_document_from_drive(drive_url)
+
+                        st.success(f"✅ Downloaded and extracted {len(extracted_text)} characters")
+
+                        # Show preview
+                        with st.expander("📝 Downloaded Text Preview", expanded=False):
+                            st.text_area("Text", extracted_text[:1000] + "..." if len(extracted_text) > 1000 else extracted_text, height=200, disabled=True)
+
+                        # Parse the extracted text
+                        if parse_method.startswith("⚡"):
+                            # Rule-based parsing
+                            with st.spinner("⚡ Parsing with rule-based parser..."):
+                                parsed_json = parse_text_to_json(extracted_text, doc_type.lower())
+
+                                # Check if parsing produced meaningful results
+                                has_content = any(isinstance(v, list) and len(v) > 0 for v in parsed_json.values())
+
+                                if not has_content:
+                                    st.warning("⚠️ Rule-based parser couldn't find structured content. Try AI-powered parsing.")
+                                else:
+                                    st.success("✅ Document parsed successfully!")
+
+                                    with st.expander("📋 Parsed JSON Preview", expanded=True):
+                                        st.json(parsed_json)
+
+                                    st.session_state['imported_doc'] = {
+                                        'title': title,
+                                        'doc_type': doc_type.lower(),
+                                        'content_json': parsed_json,
+                                        'import_method': 'google_drive',
+                                        'source_url': drive_url
+                                    }
+
+                                    st.session_state['import_step'] = 2
+                                    st.rerun()
+
+                        else:
+                            # AI parsing
+                            gemini_key = st.session_state.get("gemini_key") or os.environ.get("GEMINI_API_KEY", "")
+                            if not gemini_key:
+                                st.error("❌ Gemini API key not found. Please set it in Settings.")
+                            else:
+                                with st.spinner("🤖 AI is parsing your document..."):
+                                    # Use the same prompts as text parsing
+                                    if doc_type == "BA":
+                                        system_prompt = """You are a Business Analyst documentation expert.
+Parse the given text and convert it into a structured BA (Business Analysis) JSON format.
+
+The JSON structure should follow this schema:
+{
+  "ekranlar": [...],
+  "backend_islemler": [...],
+  "guvenlik_gereksinimleri": [...],
+  "test_senaryolari": [...]
+}
+
+Return ONLY valid JSON, no markdown formatting or explanations."""
+                                    elif doc_type == "TA":
+                                        system_prompt = """You are a Technical Architect documentation expert.
+Parse the given text into structured TA (Technical Analysis) JSON format.
+Return ONLY valid JSON."""
+                                    else:  # TC
+                                        system_prompt = """You are a Test Engineer documentation expert.
+Parse the given text into structured TC (Test Cases) JSON format.
+Return ONLY valid JSON."""
+
+                                    result = call_gemini(
+                                        system_prompt=system_prompt,
+                                        user_content=f"Parse this {doc_type} document:\n\n{extracted_text}",
+                                        api_key=gemini_key,
+                                        max_tokens=8000
+                                    )
+
+                                    if result.get('error'):
+                                        st.error(f"❌ AI parsing error: {result['error']}")
+                                    elif result.get('content'):
+                                        parsed_json = result['content']
+                                        st.success("✅ Document parsed successfully with AI!")
+
+                                        with st.expander("📋 Parsed JSON Preview", expanded=True):
+                                            st.json(parsed_json)
+
+                                        st.session_state['imported_doc'] = {
+                                            'title': title,
+                                            'doc_type': doc_type.lower(),
+                                            'content_json': parsed_json,
+                                            'import_method': 'google_drive_ai',
+                                            'source_url': drive_url
+                                        }
+
+                                        st.session_state['import_step'] = 2
+                                        st.rerun()
+                                    else:
+                                        st.error("❌ AI returned empty response")
+
+                    except ValueError as e:
+                        st.error(f"❌ {str(e)}")
+                        st.info("💡 Make sure the Google Drive link is set to 'Anyone with the link can view'")
+                    except Exception as e:
+                        st.error(f"❌ Error downloading from Google Drive: {str(e)}")
+                        st.exception(e)
 
 # ═══════════════════════════════════════════════════════════════
 # STEP 2: DETECT SIMILAR DOCUMENTS
