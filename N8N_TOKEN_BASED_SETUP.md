@@ -182,8 +182,8 @@ parsed = parse_text_to_json(content, 'ba')
 
 ```bash
 # .env file
-N8N_GOOGLE_DOCS_WEBHOOK=https://sh0tdie.app.n8n.cloud/workflow/AzlnBnFIffKIN79P_WkY7
-N8N_GOOGLE_SHEETS_WEBHOOK=https://sh0tdie.app.n8n.cloud/workflow/dqJS78_cIKH0mHLgizlNj
+N8N_GOOGLE_DOCS_WEBHOOK=https://sh0tdie.app.n8n.cloud/webhook/google-docs-proxy
+N8N_GOOGLE_SHEETS_WEBHOOK=https://sh0tdie.app.n8n.cloud/webhook/google-sheets-proxy
 ```
 
 ## 🎨 Import & Merge UI
