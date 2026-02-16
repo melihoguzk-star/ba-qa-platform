@@ -173,9 +173,29 @@ def read_document_from_drive(url: str) -> str:
             # Likely a .docx file (ZIP-based)
             return read_docx(file_content)
 
+        # Check if we got HTML (common error when permissions are wrong)
+        if file_content.startswith(b'<!DOCTYPE') or file_content.startswith(b'<html'):
+            raise ValueError(
+                "Received HTML page instead of document content.\n\n"
+                "This usually means:\n"
+                "1. Document is not publicly accessible\n"
+                "2. Sharing is not set to 'Anyone with the link'\n"
+                "3. You may need to export as .docx and upload instead\n\n"
+                "Please check sharing settings and try again."
+            )
+
         # Try plain text as fallback
         try:
-            return file_content.decode('utf-8')
+            decoded = file_content.decode('utf-8')
+
+            # Additional check: if decoded text looks like HTML
+            if decoded.strip().startswith('<!DOCTYPE') or decoded.strip().startswith('<html'):
+                raise ValueError(
+                    "Received HTML page instead of document content.\n"
+                    "Please set document sharing to 'Anyone with the link can view'."
+                )
+
+            return decoded
         except UnicodeDecodeError:
             raise ValueError(f"Unsupported file format (MIME: {mime_type}). "
                            "Please use Word (.docx) or text files.")
@@ -204,12 +224,29 @@ def export_google_doc_as_text(doc_url: str) -> str:
         response = requests.get(export_url, timeout=30)
         response.raise_for_status()
 
-        # Check if we got permission error
-        if 'text/html' in response.headers.get('content-type', '').lower():
-            raise ValueError("Cannot access document. Make sure the Google Doc is set to "
-                           "'Anyone with the link can view' in sharing settings.")
+        content_type = response.headers.get('content-type', '').lower()
+        text = response.text
 
-        return response.text
+        # Check if we got HTML instead of text (permission error or login page)
+        if 'text/html' in content_type or text.strip().startswith('<!DOCTYPE') or text.strip().startswith('<html'):
+            raise ValueError(
+                "Cannot access Google Doc - received HTML instead of document content.\n\n"
+                "Please check:\n"
+                "1. Document sharing is set to 'Anyone with the link can view'\n"
+                "2. Link permissions are correct\n"
+                "3. Document is not private/restricted\n\n"
+                "Alternative: Export document as .docx and upload it instead."
+            )
+
+        # Additional check: if response is very large and looks like HTML
+        if len(text) > 100000 and '<html' in text.lower()[:1000]:
+            raise ValueError(
+                "Received HTML page instead of document content.\n\n"
+                "This usually means the document is not publicly accessible.\n"
+                "Please set sharing to 'Anyone with the link can view'."
+            )
+
+        return text
 
     except requests.RequestException as e:
         # Fallback to regular download method

@@ -266,6 +266,24 @@ Potential improvements:
 - Verify link is correct
 - Try re-sharing the document
 
+### "Received HTML instead of document content":
+**Problem:** Google Docs returned HTML page instead of document text
+**Causes:**
+- Document is not publicly shared
+- Sharing is set to "Restricted" instead of "Anyone with the link"
+- Document requires Google account to access
+
+**Solutions:**
+1. Open document in Google Docs
+2. Click "Share" (top-right corner)
+3. Change from "Restricted" to **"Anyone with the link"**
+4. Set permission to **"Viewer"**
+5. Copy the new link and try again
+
+**Alternative:** If sharing publicly is not an option:
+- File → Download → Microsoft Word (.docx)
+- Use "📎 Upload Word Document" instead
+
 ### "Unsupported file format":
 - Only .docx, .txt, and Google Docs supported
 - Convert .doc to .docx
