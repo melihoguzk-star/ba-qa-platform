@@ -240,7 +240,7 @@ with tab2:
     st.divider()
 
     # Search projects
-    search = st.text_input("🔍 Search Projects", placeholder="Search by name or description")
+    search = st.text_input("🔍 Search Projects", placeholder="Search by name or description", key="tab2_search_projects")
 
     # List projects
     projects = get_projects(search=search)
@@ -283,20 +283,20 @@ with tab3:
     with col1:
         projects = get_projects()
         project_options = ["All Projects"] + [p['name'] for p in projects]
-        selected_project_name = st.selectbox("Project", project_options)
+        selected_project_name = st.selectbox("Project", project_options, key="tab3_project_filter")
 
         selected_project_id = None
         if selected_project_name != "All Projects":
             selected_project_id = next((p['id'] for p in projects if p['name'] == selected_project_name), None)
 
     with col2:
-        doc_type_filter = st.selectbox("Document Type", ["All Types", "BA", "TA", "TC"])
+        doc_type_filter = st.selectbox("Document Type", ["All Types", "BA", "TA", "TC"], key="tab3_doctype_filter")
         doc_type = None
         if doc_type_filter != "All Types":
             doc_type = doc_type_filter.lower()
 
     with col3:
-        search = st.text_input("🔍 Search", placeholder="Search documents...")
+        search = st.text_input("🔍 Search", placeholder="Search documents...", key="tab3_search_documents")
 
     # Phase 2B: Semantic Search & Hybrid Mode
     use_semantic = False
@@ -312,14 +312,16 @@ with tab3:
                 use_semantic = st.checkbox(
                     "🔍 Use Semantic Search (AI-powered)",
                     value=False,
-                    help="Find documents by meaning, not just keywords. Supports Turkish + English."
+                    help="Find documents by meaning, not just keywords. Supports Turkish + English.",
+                    key="tab3_use_semantic"
                 )
             with col_s2:
                 if hybrid_enabled and use_semantic:
                     use_hybrid = st.checkbox(
                         "⚡ Hybrid Mode (Best Results)",
                         value=True,
-                        help="Combines keyword + semantic search. Exact matches ranked higher."
+                        help="Combines keyword + semantic search. Exact matches ranked higher.",
+                        key="tab3_use_hybrid"
                     )
 
     # Get documents
@@ -754,11 +756,11 @@ with tab5:
 
             # Project selection
             project_options = {p['name']: p['id'] for p in projects}
-            selected_project_name = st.selectbox("Project*", list(project_options.keys()))
+            selected_project_name = st.selectbox("Project*", list(project_options.keys()), key="tab5_project_select")
             selected_project_id = project_options[selected_project_name]
 
             # Document type
-            doc_type = st.selectbox("Document Type*", ["BA", "TA", "TC"])
+            doc_type = st.selectbox("Document Type*", ["BA", "TA", "TC"], key="tab5_doctype_select")
 
             # Basic info
             col1, col2 = st.columns(2)
@@ -867,13 +869,13 @@ with tab4:
         # Filters
         col1, col2 = st.columns(2)
         with col1:
-            template_type = st.selectbox("Document Type", ["All Types", "BA", "TA", "TC"])
+            template_type = st.selectbox("Document Type", ["All Types", "BA", "TA", "TC"], key="tab4_template_type")
             type_filter = None if template_type == "All Types" else template_type.lower()
 
         with col2:
             projects = get_projects()
             project_options = ["All Projects"] + [p['name'] for p in projects]
-            selected_project_name = st.selectbox("Project", project_options)
+            selected_project_name = st.selectbox("Project", project_options, key="tab4_project_filter")
             project_filter = None
             if selected_project_name != "All Projects":
                 project_filter = next((p['id'] for p in projects if p['name'] == selected_project_name), None)
