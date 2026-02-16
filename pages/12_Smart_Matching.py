@@ -18,10 +18,10 @@ def main():
     # Render custom sidebar
     render_custom_sidebar(active_page="smart_matching")
 
-    st.title("🔍 Smart Document Matching")
+    st.title("🔍 Akıllı Doküman Eşleştirme")
     st.markdown("""
-    **AI-powered task-to-document matching** - Describe your task and find relevant existing documents.
-    Saves time by avoiding duplicate work and helping you reuse existing documentation.
+    **AI destekli görev-doküman eşleştirme** - Görevinizi tanımlayın ve ilgili mevcut dokümanları bulun.
+    Tekrar eden iş yapmaktan kaçınarak zamandan tasarruf edin ve mevcut dokümanları yeniden kullanın.
     """)
 
     # Analytics Section (moved from sidebar)
@@ -31,13 +31,13 @@ def main():
     col_filter, col_spacer = st.columns([1, 3])
     with col_filter:
         time_range = st.selectbox(
-            "📊 Analytics Period",
+            "📊 Analitik Periyodu",
             ["7days", "30days", "90days", "all"],
             format_func=lambda x: {
-                "7days": "Last 7 Days",
-                "30days": "Last 30 Days",
-                "90days": "Last 90 Days",
-                "all": "All Time"
+                "7days": "Son 7 Gün",
+                "30days": "Son 30 Gün",
+                "90days": "Son 90 Gün",
+                "all": "Tüm Zamanlar"
             }[x],
             index=3  # Default to "all"
         )
@@ -48,54 +48,54 @@ def main():
     metric1, metric2, metric3, metric4 = st.columns(4)
 
     with metric1:
-        st.metric("📊 Total Matches", analytics["total_matches"])
+        st.metric("📊 Toplam Eşleşme", analytics["total_matches"])
 
     with metric2:
-        st.metric("✅ Accepted", analytics["total_accepted"])
+        st.metric("✅ Kabul Edilen", analytics["total_accepted"])
 
     with metric3:
-        st.metric("📈 Acceptance Rate", f"{analytics['acceptance_rate']:.1f}%")
+        st.metric("📈 Kabul Oranı", f"{analytics['acceptance_rate']:.1f}%")
 
     with metric4:
-        st.metric("🎯 Avg Confidence", f"{analytics['avg_confidence']:.2f}")
+        st.metric("🎯 Ort. Güven Skoru", f"{analytics['avg_confidence']:.2f}")
 
     # Main content area
     st.markdown("---")
 
     # Task Input Section
-    st.subheader("1️⃣ Describe Your Task")
+    st.subheader("1️⃣ Görevinizi Tanımlayın")
 
     col1, col2 = st.columns([3, 1])
     with col1:
         jira_key = st.text_input(
-            "JIRA Key (Optional)",
-            placeholder="e.g., PROJ-123",
-            help="Optional JIRA key for tracking"
+            "JIRA Anahtarı (Opsiyonel)",
+            placeholder="örn: PROJ-123",
+            help="Takip için opsiyonel JIRA anahtarı"
         )
     with col2:
         doc_type_filter = st.selectbox(
-            "Document Type",
+            "Doküman Tipi",
             ["all", "ba", "ta", "tc"],
             format_func=lambda x: {
-                "all": "All Types",
-                "ba": "BA Documents",
-                "ta": "TA Documents",
-                "tc": "Test Cases"
+                "all": "Tüm Tipler",
+                "ba": "BA Dokümanları",
+                "ta": "TA Dokümanları",
+                "tc": "Test Senaryoları"
             }[x]
         )
 
     task_description = st.text_area(
-        "Task Description",
-        placeholder="Describe what you need to do...\n\nExample: Add biometric authentication (Face ID and Touch ID) to the login screen for mobile app",
+        "Görev Açıklaması",
+        placeholder="Ne yapmanız gerektiğini açıklayın...\n\nÖrnek: Mobil uygulama için login ekranına biyometrik kimlik doğrulama (Face ID ve Touch ID) ekle",
         height=150,
-        help="Provide a clear description of your task. Include features, components, and technical details."
+        help="Görevinizi açık bir şekilde tanımlayın. Özellikler, bileşenler ve teknik detayları dahil edin."
     )
 
     col1, col2, col3 = st.columns([1, 1, 4])
     with col1:
-        search_button = st.button("🔍 Find Matches", type="primary", use_container_width=True)
+        search_button = st.button("🔍 Eşleşme Bul", type="primary", use_container_width=True)
     with col2:
-        if st.button("🔄 Clear", use_container_width=True):
+        if st.button("🔄 Temizle", use_container_width=True):
             # Clear all match-related session state
             for key in ["current_matches", "current_task_description", "current_jira_key", "match_response_time"]:
                 if key in st.session_state:
@@ -105,11 +105,11 @@ def main():
     # Analysis and Results Section
     if search_button:
         if not task_description.strip():
-            st.error("Please enter a task description.")
+            st.error("Lütfen bir görev açıklaması girin.")
             return
 
         # Show analysis progress
-        with st.spinner("Analyzing task..."):
+        with st.spinner("Görev analiz ediliyor..."):
             matcher = SmartMatcher()
             explainer = MatchExplainer()
 
@@ -148,27 +148,27 @@ def main():
         if matches:
             task_features = matches[0].get("task_features", {})
 
-            with st.expander("📋 Task Analysis", expanded=False):
+            with st.expander("📋 Görev Analizi", expanded=False):
                 col1, col2, col3 = st.columns(3)
                 with col1:
-                    st.markdown(f"**Intent:** {task_features.get('intent', 'Unknown')}")
-                    st.markdown(f"**Complexity:** {task_features.get('complexity', 'Unknown')}")
+                    st.markdown(f"**Niyet:** {task_features.get('intent', 'Bilinmiyor')}")
+                    st.markdown(f"**Karmaşıklık:** {task_features.get('complexity', 'Bilinmiyor')}")
                 with col2:
-                    st.markdown(f"**Scope:** {task_features.get('scope', 'Unknown')}")
+                    st.markdown(f"**Kapsam:** {task_features.get('scope', 'Bilinmiyor')}")
                     keywords = task_features.get('keywords', [])
-                    st.markdown(f"**Keywords:** {', '.join(keywords[:5])}")
+                    st.markdown(f"**Anahtar Kelimeler:** {', '.join(keywords[:5])}")
                 with col3:
                     relevance = task_features.get('doc_type_relevance', {})
-                    st.markdown("**Doc Type Relevance:**")
+                    st.markdown("**Doküman Tipi İlgisi:**")
                     for dt, score in relevance.items():
                         st.caption(f"{dt.upper()}: {score:.2f}")
 
         # Show matches
-        st.subheader(f"2️⃣ Match Results ({len(matches)} found in {response_time:.2f}s)")
+        st.subheader(f"2️⃣ Eşleşme Sonuçları ({len(matches)} bulundu, {response_time:.2f}s)")
 
         if not matches:
-            st.info("🔍 No relevant documents found. Consider creating a new document.")
-            st.markdown("**Suggestion:** Use the Document Library to create a new document for this task.")
+            st.info("🔍 İlgili doküman bulunamadı. Yeni bir doküman oluşturmayı düşünün.")
+            st.markdown("**Öneri:** Bu görev için yeni bir doküman oluşturmak üzere Doküman Kütüphanesi'ni kullanın.")
 
             # Record no-match event (only once when search button was clicked)
             if search_button:
@@ -189,12 +189,12 @@ def main():
                 display_match_card(match, idx + 1, task_description, explainer, jira_key)
 
             st.markdown("---")
-            st.caption(f"💡 **Tip:** Higher confidence scores (green) indicate stronger matches. You can view or use any document from the results.")
+            st.caption(f"💡 **İpucu:** Daha yüksek güven skorları (yeşil) daha güçlü eşleşmeleri gösterir. Sonuçlardan herhangi bir dokümanı görüntüleyebilir veya kullanabilirsiniz.")
 
     elif search_button:
         # This happens if search_button was clicked but no matches in session state
         # (shouldn't normally happen, but good to handle)
-        st.info("No results to display. Please try searching again.")
+        st.info("Görüntülenecek sonuç yok. Lütfen tekrar arama yapmayı deneyin.")
 
 
 def display_match_card(match: dict, rank: int, task_description: str, explainer: MatchExplainer, jira_key: str):
@@ -206,16 +206,19 @@ def display_match_card(match: dict, rank: int, task_description: str, explainer:
     doc_type = match["doc_type"].upper()
     version = match.get("version", "")
 
-    # Determine confidence color
+    # Determine confidence color and emoji
     if confidence >= 0.75:
         confidence_color = "green"
-        confidence_label = "High"
+        confidence_label = "Yüksek"
+        confidence_emoji = "🟢"
     elif confidence >= 0.5:
         confidence_color = "orange"
-        confidence_label = "Medium"
+        confidence_label = "Orta"
+        confidence_emoji = "🟡"
     else:
         confidence_color = "red"
-        confidence_label = "Low"
+        confidence_label = "Düşük"
+        confidence_emoji = "🔴"
 
     # Generate explanation and suggestion
     task_features = match.get("task_features", {})
@@ -241,19 +244,20 @@ def display_match_card(match: dict, rank: int, task_description: str, explainer:
 
     # Display card
     with st.container():
+        # Card with colored left border using markdown
         st.markdown(f"""
-        <div style="border: 2px solid {confidence_color}; border-radius: 10px; padding: 15px; margin-bottom: 15px;">
+        <div style="border-left: 4px solid {confidence_color}; padding-left: 15px; margin-bottom: 15px;">
         </div>
         """, unsafe_allow_html=True)
 
         col1, col2, col3 = st.columns([3, 1, 1])
 
         with col1:
-            st.markdown(f"### {rank}. {title}")
-            st.caption(f"**Type:** {doc_type} | **Version:** {version}")
+            st.markdown(f"### {confidence_emoji} {rank}. {title}")
+            st.caption(f"**Tip:** {doc_type} | **Versiyon:** {version}")
 
         with col2:
-            st.metric("Confidence", f"{confidence:.0%}", help=f"{confidence_label} confidence")
+            st.metric("Güven Skoru", f"{confidence:.0%}", help=f"{confidence_label} güven skoru")
 
         with col3:
             # Suggestion badge
@@ -264,40 +268,40 @@ def display_match_card(match: dict, rank: int, task_description: str, explainer:
                 "EVALUATE": "⚪"
             }
             badge = suggestion_colors.get(suggestion, "⚪")
-            st.markdown(f"**Suggestion**")
+            st.markdown(f"**Öneri**")
             st.markdown(f"{badge} {suggestion.replace('_', ' ')}")
 
         # Match preview
         section_matched = match.get("section_matched", "")
         if section_matched:
-            st.markdown("**Matched Section Preview:**")
+            st.markdown("**Eşleşen Bölüm Önizlemesi:**")
             st.text(section_matched[:200] + "..." if len(section_matched) > 200 else section_matched)
 
         # Explanation (expandable)
-        with st.expander("💡 Why this match?"):
+        with st.expander("💡 Neden bu eşleşme?"):
             st.markdown(explanation)
-            st.markdown(f"**Suggestion:** {suggestion_reasoning}")
+            st.markdown(f"**Öneri:** {suggestion_reasoning}")
 
             # Score breakdown
-            st.markdown("**Score Breakdown:**")
+            st.markdown("**Skor Dağılımı:**")
             col1, col2, col3 = st.columns(3)
             with col1:
-                st.caption(f"Semantic: {breakdown.get('semantic_score', 0):.2f}")
+                st.caption(f"Anlamsal: {breakdown.get('semantic_score', 0):.2f}")
             with col2:
-                st.caption(f"Keyword: {breakdown.get('keyword_score', 0):.2f}")
+                st.caption(f"Anahtar Kelime: {breakdown.get('keyword_score', 0):.2f}")
             with col3:
                 st.caption(f"Metadata: {breakdown.get('metadata_score', 0):.2f}")
 
         # Actions
         col1, col2, col3, col4 = st.columns([1, 1, 1, 3])
         with col1:
-            if st.button(f"👁️ View", key=f"view_{doc_id}_{rank}"):
+            if st.button(f"👁️ Görüntüle", key=f"view_{doc_id}_{rank}"):
                 # Navigate to Document Library with this document
                 st.session_state["selected_document_id"] = doc_id
                 st.switch_page("pages/10_Document_Library.py")
 
         with col2:
-            if st.button(f"✅ Use This", key=f"use_{doc_id}_{rank}"):
+            if st.button(f"✅ Bunu Kullan", key=f"use_{doc_id}_{rank}"):
                 # Record acceptance and navigate
                 record_task_match(
                     task_description=task_description,
@@ -310,12 +314,12 @@ def display_match_card(match: dict, rank: int, task_description: str, explainer:
                     user_accepted=True
                 )
                 st.session_state["selected_document_id"] = doc_id
-                st.success(f"✅ Using document: {title}")
+                st.success(f"✅ Doküman kullanılıyor: {title}")
                 time.sleep(1)
                 st.switch_page("pages/10_Document_Library.py")
 
         with col3:
-            if st.button(f"❌ Not Relevant", key=f"reject_{doc_id}_{rank}"):
+            if st.button(f"❌ İlgili Değil", key=f"reject_{doc_id}_{rank}"):
                 # Record rejection
                 record_task_match(
                     task_description=task_description,
@@ -327,7 +331,7 @@ def display_match_card(match: dict, rank: int, task_description: str, explainer:
                     jira_key=jira_key if jira_key.strip() else None,
                     user_accepted=False
                 )
-                st.info("Feedback recorded. Thanks!")
+                st.info("Geri bildirim kaydedildi. Teşekkürler!")
 
 
 if __name__ == "__main__":

@@ -248,7 +248,7 @@ def render_custom_sidebar(active_page="home"):
         st.markdown("""
         <div class="nav-header">
             <div class="nav-logo">🧠 BA&QA Platform</div>
-            <div class="nav-subtitle">Intelligence Platform v1.0</div>
+            <div class="nav-subtitle">Intelligence Platform v2.0</div>
         </div>
         """, unsafe_allow_html=True)
 
@@ -382,5 +382,5 @@ def render_custom_sidebar(active_page="home"):
             """, unsafe_allow_html=True)
 
         st.markdown("")
-        st.caption("BA&QA Platform v1.0")
+        st.caption("BA&QA Platform v2.0")
         st.caption("© 2026 Loodos")
