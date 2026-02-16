@@ -99,6 +99,14 @@ with st.sidebar:
 
     st.divider()
 
+    # Smart Matching integration (Phase 2C)
+    st.markdown("### 🔍 Smart Tools")
+    if st.button("🔍 Find Documents for Task", use_container_width=True):
+        st.switch_page("pages/12_Smart_Matching.py")
+    st.caption("AI-powered task matching to find relevant documents")
+
+    st.divider()
+
     # Quick stats
     stats = get_document_stats()
     st.metric("Total Projects", stats['total_projects'])

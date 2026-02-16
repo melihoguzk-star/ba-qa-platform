@@ -328,6 +328,70 @@ with tab3:
             
             st.bar_chart(chart_data)
 
+    # Smart Matching Analytics (Phase 2C)
+    st.divider()
+    st.subheader("🔍 Smart Matching Analytics")
+
+    try:
+        from data.database import get_task_match_analytics
+
+        # Time range selector
+        match_time_range = st.selectbox(
+            "Time Range",
+            ["7days", "30days", "90days", "all"],
+            format_func=lambda x: {
+                "7days": "Last 7 Days",
+                "30days": "Last 30 Days",
+                "90days": "Last 90 Days",
+                "all": "All Time"
+            }[x],
+            key="match_analytics_time_range"
+        )
+
+        analytics = get_task_match_analytics(match_time_range)
+
+        # Overview metrics
+        col1, col2, col3, col4 = st.columns(4)
+
+        with col1:
+            st.metric("Total Matches", analytics["total_matches"])
+        with col2:
+            st.metric("Accepted", analytics["total_accepted"])
+        with col3:
+            st.metric("Acceptance Rate", f"{analytics['acceptance_rate']:.1f}%")
+        with col4:
+            st.metric("Avg Confidence", f"{analytics['avg_confidence']:.2f}")
+
+        # Suggestion breakdown
+        if analytics["suggestion_breakdown"]:
+            st.markdown("**Suggestion Breakdown**")
+            col1, col2 = st.columns(2)
+
+            with col1:
+                for item in analytics["suggestion_breakdown"]:
+                    suggestion = item["suggestion"] or "N/A"
+                    count = item["count"]
+                    accepted = item["accepted"] or 0
+                    rate = (accepted / count * 100) if count > 0 else 0
+                    st.caption(f"**{suggestion}:** {count} matches ({rate:.0f}% accepted)")
+
+            with col2:
+                # Document type breakdown
+                if analytics["doc_type_breakdown"]:
+                    st.markdown("**Document Type Breakdown**")
+                    for item in analytics["doc_type_breakdown"]:
+                        doc_type = item["doc_type"] or "N/A"
+                        count = item["count"]
+                        avg_conf = item["avg_confidence"] or 0.0
+                        st.caption(f"**{doc_type.upper()}:** {count} matches (avg: {avg_conf:.2f})")
+        else:
+            st.info("ℹ️ No smart matching data yet. Use the Smart Matching feature to start tracking.")
+
+    except ImportError:
+        st.warning("⚠️ Smart Matching module not available.")
+    except Exception as e:
+        st.error(f"❌ Error loading smart matching analytics: {str(e)}")
+
 # ============================================================================
 # TAB 4: VECTOR STORE (Phase 2B)
 # ============================================================================

@@ -132,7 +132,7 @@ class VectorStore:
 
             if not chunks:
                 logger.warning(f"No chunks generated for document {doc_id}")
-                return
+                return 0  # Return 0 chunks
 
             logger.info(f"Generated {len(chunks)} chunks for document {doc_id}")
 
@@ -179,6 +179,7 @@ class VectorStore:
             )
 
             logger.info(f"Document {doc_id} indexed with {len(chunks)} chunks")
+            return len(chunks)  # Return number of chunks indexed
 
         except Exception as e:
             logger.error(f"Failed to index document {doc_id}: {e}")
@@ -209,6 +210,14 @@ class VectorStore:
             # Search collection
             collection = self.get_collection(doc_type)
 
+            # Check collection size and limit top_k
+            collection_count = collection.count()
+            actual_top_k = min(top_k, collection_count) if collection_count > 0 else top_k
+
+            if collection_count == 0:
+                logger.warning(f"Collection {doc_type} is empty")
+                return []
+
             # Build where filter if provided
             where_filter = None
             if filter_metadata:
@@ -216,7 +225,7 @@ class VectorStore:
 
             results = collection.query(
                 query_embeddings=[query_embedding],
-                n_results=top_k,
+                n_results=actual_top_k,
                 where=where_filter
             )
 

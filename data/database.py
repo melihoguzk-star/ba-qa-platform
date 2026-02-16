@@ -142,6 +142,25 @@ def init_db():
         CREATE INDEX IF NOT EXISTS idx_documents_status ON documents(status);
         CREATE INDEX IF NOT EXISTS idx_document_versions_doc ON document_versions(document_id);
         CREATE INDEX IF NOT EXISTS idx_document_sections_version ON document_sections(version_id);
+
+        -- Smart Matching Tables (Phase 2C)
+        CREATE TABLE IF NOT EXISTS task_matches (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            jira_key TEXT,
+            task_description TEXT NOT NULL,
+            task_features_json TEXT,
+            matched_document_id INTEGER,
+            confidence_score REAL,
+            match_reasoning TEXT,
+            suggestion TEXT,
+            user_accepted INTEGER DEFAULT 0,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (matched_document_id) REFERENCES documents(id) ON DELETE SET NULL
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_task_matches_jira ON task_matches(jira_key);
+        CREATE INDEX IF NOT EXISTS idx_task_matches_accepted ON task_matches(user_accepted);
+        CREATE INDEX IF NOT EXISTS idx_task_matches_created ON task_matches(created_at);
     """)
     conn.commit()
     conn.close()
@@ -1109,6 +1128,202 @@ def get_template_candidates(doc_type: str = None, project_id: int = None,
         doc['tags'] = json.loads(doc.get('tags', '[]'))
         doc['jira_keys'] = json.loads(doc.get('jira_keys', '[]'))
         result.append(doc)
+
+    return result
+
+
+# ============================================================================
+# Smart Matching Functions (Phase 2C)
+# ============================================================================
+
+def record_task_match(
+    task_description: str,
+    task_features: dict,
+    matched_document_id: int = None,
+    confidence_score: float = 0.0,
+    match_reasoning: str = "",
+    suggestion: str = "",
+    jira_key: str = None,
+    user_accepted: bool = False
+) -> int:
+    """
+    Record a task matching result for analytics.
+
+    Args:
+        task_description: The task description
+        task_features: Extracted task features (dict)
+        matched_document_id: ID of matched document (None if no match)
+        confidence_score: Match confidence (0-1)
+        match_reasoning: Explanation of the match
+        suggestion: Suggested action (UPDATE_EXISTING, CREATE_NEW, etc.)
+        jira_key: Optional JIRA key
+        user_accepted: Whether user accepted the suggestion
+
+    Returns:
+        ID of the created task_match record
+    """
+    conn = get_db()
+    cur = conn.execute("""
+        INSERT INTO task_matches (
+            jira_key, task_description, task_features_json,
+            matched_document_id, confidence_score, match_reasoning,
+            suggestion, user_accepted
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    """, (
+        jira_key,
+        task_description,
+        json.dumps(task_features, ensure_ascii=False),
+        matched_document_id,
+        confidence_score,
+        match_reasoning,
+        suggestion,
+        int(user_accepted)
+    ))
+    match_id = cur.lastrowid
+    conn.commit()
+    conn.close()
+    return match_id
+
+
+def update_task_match_acceptance(match_id: int, user_accepted: bool):
+    """
+    Update whether a user accepted a match suggestion.
+
+    Args:
+        match_id: ID of the task_match record
+        user_accepted: Whether user accepted the suggestion
+    """
+    conn = get_db()
+    conn.execute("""
+        UPDATE task_matches
+        SET user_accepted = ?
+        WHERE id = ?
+    """, (int(user_accepted), match_id))
+    conn.commit()
+    conn.close()
+
+
+def get_task_match_analytics(time_range: str = "all") -> dict:
+    """
+    Get analytics for smart matching.
+
+    Args:
+        time_range: Time range filter - "7days", "30days", "90days", or "all"
+
+    Returns:
+        Dict with analytics metrics
+    """
+    conn = get_db()
+
+    # Build time filter
+    time_filter = ""
+    if time_range == "7days":
+        time_filter = "WHERE created_at >= date('now', '-7 days')"
+    elif time_range == "30days":
+        time_filter = "WHERE created_at >= date('now', '-30 days')"
+    elif time_range == "90days":
+        time_filter = "WHERE created_at >= date('now', '-90 days')"
+
+    # Get total matches
+    total_matches = conn.execute(
+        f"SELECT COUNT(*) as count FROM task_matches {time_filter}"
+    ).fetchone()["count"]
+
+    # Get acceptance metrics
+    acceptance_metrics = conn.execute(f"""
+        SELECT
+            COUNT(*) as total,
+            SUM(user_accepted) as accepted,
+            AVG(confidence_score) as avg_confidence,
+            AVG(CASE WHEN user_accepted = 1 THEN confidence_score ELSE NULL END) as avg_accepted_confidence
+        FROM task_matches
+        {time_filter}
+    """).fetchone()
+
+    # Get suggestion breakdown
+    suggestion_breakdown = conn.execute(f"""
+        SELECT
+            suggestion,
+            COUNT(*) as count,
+            SUM(user_accepted) as accepted
+        FROM task_matches
+        {time_filter}
+        GROUP BY suggestion
+        ORDER BY count DESC
+    """).fetchall()
+
+    # Get matches by document type
+    doc_type_breakdown = conn.execute(f"""
+        SELECT
+            d.doc_type,
+            COUNT(*) as count,
+            AVG(tm.confidence_score) as avg_confidence
+        FROM task_matches tm
+        LEFT JOIN documents d ON tm.matched_document_id = d.id
+        {time_filter}
+        GROUP BY d.doc_type
+    """).fetchall()
+
+    conn.close()
+
+    # Calculate acceptance rate
+    total = acceptance_metrics["total"] or 0
+    accepted = acceptance_metrics["accepted"] or 0
+    acceptance_rate = (accepted / total * 100) if total > 0 else 0
+
+    return {
+        "total_matches": total_matches,
+        "acceptance_rate": acceptance_rate,
+        "total_accepted": accepted,
+        "avg_confidence": acceptance_metrics["avg_confidence"] or 0.0,
+        "avg_accepted_confidence": acceptance_metrics["avg_accepted_confidence"] or 0.0,
+        "suggestion_breakdown": [dict(row) for row in suggestion_breakdown],
+        "doc_type_breakdown": [dict(row) for row in doc_type_breakdown],
+        "time_range": time_range
+    }
+
+
+def get_recent_task_matches(limit: int = 20, jira_key: str = None) -> list:
+    """
+    Get recent task matches.
+
+    Args:
+        limit: Maximum number of records to return
+        jira_key: Optional filter by JIRA key
+
+    Returns:
+        List of task match records
+    """
+    conn = get_db()
+
+    if jira_key:
+        query = """
+            SELECT tm.*, d.title as document_title, d.doc_type, d.current_version
+            FROM task_matches tm
+            LEFT JOIN documents d ON tm.matched_document_id = d.id
+            WHERE tm.jira_key = ?
+            ORDER BY tm.created_at DESC
+            LIMIT ?
+        """
+        rows = conn.execute(query, (jira_key, limit)).fetchall()
+    else:
+        query = """
+            SELECT tm.*, d.title as document_title, d.doc_type, d.current_version
+            FROM task_matches tm
+            LEFT JOIN documents d ON tm.matched_document_id = d.id
+            ORDER BY tm.created_at DESC
+            LIMIT ?
+        """
+        rows = conn.execute(query, (limit,)).fetchall()
+
+    conn.close()
+
+    result = []
+    for row in rows:
+        match = dict(row)
+        if match.get('task_features_json'):
+            match['task_features'] = json.loads(match['task_features_json'])
+        result.append(match)
 
     return result
 

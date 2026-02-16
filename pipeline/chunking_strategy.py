@@ -37,6 +37,11 @@ class DocumentChunker:
         """
         metadata = metadata or {}
 
+        # Check if using new generic format (sections array)
+        if 'sections' in content_json:
+            return self._chunk_generic_document(doc_id, doc_type, content_json, metadata)
+
+        # Otherwise use legacy BRD Pipeline format
         if doc_type == 'ba':
             return self._chunk_ba_document(doc_id, content_json, metadata)
         elif doc_type == 'ta':
@@ -313,6 +318,113 @@ class DocumentChunker:
         if len(text) <= max_chars:
             return text
         return text[:max_chars] + "..."
+
+    def _chunk_generic_document(self, doc_id: int, doc_type: str, content: dict,
+                                 metadata: dict) -> List[Dict]:
+        """
+        Chunk generic document format (sections array).
+
+        Used for Document Repository Phase 1/2/3 documents that use
+        the generic sections format instead of BRD Pipeline format.
+
+        Args:
+            doc_id: Document ID
+            doc_type: Document type
+            content: Content with 'sections' array
+            metadata: Additional metadata
+
+        Returns:
+            List of chunks
+        """
+        chunks = []
+        chunk_index = 0
+
+        sections = content.get('sections', [])
+
+        for section in sections:
+            section_title = section.get('section_title', 'Untitled Section')
+            section_type = section.get('section_type', 'general')
+
+            # Get section content (might be JSON string or dict)
+            section_content = section.get('content_json', '{}')
+            if isinstance(section_content, str):
+                try:
+                    section_data = json.loads(section_content)
+                except:
+                    section_data = {}
+            else:
+                section_data = section_content
+
+            # Build chunk text
+            text_parts = [f"Section: {section_title}"]
+
+            # Add description
+            if 'description' in section_data:
+                text_parts.append(f"\nDescription: {section_data['description']}")
+
+            # Add requirements
+            if 'requirements' in section_data:
+                text_parts.append("\n\nRequirements:")
+                for req in section_data.get('requirements', []):
+                    text_parts.append(f"- {req}")
+
+            # Add security items
+            if 'security' in section_data:
+                text_parts.append("\n\nSecurity:")
+                for sec in section_data.get('security', []):
+                    text_parts.append(f"- {sec}")
+
+            # Add components
+            if 'components' in section_data:
+                text_parts.append("\n\nComponents:")
+                for comp in section_data.get('components', []):
+                    text_parts.append(f"- {comp}")
+
+            # Add APIs
+            if 'apis' in section_data:
+                text_parts.append("\n\nAPIs:")
+                for api in section_data.get('apis', []):
+                    text_parts.append(f"- {api}")
+
+            # Add test cases
+            if 'test_cases' in section_data:
+                text_parts.append("\n\nTest Cases:")
+                for tc in section_data.get('test_cases', []):
+                    tc_id = tc.get('id', '')
+                    tc_title = tc.get('title', '')
+                    text_parts.append(f"\n{tc_id}: {tc_title}")
+
+                    if 'steps' in tc:
+                        text_parts.append("Steps:")
+                        for step in tc['steps']:
+                            text_parts.append(f"  - {step}")
+
+                    if 'expected' in tc:
+                        text_parts.append(f"Expected: {tc['expected']}")
+
+            chunk_text = '\n'.join(text_parts)
+
+            # Check size
+            if self._estimate_tokens(chunk_text) > self.MAX_CHUNK_SIZE:
+                logger.warning(f"Generic section chunk exceeds max size: {section_title}")
+                chunk_text = self._truncate_text(chunk_text, self.MAX_CHUNK_SIZE)
+
+            chunks.append({
+                'document_id': doc_id,
+                'chunk_index': chunk_index,
+                'chunk_type': section_type,
+                'chunk_text': chunk_text,
+                'metadata': {
+                    **metadata,
+                    'section_title': section_title,
+                    'section_type': section_type,
+                    'doc_type': doc_type
+                }
+            })
+            chunk_index += 1
+
+        logger.info(f"Generated {len(chunks)} chunks for generic document {doc_id}")
+        return chunks
 
 
 # Singleton instance
