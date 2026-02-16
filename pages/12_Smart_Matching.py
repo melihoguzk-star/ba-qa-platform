@@ -8,11 +8,15 @@ import streamlit as st
 from pipeline.smart_matcher import SmartMatcher
 from pipeline.match_explainer import MatchExplainer
 from data.database import record_task_match, get_task_match_analytics
+from components.sidebar import render_custom_sidebar
 import time
 
 
 def main():
     st.set_page_config(page_title="Smart Matching", page_icon="🔍", layout="wide")
+
+    # Render custom sidebar
+    render_custom_sidebar(active_page="smart_matching")
 
     st.title("🔍 Smart Document Matching")
     st.markdown("""
@@ -20,12 +24,14 @@ def main():
     Saves time by avoiding duplicate work and helping you reuse existing documentation.
     """)
 
-    # Sidebar with analytics
-    with st.sidebar:
-        st.subheader("📊 Matching Analytics")
+    # Analytics Section (moved from sidebar)
+    st.markdown("---")
 
+    # Time range filter (compact, inline)
+    col_filter, col_spacer = st.columns([1, 3])
+    with col_filter:
         time_range = st.selectbox(
-            "Time Range",
+            "📊 Analytics Period",
             ["7days", "30days", "90days", "all"],
             format_func=lambda x: {
                 "7days": "Last 7 Days",
@@ -36,24 +42,22 @@ def main():
             index=3  # Default to "all"
         )
 
-        analytics = get_task_match_analytics(time_range)
+    analytics = get_task_match_analytics(time_range)
 
-        col1, col2 = st.columns(2)
-        with col1:
-            st.metric("Total Matches", analytics["total_matches"])
-            st.metric("Accepted", analytics["total_accepted"])
-        with col2:
-            st.metric("Acceptance Rate", f"{analytics['acceptance_rate']:.1f}%")
-            st.metric("Avg Confidence", f"{analytics['avg_confidence']:.2f}")
+    # 4 metric cards in a row
+    metric1, metric2, metric3, metric4 = st.columns(4)
 
-        if analytics["suggestion_breakdown"]:
-            st.markdown("**Suggestions**")
-            for item in analytics["suggestion_breakdown"]:
-                suggestion = item["suggestion"] or "N/A"
-                count = item["count"]
-                accepted = item["accepted"] or 0
-                rate = (accepted / count * 100) if count > 0 else 0
-                st.caption(f"{suggestion}: {count} ({rate:.0f}% accepted)")
+    with metric1:
+        st.metric("📊 Total Matches", analytics["total_matches"])
+
+    with metric2:
+        st.metric("✅ Accepted", analytics["total_accepted"])
+
+    with metric3:
+        st.metric("📈 Acceptance Rate", f"{analytics['acceptance_rate']:.1f}%")
+
+    with metric4:
+        st.metric("🎯 Avg Confidence", f"{analytics['avg_confidence']:.2f}")
 
     # Main content area
     st.markdown("---")

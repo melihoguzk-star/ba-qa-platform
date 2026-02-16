@@ -23,8 +23,12 @@ from pipeline.document_parser_v2 import parse_text_to_json
 from pipeline.document_reader import read_docx, read_document_from_drive, export_google_doc_as_text, extract_google_drive_file_id
 from pipeline.google_drive_client import GoogleDriveClient
 from agents.ai_client import call_gemini
+from components.sidebar import render_custom_sidebar
 
 st.set_page_config(page_title="Import & Merge", page_icon="📥", layout="wide")
+
+# Render custom sidebar
+render_custom_sidebar(active_page="import_merge")
 
 # Custom CSS
 st.markdown("""

@@ -16,6 +16,7 @@ from data.database import (
 )
 from pipeline.document_matching import find_similar
 from pipeline.document_adaptation import DocumentAdapter
+from components.sidebar import render_custom_sidebar
 
 # Phase 2B: Semantic Search
 try:
@@ -25,6 +26,9 @@ except ImportError:
     SEMANTIC_SEARCH_AVAILABLE = False
 
 st.set_page_config(page_title="Document Library", page_icon="📚", layout="wide")
+
+# Render custom sidebar
+render_custom_sidebar(active_page="document_library")
 
 # Custom CSS
 st.markdown("""
@@ -97,45 +101,25 @@ if "selected_document_id" in st.session_state:
     del st.session_state["selected_document_id"]
     st.success(f"📄 Opening document ID {selected_doc_id}")
 
-# Sidebar navigation
-with st.sidebar:
-    st.header("Navigation")
+# Get stats for dashboard
+stats = get_document_stats()
 
-    # Default to Documents page if view_document_id is set
-    default_page = "📄 Documents" if "view_document_id" in st.session_state else "📊 Dashboard"
-    default_index = ["📊 Dashboard", "📁 Projects", "📄 Documents", "📝 Create from Template", "⬆️ Upload Document"].index(default_page)
+# Default to Documents tab if view_document_id is set
+default_tab = 2 if "view_document_id" in st.session_state else 0
 
-    page = st.radio(
-        "Select Page",
-        ["📊 Dashboard", "📁 Projects", "📄 Documents", "📝 Create from Template", "⬆️ Upload Document"],
-        index=default_index,
-        label_visibility="collapsed"
-    )
-
-    st.divider()
-
-    # Smart Matching integration (Phase 2C)
-    st.markdown("### 🔍 Smart Tools")
-    if st.button("🔍 Find Documents for Task", use_container_width=True):
-        st.switch_page("pages/12_Smart_Matching.py")
-    st.caption("AI-powered task matching to find relevant documents")
-
-    st.divider()
-
-    # Quick stats
-    stats = get_document_stats()
-    st.metric("Total Projects", stats['total_projects'])
-    st.metric("Total Documents", stats['total_documents'])
-
-    for type_stat in stats['by_type']:
-        type_label = {"ba": "BA", "ta": "TA", "tc": "TC"}.get(type_stat['doc_type'], type_stat['doc_type'])
-        st.metric(f"{type_label} Documents", type_stat['c'])
-
+# Tabs for navigation
+tab1, tab2, tab3, tab4, tab5 = st.tabs([
+    "📊 Dashboard",
+    "📁 Projeler",
+    "📄 Dokümanlar",
+    "📝 Şablondan Oluştur",
+    "⬆️ Doküman Yükle"
+])
 
 # ─────────────────────────────────────────────
-# DASHBOARD PAGE
+# TAB 1: DASHBOARD
 # ─────────────────────────────────────────────
-if page == "📊 Dashboard":
+with tab1:
     st.header("📊 Document Repository Dashboard")
 
     # Stats overview
@@ -206,7 +190,10 @@ if page == "📊 Dashboard":
 # ─────────────────────────────────────────────
 # PROJECTS PAGE
 # ─────────────────────────────────────────────
-elif page == "📁 Projects":
+# ─────────────────────────────────────────────
+# TAB 2: PROJECTS
+# ─────────────────────────────────────────────
+with tab2:
     st.header("📁 Projects")
 
     col1, col2 = st.columns([3, 1])
@@ -284,7 +271,10 @@ elif page == "📁 Projects":
 # ─────────────────────────────────────────────
 # DOCUMENTS PAGE
 # ─────────────────────────────────────────────
-elif page == "📄 Documents":
+# ─────────────────────────────────────────────
+# TAB 3: DOCUMENTS
+# ─────────────────────────────────────────────
+with tab3:
     st.header("📄 Documents")
 
     # Filters
@@ -744,7 +734,10 @@ elif page == "📄 Documents":
 # ─────────────────────────────────────────────
 # UPLOAD DOCUMENT PAGE
 # ─────────────────────────────────────────────
-elif page == "⬆️ Upload Document":
+# ─────────────────────────────────────────────
+# TAB 5: UPLOAD DOCUMENT
+# ─────────────────────────────────────────────
+with tab5:
     st.header("⬆️ Upload New Document")
 
     # Get projects
@@ -843,7 +836,10 @@ elif page == "⬆️ Upload Document":
 # ─────────────────────────────────────────────
 # CREATE FROM TEMPLATE PAGE (PHASE 3)
 # ─────────────────────────────────────────────
-elif page == "📝 Create from Template":
+# ─────────────────────────────────────────────
+# TAB 4: CREATE FROM TEMPLATE
+# ─────────────────────────────────────────────
+with tab4:
     st.header("📝 Create from Template")
     st.markdown("**Reuse & Adapt** — Create new documents based on existing templates")
 
