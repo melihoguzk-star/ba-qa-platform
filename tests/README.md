@@ -10,8 +10,27 @@ tests/
 ├── unit/                    # Unit tests (fast, isolated)
 │   └── test_document_repository.py
 ├── integration/             # Integration tests (with dependencies)
-└── fixtures/                # Test data and factories
+├── fixtures/                # Test data and factories
+├── test_*.py                # Manual test scripts (demo/debugging)
+└── TEST_README.md           # Manual test scripts guide
 ```
+
+### Test Types
+
+1. **Pytest Tests** (`unit/`, `integration/`)
+   - Automated tests that run with `pytest`
+   - Use fixtures and mocking
+   - Generate coverage reports
+
+2. **Manual Test Scripts** (`test_*.py` files in tests/)
+   - Demonstration scripts
+   - Debugging tools
+   - Can be run directly with `python3 tests/test_*.py`
+   - Examples:
+     - `test_document_reader.py` - Word & Google Drive tests
+     - `test_numbered_sections.py` - Parser tests with numbered sections
+     - `test_heading_parser.py` - Heading-based parser tests
+     - `test_parser_debug.py` - Parser debugging tool
 
 ## 🚀 Quick Start
 
@@ -49,6 +68,26 @@ PYTHONPATH=. pytest tests/unit/test_document_repository.py::TestProjectOperation
 # Run specific test
 PYTHONPATH=. pytest tests/unit/test_document_repository.py::TestProjectOperations::test_create_project
 ```
+
+### Run Manual Test Scripts
+
+Manual test scripts are demonstration and debugging tools:
+
+```bash
+# Parser tests
+python3 tests/test_numbered_sections.py      # Test numbered sections (5.3., 5.4.)
+python3 tests/test_heading_parser.py         # Test heading-based parsing
+python3 tests/test_parser_debug.py          # Debug parser behavior
+
+# Document reader tests
+python3 tests/test_document_reader.py       # Test Word & Google Drive import
+
+# Feature tests
+python3 tests/test_both_parsers.py          # Compare rule-based vs AI parsing
+python3 tests/test_import_merge.py          # Test import & merge workflow
+```
+
+See `tests/TEST_README.md` for detailed documentation on manual test scripts.
 
 ## 📊 Coverage Reports
 
