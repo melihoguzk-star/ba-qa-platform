@@ -20,7 +20,7 @@ class SmartMatcher:
         self.task_analyzer = TaskAnalyzer()
         self.match_explainer = MatchExplainer()
         # Hybrid search weights
-        self.alpha = 0.6  # 60% semantic, 40% keyword
+        self.alpha = 0.4  # 40% keyword, 60% semantic (alpha is keyword weight)
         self.confidence_threshold = 0.3  # Minimum confidence to return a match
 
     def find_matches_for_task(

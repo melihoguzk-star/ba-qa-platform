@@ -22,7 +22,7 @@ class TestSmartMatcher:
         assert self.matcher is not None
         assert hasattr(self.matcher, 'task_analyzer')
         assert hasattr(self.matcher, 'match_explainer')
-        assert self.matcher.alpha == 0.6
+        assert self.matcher.alpha == 0.4  # 40% keyword, 60% semantic
         assert self.matcher.confidence_threshold == 0.3
 
     @patch('pipeline.smart_matcher.hybrid_search')
