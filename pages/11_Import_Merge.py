@@ -95,7 +95,7 @@ if step == 1:
     import_method = st.radio(
         "How would you like to import?",
         ["📋 Paste JSON", "📄 From BRD Pipeline", "📝 Paste Text (AI Parse)",
-         "📎 Upload Word Document", "☁️ Import from Google Drive"],
+         "📎 Upload Word Document", "☁️ Google Drive (Public)", "🔗 Google Drive (n8n)"],
         horizontal=True
     )
 
@@ -614,9 +614,9 @@ Return ONLY valid JSON."""
                         st.error(f"❌ Error processing Word document: {str(e)}")
                         st.exception(e)
 
-    elif import_method == "☁️ Import from Google Drive":
-        st.markdown("### Import from Google Drive")
-        st.info("💡 Paste a Google Drive share link to import the document")
+    elif import_method == "☁️ Google Drive (Public)":
+        st.markdown("### Import from Google Drive (Public)")
+        st.info("💡 For public/shared documents - Paste a Google Drive share link")
 
         st.markdown("""
         **How to get a shareable link:**
@@ -758,6 +758,219 @@ Return ONLY valid JSON."""
                         st.info("💡 Make sure the Google Drive link is set to 'Anyone with the link can view'")
                     except Exception as e:
                         st.error(f"❌ Error downloading from Google Drive: {str(e)}")
+                        st.exception(e)
+
+    elif import_method == "🔗 Google Drive (n8n)":
+        st.markdown("### Import from Google Drive (via n8n Webhook)")
+        st.info("💡 For private/company documents - Uses n8n webhook with OAuth authentication")
+
+        st.markdown("""
+        **Benefits:**
+        - ✅ No public sharing required
+        - ✅ Works with company/private documents
+        - ✅ OAuth authentication via n8n
+        - ✅ Secure access control
+
+        **Setup:** See `N8N_GOOGLE_DOCS_SETUP.md` for configuration
+        """)
+
+        # Get webhook URL from settings
+        n8n_webhook_url = st.session_state.get("n8n_webhook_url") or os.environ.get("N8N_GOOGLE_DOCS_WEBHOOK_URL", "")
+
+        if not n8n_webhook_url:
+            st.warning("⚠️ n8n webhook URL not configured")
+
+            webhook_url_input = st.text_input(
+                "n8n Webhook URL",
+                placeholder="https://n8n.example.com/webhook/read-google-doc",
+                help="Enter your n8n webhook URL for Google Docs reading"
+            )
+
+            if webhook_url_input:
+                if st.button("💾 Save Webhook URL"):
+                    st.session_state["n8n_webhook_url"] = webhook_url_input
+                    st.success("✅ Webhook URL saved to session")
+                    st.rerun()
+        else:
+            st.success(f"✅ Using webhook: {n8n_webhook_url}")
+            if st.button("🔄 Change Webhook URL"):
+                st.session_state["n8n_webhook_url"] = ""
+                st.rerun()
+
+        drive_url = st.text_input(
+            "Google Docs/Drive URL",
+            placeholder="https://docs.google.com/document/d/.../edit",
+            help="Paste any Google Docs or Drive link (no public sharing needed)",
+            key="n8n_drive_url"
+        )
+
+        if drive_url and n8n_webhook_url:
+            col1, col2 = st.columns(2)
+            with col1:
+                doc_type = st.selectbox("Document Type", ["BA", "TA", "TC"], key="n8n_doc_type")
+            with col2:
+                title = st.text_input("Document Title*", placeholder="e.g., Face ID Login Analysis", key="n8n_title")
+
+            # Choose parsing method
+            parse_method = st.radio(
+                "Choose parsing method:",
+                ["⚡ Rule-based (Fast, Free)", "🤖 AI-powered (Flexible, Requires API Key)"],
+                help="Rule-based parser works best with structured documents",
+                key="n8n_parse_method"
+            )
+
+            if st.button("🔗 Fetch via n8n Webhook", type="primary"):
+                if not title:
+                    st.error("❌ Please provide a title")
+                else:
+                    try:
+                        # Extract document ID from URL
+                        with st.spinner("📤 Extracting document ID..."):
+                            from pipeline.document_reader import extract_google_drive_file_id
+
+                            doc_id = extract_google_drive_file_id(drive_url)
+                            if not doc_id:
+                                st.error("❌ Could not extract document ID from URL")
+                                st.stop()
+
+                        st.info(f"📄 Document ID: {doc_id}")
+
+                        # Call n8n webhook
+                        with st.spinner("🔗 Calling n8n webhook..."):
+                            import requests
+
+                            webhook_data = {
+                                "documentId": doc_id
+                            }
+
+                            # Add API key if configured
+                            headers = {"Content-Type": "application/json"}
+                            webhook_api_key = st.session_state.get("n8n_api_key") or os.environ.get("N8N_WEBHOOK_API_KEY")
+                            if webhook_api_key:
+                                headers["X-API-Key"] = webhook_api_key
+
+                            response = requests.post(
+                                n8n_webhook_url,
+                                json=webhook_data,
+                                headers=headers,
+                                timeout=60
+                            )
+                            response.raise_for_status()
+                            result = response.json()
+
+                        # Check response
+                        if not result.get('success'):
+                            error_msg = result.get('error', 'Unknown error')
+                            st.error(f"❌ n8n webhook error: {error_msg}")
+                            st.stop()
+
+                        extracted_text = result.get('content', '')
+                        char_count = result.get('characterCount', len(extracted_text))
+
+                        st.success(f"✅ Downloaded via n8n webhook: {char_count} characters")
+
+                        # Show preview
+                        with st.expander("📝 Downloaded Text Preview", expanded=False):
+                            preview_text = extracted_text[:1000] + "..." if len(extracted_text) > 1000 else extracted_text
+                            st.text_area("Text", preview_text, height=200, disabled=True)
+
+                        # Parse the extracted text
+                        if parse_method.startswith("⚡"):
+                            # Rule-based parsing
+                            with st.spinner("⚡ Parsing with rule-based parser..."):
+                                parsed_json = parse_text_to_json(extracted_text, doc_type.lower())
+
+                                # Check if parsing produced meaningful results
+                                has_content = any(isinstance(v, list) and len(v) > 0 for v in parsed_json.values())
+
+                                if not has_content:
+                                    st.warning("⚠️ Rule-based parser couldn't find structured content. Try AI-powered parsing.")
+                                else:
+                                    st.success("✅ Document parsed successfully!")
+
+                                    with st.expander("📋 Parsed JSON Preview", expanded=True):
+                                        st.json(parsed_json)
+
+                                    st.session_state['imported_doc'] = {
+                                        'title': title,
+                                        'doc_type': doc_type.lower(),
+                                        'content_json': parsed_json,
+                                        'import_method': 'n8n_webhook',
+                                        'source_url': drive_url,
+                                        'document_id': doc_id
+                                    }
+
+                                    st.session_state['import_step'] = 2
+                                    st.rerun()
+
+                        else:
+                            # AI parsing
+                            gemini_key = st.session_state.get("gemini_key") or os.environ.get("GEMINI_API_KEY", "")
+                            if not gemini_key:
+                                st.error("❌ Gemini API key not found. Please set it in Settings.")
+                            else:
+                                with st.spinner("🤖 AI is parsing your document..."):
+                                    # Use the same prompts as text parsing
+                                    if doc_type == "BA":
+                                        system_prompt = """You are a Business Analyst documentation expert.
+Parse the given text and convert it into a structured BA (Business Analysis) JSON format.
+
+The JSON structure should follow this schema:
+{
+  "ekranlar": [...],
+  "backend_islemler": [...],
+  "guvenlik_gereksinimleri": [...],
+  "test_senaryolari": [...]
+}
+
+Return ONLY valid JSON, no markdown formatting or explanations."""
+                                    elif doc_type == "TA":
+                                        system_prompt = """You are a Technical Architect documentation expert.
+Parse the given text into structured TA (Technical Analysis) JSON format.
+Return ONLY valid JSON."""
+                                    else:  # TC
+                                        system_prompt = """You are a Test Engineer documentation expert.
+Parse the given text into structured TC (Test Cases) JSON format.
+Return ONLY valid JSON."""
+
+                                    result = call_gemini(
+                                        system_prompt=system_prompt,
+                                        user_content=f"Parse this {doc_type} document:\n\n{extracted_text}",
+                                        api_key=gemini_key,
+                                        max_tokens=8000
+                                    )
+
+                                    if result.get('error'):
+                                        st.error(f"❌ AI parsing error: {result['error']}")
+                                    elif result.get('content'):
+                                        parsed_json = result['content']
+                                        st.success("✅ Document parsed successfully with AI!")
+
+                                        with st.expander("📋 Parsed JSON Preview", expanded=True):
+                                            st.json(parsed_json)
+
+                                        st.session_state['imported_doc'] = {
+                                            'title': title,
+                                            'doc_type': doc_type.lower(),
+                                            'content_json': parsed_json,
+                                            'import_method': 'n8n_webhook_ai',
+                                            'source_url': drive_url,
+                                            'document_id': doc_id
+                                        }
+
+                                        st.session_state['import_step'] = 2
+                                        st.rerun()
+                                    else:
+                                        st.error("❌ AI returned empty response")
+
+                    except requests.Timeout:
+                        st.error("❌ Webhook timeout - document may be too large or n8n is slow")
+                        st.info("💡 Try with a smaller document or check n8n workflow status")
+                    except requests.RequestException as e:
+                        st.error(f"❌ Webhook request failed: {str(e)}")
+                        st.info("💡 Check that n8n webhook URL is correct and accessible")
+                    except Exception as e:
+                        st.error(f"❌ Error: {str(e)}")
                         st.exception(e)
 
 # ═══════════════════════════════════════════════════════════════
