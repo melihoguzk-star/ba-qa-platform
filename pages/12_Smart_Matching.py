@@ -92,6 +92,10 @@ def main():
         search_button = st.button("🔍 Find Matches", type="primary", use_container_width=True)
     with col2:
         if st.button("🔄 Clear", use_container_width=True):
+            # Clear all match-related session state
+            for key in ["current_matches", "current_task_description", "current_jira_key", "match_response_time"]:
+                if key in st.session_state:
+                    del st.session_state[key]
             st.rerun()
 
     # Analysis and Results Section
@@ -117,6 +121,22 @@ def main():
                 top_k=5
             )
             response_time = time.time() - start_time
+
+            # Store matches in session state so they persist across reruns
+            st.session_state["current_matches"] = matches
+            st.session_state["current_task_description"] = task_description
+            st.session_state["current_jira_key"] = jira_key
+            st.session_state["match_response_time"] = response_time
+
+        st.markdown("---")
+
+    # Display results from session state (persists across button clicks)
+    if "current_matches" in st.session_state:
+        matches = st.session_state["current_matches"]
+        task_description = st.session_state.get("current_task_description", task_description)
+        jira_key = st.session_state.get("current_jira_key", jira_key)
+        response_time = st.session_state.get("match_response_time", 0)
+        explainer = MatchExplainer()
 
         st.markdown("---")
 
@@ -146,13 +166,12 @@ def main():
             st.info("🔍 No relevant documents found. Consider creating a new document.")
             st.markdown("**Suggestion:** Use the Document Library to create a new document for this task.")
 
-            # Record no-match event
-            if matches:  # This will never be true, but keeping structure for consistency
-                pass
-            else:
+            # Record no-match event (only once when search button was clicked)
+            if search_button:
+                task_features = {}
                 record_task_match(
                     task_description=task_description,
-                    task_features=task_features if matches else {},
+                    task_features=task_features,
                     matched_document_id=None,
                     confidence_score=0.0,
                     match_reasoning="No matches found",
@@ -167,6 +186,11 @@ def main():
 
             st.markdown("---")
             st.caption(f"💡 **Tip:** Higher confidence scores (green) indicate stronger matches. You can view or use any document from the results.")
+
+    elif search_button:
+        # This happens if search_button was clicked but no matches in session state
+        # (shouldn't normally happen, but good to handle)
+        st.info("No results to display. Please try searching again.")
 
 
 def display_match_card(match: dict, rank: int, task_description: str, explainer: MatchExplainer, jira_key: str):
