@@ -10,6 +10,7 @@ End-to-end workflow for importing and merging documents:
 import streamlit as st
 import json
 import os
+import requests
 from datetime import datetime
 from data.database import (
     create_document, get_projects, get_documents_with_content,
