@@ -59,6 +59,10 @@ class DocumentChunker:
         - Screen name
         - Description
         - UI elements list
+        - Functional requirements (fonksiyonel_gereksinimler)
+        - Business rules (is_kurallari)
+        - Acceptance criteria (kabul_kriterleri)
+        - Validations (validasyonlar)
         """
         chunks = []
         chunk_index = 0
@@ -79,25 +83,73 @@ class DocumentChunker:
             if ui_elements:
                 text_parts.append(f"UI Elements: {', '.join(ui_elements)}")
 
+            # Add functional requirements (fonksiyonel_gereksinimler)
+            frs = ekran.get('fonksiyonel_gereksinimler', [])
+            if frs:
+                text_parts.append("\nFunctional Requirements:")
+                for fr in frs:
+                    fr_id = fr.get('id', 'FR-XX')
+                    fr_tanim = fr.get('tanim', '')
+                    if fr_tanim:
+                        text_parts.append(f"  {fr_id}: {fr_tanim}")
+
+            # Add business rules (is_kurallari)
+            brs = ekran.get('is_kurallari', [])
+            if brs:
+                text_parts.append("\nBusiness Rules:")
+                for br in brs:
+                    br_kural = br.get('kural', '')
+                    br_detay = br.get('detay', '')
+                    if br_kural:
+                        text_parts.append(f"  BR: {br_kural}")
+                        if br_detay:
+                            text_parts.append(f"     {br_detay[:200]}")  # Limit detail length
+
+            # Add acceptance criteria (kabul_kriterleri)
+            kriter = ekran.get('kabul_kriterleri', [])
+            if kriter:
+                text_parts.append("\nAcceptance Criteria:")
+                for k in kriter:
+                    k_id = k.get('id', '')
+                    k_kriter = k.get('kriter', '')
+                    if k_kriter:
+                        text_parts.append(f"  {k_id}: {k_kriter}")
+
+            # Add validations (validasyonlar)
+            validasyonlar = ekran.get('validasyonlar', [])
+            if validasyonlar:
+                text_parts.append("\nValidations:")
+                for val in validasyonlar:
+                    alan = val.get('alan', '')
+                    kisit = val.get('kisit', '')
+                    hata = val.get('hata_mesaji', '')
+                    if alan and kisit:
+                        text_parts.append(f"  {alan}: {kisit} - {hata}")
+
             chunk_text = '\n'.join(filter(None, text_parts))
 
-            # Check size
+            # Check size and split if needed
             if self._estimate_tokens(chunk_text) > self.MAX_CHUNK_SIZE:
-                logger.warning(f"BA screen chunk exceeds max size: {ekran_adi}")
-                chunk_text = self._truncate_text(chunk_text, self.MAX_CHUNK_SIZE)
-
-            chunks.append({
-                'document_id': doc_id,
-                'chunk_index': chunk_index,
-                'chunk_type': 'ekran',
-                'chunk_text': chunk_text,
-                'metadata': {
-                    **metadata,
-                    'ekran_adi': ekran_adi,
-                    'has_ui_elements': len(ui_elements) > 0
-                }
-            })
-            chunk_index += 1
+                logger.warning(f"BA screen chunk exceeds max size: {ekran_adi}, splitting...")
+                # Split large chunk into multiple smaller chunks
+                split_chunks = self._split_large_chunk(chunk_text, ekran_adi, 'ekran', doc_id, chunk_index, metadata)
+                chunks.extend(split_chunks)
+                chunk_index += len(split_chunks)
+            else:
+                chunks.append({
+                    'document_id': doc_id,
+                    'chunk_index': chunk_index,
+                    'chunk_type': 'ekran',
+                    'chunk_text': chunk_text,
+                    'metadata': {
+                        **metadata,
+                        'ekran_adi': ekran_adi,
+                        'has_ui_elements': len(ui_elements) > 0,
+                        'fr_count': len(frs),
+                        'br_count': len(brs)
+                    }
+                })
+                chunk_index += 1
 
         # Chunk backend operations (backend_islemler)
         backend_islemler = content.get('backend_islemler', [])
@@ -167,26 +219,79 @@ class DocumentChunker:
                 if teknolojiler:
                     text_parts.append(f"Technologies: {', '.join(teknolojiler)}")
 
+                # Add request body fields
+                request_body = endpoint.get('request_body', {})
+                if request_body:
+                    text_parts.append("\nRequest Body:")
+                    if isinstance(request_body, dict):
+                        for field_name, field_info in list(request_body.items())[:15]:  # Limit to 15 fields
+                            if isinstance(field_info, dict):
+                                field_type = field_info.get('type', 'unknown')
+                                required = " (required)" if field_info.get('required', False) else ""
+                                text_parts.append(f"  {field_name}: {field_type}{required}")
+                            else:
+                                text_parts.append(f"  {field_name}: {field_info}")
+
+                # Add response body fields
+                response_body = endpoint.get('response_body', {})
+                if response_body:
+                    text_parts.append("\nResponse Body:")
+                    if isinstance(response_body, dict):
+                        for field_name, field_info in list(response_body.items())[:15]:  # Limit to 15 fields
+                            if isinstance(field_info, dict):
+                                field_type = field_info.get('type', 'unknown')
+                                text_parts.append(f"  {field_name}: {field_type}")
+                            else:
+                                text_parts.append(f"  {field_name}: {field_info}")
+
+                # Add error codes (hata_kodlari)
+                hata_kodlari = endpoint.get('hata_kodlari', [])
+                if hata_kodlari:
+                    text_parts.append("\nError Codes:")
+                    for hata in hata_kodlari:
+                        if isinstance(hata, dict):
+                            kod = hata.get('kod', hata.get('code', ''))
+                            aciklama_hata = hata.get('aciklama', hata.get('description', ''))
+                            text_parts.append(f"  {kod}: {aciklama_hata}")
+                        else:
+                            text_parts.append(f"  {hata}")
+
+                # Add validations (validasyonlar)
+                validasyonlar = endpoint.get('validasyonlar', [])
+                if validasyonlar:
+                    text_parts.append("\nValidations:")
+                    for val in validasyonlar:
+                        if isinstance(val, dict):
+                            alan = val.get('alan', '')
+                            kisit = val.get('kisit', '')
+                            text_parts.append(f"  {alan}: {kisit}")
+                        else:
+                            text_parts.append(f"  {val}")
+
                 chunk_text = '\n'.join(filter(None, text_parts))
 
                 if self._estimate_tokens(chunk_text) > self.MAX_CHUNK_SIZE:
-                    logger.warning(f"TA endpoint chunk exceeds max size: {path}")
-                    chunk_text = self._truncate_text(chunk_text, self.MAX_CHUNK_SIZE)
-
-                chunks.append({
-                    'document_id': doc_id,
-                    'chunk_index': chunk_index,
-                    'chunk_type': 'endpoint',
-                    'chunk_text': chunk_text,
-                    'metadata': {
-                        **metadata,
-                        'servis_adi': servis_adi,
-                        'endpoint': path,
-                        'method': method,
-                        'teknolojiler': teknolojiler
-                    }
-                })
-                chunk_index += 1
+                    logger.warning(f"TA endpoint chunk exceeds max size: {path}, splitting...")
+                    split_chunks = self._split_large_chunk(chunk_text, path, 'endpoint', doc_id, chunk_index, metadata)
+                    chunks.extend(split_chunks)
+                    chunk_index += len(split_chunks)
+                else:
+                    chunks.append({
+                        'document_id': doc_id,
+                        'chunk_index': chunk_index,
+                        'chunk_type': 'endpoint',
+                        'chunk_text': chunk_text,
+                        'metadata': {
+                            **metadata,
+                            'servis_adi': servis_adi,
+                            'endpoint': path,
+                            'method': method,
+                            'teknolojiler': teknolojiler,
+                            'has_request_body': bool(request_body),
+                            'has_response_body': bool(response_body)
+                        }
+                    })
+                    chunk_index += 1
 
         # Chunk data models
         veri_modeli = content.get('veri_modeli', [])
@@ -249,12 +354,12 @@ class DocumentChunker:
 
         for test_case in test_cases:
             # Extract test case fields (flexible keys)
-            test_id = test_case.get('test_id') or test_case.get('scenario_id', 'TC-Unknown')
+            test_id = test_case.get('test_id') or test_case.get('scenario_id') or test_case.get('id', 'TC-Unknown')
             test_name = test_case.get('test_name') or test_case.get('title', 'Unnamed Test')
             description = test_case.get('description', '')
             priority = test_case.get('priority', '')
             steps = test_case.get('steps', [])
-            expected = test_case.get('expected_result', '')
+            expected = test_case.get('expected_result', '') or test_case.get('expected', '')
 
             # Build chunk text
             text_parts = [
@@ -268,9 +373,24 @@ class DocumentChunker:
             if priority:
                 text_parts.append(f"Priority: {priority}")
 
+            # Add precondition (ön koşul)
+            precondition = test_case.get('precondition', '') or test_case.get('on_kosul', '')
+            if precondition:
+                text_parts.append(f"Precondition: {precondition}")
+
+            # Add test data
+            test_data = test_case.get('test_data', {})
+            if test_data:
+                text_parts.append("\nTest Data:")
+                if isinstance(test_data, dict):
+                    for key, value in test_data.items():
+                        text_parts.append(f"  {key}: {value}")
+                elif isinstance(test_data, str):
+                    text_parts.append(f"  {test_data}")
+
             # Add steps
             if steps:
-                text_parts.append("Steps:")
+                text_parts.append("\nSteps:")
                 if isinstance(steps, list):
                     for i, step in enumerate(steps, 1):
                         if isinstance(step, dict):
@@ -283,7 +403,7 @@ class DocumentChunker:
                             text_parts.append(f"  {i}. {step}")
 
             if expected:
-                text_parts.append(f"Expected Result: {expected}")
+                text_parts.append(f"\nExpected Result: {expected}")
 
             chunk_text = '\n'.join(filter(None, text_parts))
 
@@ -318,6 +438,78 @@ class DocumentChunker:
         if len(text) <= max_chars:
             return text
         return text[:max_chars] + "..."
+
+    def _split_large_chunk(
+        self,
+        chunk_text: str,
+        chunk_name: str,
+        chunk_type: str,
+        doc_id: int,
+        start_index: int,
+        metadata: dict
+    ) -> List[Dict]:
+        """
+        Split a large chunk into multiple smaller chunks.
+
+        When a chunk exceeds MAX_CHUNK_SIZE, split it by sections or paragraphs
+        while preserving context.
+
+        Args:
+            chunk_text: The text to split
+            chunk_name: Name of the chunk (e.g., screen name, endpoint path)
+            chunk_type: Type of chunk (e.g., 'ekran', 'endpoint', 'test_case')
+            doc_id: Document ID
+            start_index: Starting chunk index
+            metadata: Chunk metadata
+
+        Returns:
+            List of chunk dictionaries
+        """
+        chunks = []
+        max_chars = self.MAX_CHUNK_SIZE * 4
+
+        # Split by sections (double newline) first
+        sections = chunk_text.split('\n\n')
+
+        current_chunk = f"{chunk_type.capitalize()}: {chunk_name}\n"
+        part_num = 1
+
+        for section in sections:
+            # If adding this section would exceed limit, save current chunk
+            if len(current_chunk) + len(section) + 2 > max_chars and len(current_chunk) > len(chunk_name) + 50:
+                chunks.append({
+                    'document_id': doc_id,
+                    'chunk_index': start_index + len(chunks),
+                    'chunk_type': chunk_type,
+                    'chunk_text': current_chunk,
+                    'metadata': {
+                        **metadata,
+                        f'{chunk_type}_name': chunk_name,
+                        'part': part_num,
+                        'is_split': True
+                    }
+                })
+                part_num += 1
+                current_chunk = f"{chunk_type.capitalize()}: {chunk_name} (Part {part_num})\n"
+
+            current_chunk += section + '\n\n'
+
+        # Add final chunk
+        if len(current_chunk.strip()) > 0:
+            chunks.append({
+                'document_id': doc_id,
+                'chunk_index': start_index + len(chunks),
+                'chunk_type': chunk_type,
+                'chunk_text': current_chunk,
+                'metadata': {
+                    **metadata,
+                    f'{chunk_type}_name': chunk_name,
+                    'part': part_num if part_num > 1 else None,
+                    'is_split': part_num > 1
+                }
+            })
+
+        return chunks
 
     def _chunk_generic_document(self, doc_id: int, doc_type: str, content: dict,
                                  metadata: dict) -> List[Dict]:
