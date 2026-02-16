@@ -88,12 +88,27 @@ st.markdown("""
 st.title("📚 Document Library")
 st.markdown("**Smart Document Repository** — Store, organize, and evolve your BA/TA/TC documents")
 
+# Check if coming from Smart Matching with a selected document
+if "selected_document_id" in st.session_state:
+    selected_doc_id = st.session_state["selected_document_id"]
+    # Force page to Documents view and set document to view
+    st.session_state["view_document_id"] = selected_doc_id
+    # Clear the selected_document_id so it doesn't persist
+    del st.session_state["selected_document_id"]
+    st.success(f"📄 Opening document ID {selected_doc_id}")
+
 # Sidebar navigation
 with st.sidebar:
     st.header("Navigation")
+
+    # Default to Documents page if view_document_id is set
+    default_page = "📄 Documents" if "view_document_id" in st.session_state else "📊 Dashboard"
+    default_index = ["📊 Dashboard", "📁 Projects", "📄 Documents", "📝 Create from Template", "⬆️ Upload Document"].index(default_page)
+
     page = st.radio(
         "Select Page",
         ["📊 Dashboard", "📁 Projects", "📄 Documents", "📝 Create from Template", "⬆️ Upload Document"],
+        index=default_index,
         label_visibility="collapsed"
     )
 
@@ -470,7 +485,14 @@ elif page == "📄 Documents":
                 similarity_pct = f"{similarity:.0%}"
                 doc_title = f"📄 {doc['title']} 💡 Similarity: {similarity_pct}"
 
-            with st.expander(doc_title, expanded=False):
+            # Auto-expand if this is the document selected from Smart Matching
+            is_selected = st.session_state.get("view_document_id") == doc['id']
+            if is_selected:
+                # Clear after using it
+                if "view_document_id" in st.session_state:
+                    del st.session_state["view_document_id"]
+
+            with st.expander(doc_title, expanded=is_selected):
                 col_a, col_b = st.columns([3, 1])
 
                 with col_a:
