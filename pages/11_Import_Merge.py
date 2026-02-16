@@ -18,7 +18,7 @@ from data.database import (
 )
 from pipeline.document_matching import find_similar
 from pipeline.document_adaptation import DocumentAdapter
-from pipeline.document_parser import parse_text_to_json
+from pipeline.document_parser_v2 import parse_text_to_json
 from agents.ai_client import call_gemini
 
 st.set_page_config(page_title="Import & Merge", page_icon="📥", layout="wide")
