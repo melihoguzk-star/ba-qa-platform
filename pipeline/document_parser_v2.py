@@ -87,6 +87,17 @@ class HeadingBasedParser:
                     }
                     current_section["subsections"].append(current_subsection)
                     just_had_section = False  # Reset flag
+                else:
+                    # No parent section - treat as main section
+                    current_section = {
+                        "heading": HeadingBasedParser._clean_heading(line),
+                        "level": 1,
+                        "content": "",
+                        "subsections": [],
+                        "items": []
+                    }
+                    structure["sections"].append(current_section)
+                    just_had_section = True
 
             elif line.startswith(('-', '•', '*', '+')):
                 # Bullet point - list item
@@ -141,6 +152,7 @@ class HeadingBasedParser:
 
         Logic:
         - Lines ending with ":" are headings
+        - Numbered sections (e.g., "5.3. Section Name") are headings
         - Shorter headings (1-3 words) → H1
         - Longer headings (4-6 words) → H2
         - All caps → H1
@@ -154,10 +166,26 @@ class HeadingBasedParser:
         if line.startswith('### '):
             return 2
 
+        # Check for numbered sections (e.g., "5.3. Teknik Gereksinimler")
+        # Pattern: digits.digits. or just digits.
+        numbered_pattern = r'^\d+(\.\d+)*\.\s+'
+        if re.match(numbered_pattern, line):
+            # Remove the number prefix to analyze the text
+            clean_line = re.sub(numbered_pattern, '', line)
+            word_count = len(clean_line.split())
+
+            # Numbered sections are usually subsections (H2)
+            # unless they're very short
+            if word_count <= 2:
+                return 1
+            return 2
+
         # Check for colon-ending headings (common in documents)
         if line.endswith(':'):
             # Clean and count words
             clean_line = line.rstrip(':').strip()
+            # Remove number prefix if present
+            clean_line = re.sub(r'^\d+(\.\d+)*\.\s*', '', clean_line)
             words = clean_line.split()
             word_count = len(words)
 
@@ -190,6 +218,8 @@ class HeadingBasedParser:
         """Remove heading markers and clean text"""
         # Remove markdown #
         line = re.sub(r'^#+\s*', '', line)
+        # Remove numbered prefixes (e.g., "5.3. " or "1. ")
+        line = re.sub(r'^\d+(\.\d+)*\.\s*', '', line)
         # Remove trailing colon
         line = line.rstrip(':')
         return line.strip()
@@ -217,61 +247,154 @@ class HeadingBasedParser:
             # Map sections to BA structure based on content type
             if HeadingBasedParser._is_screen_section(section):
                 # This section contains screens/UI
-                for subsection in section.get("subsections", []):
-                    screen = {
-                        "ekran_adi": subsection["heading"],
-                        "aciklama": subsection.get("content", ""),
-                        "fields": [],
-                        "actions": []
-                    }
+                if section.get("subsections"):
+                    # Has subsections - each subsection is a screen
+                    for subsection in section.get("subsections", []):
+                        screen = {
+                            "ekran_adi": subsection["heading"],
+                            "aciklama": subsection.get("content", ""),
+                            "fields": [],
+                            "actions": []
+                        }
 
-                    # Parse items as fields
-                    for item in subsection.get("items", []):
-                        field = HeadingBasedParser._parse_field(item)
-                        if field["type"] == "button":
-                            screen["actions"].append({
-                                "button": field["name"],
-                                "action": field["description"]
-                            })
-                        else:
-                            screen["fields"].append({
-                                "name": field["name"],
-                                "type": field["type"],
-                                "required": field["required"],
-                                "description": field["description"]
-                            })
+                        # Parse items as fields
+                        for item in subsection.get("items", []):
+                            field = HeadingBasedParser._parse_field(item)
+                            if field["type"] == "button":
+                                screen["actions"].append({
+                                    "button": field["name"],
+                                    "action": field["description"]
+                                })
+                            else:
+                                screen["fields"].append({
+                                    "name": field["name"],
+                                    "type": field["type"],
+                                    "required": field["required"],
+                                    "description": field["description"]
+                                })
 
-                    ba_doc["ekranlar"].append(screen)
+                        ba_doc["ekranlar"].append(screen)
+                else:
+                    # No subsections - section itself is a screen
+                    items = section.get("items", [])
+                    if items:
+                        screen = {
+                            "ekran_adi": section["heading"],
+                            "aciklama": section.get("content", ""),
+                            "fields": [],
+                            "actions": []
+                        }
+
+                        for item in items:
+                            field = HeadingBasedParser._parse_field(item)
+                            if field["type"] == "button":
+                                screen["actions"].append({
+                                    "button": field["name"],
+                                    "action": field["description"]
+                                })
+                            else:
+                                screen["fields"].append({
+                                    "name": field["name"],
+                                    "type": field["type"],
+                                    "required": field["required"],
+                                    "description": field["description"]
+                                })
+
+                        ba_doc["ekranlar"].append(screen)
 
             elif HeadingBasedParser._is_backend_section(section):
                 # This section contains backend/API operations
-                for subsection in section.get("subsections", []):
-                    # Look for API endpoint in content
-                    endpoint_info = HeadingBasedParser._extract_api_info(
-                        subsection.get("content", "")
-                    )
+                if section.get("subsections"):
+                    for subsection in section.get("subsections", []):
+                        # Look for API endpoint in content
+                        endpoint_info = HeadingBasedParser._extract_api_info(
+                            subsection.get("content", "")
+                        )
+
+                        ba_doc["backend_islemler"].append({
+                            "islem": subsection["heading"],
+                            "aciklama": subsection.get("content", ""),
+                            "endpoint": endpoint_info.get("endpoint", "/api/endpoint"),
+                            "method": endpoint_info.get("method", "POST")
+                        })
+                else:
+                    # No subsections - treat section itself as backend operation
+                    content = section.get("content", "")
+                    items = section.get("items", [])
+                    if items:
+                        content += "\n" + "\n".join(f"• {item}" for item in items)
+
+                    endpoint_info = HeadingBasedParser._extract_api_info(content)
 
                     ba_doc["backend_islemler"].append({
-                        "islem": subsection["heading"],
-                        "aciklama": subsection.get("content", ""),
+                        "islem": section["heading"],
+                        "aciklama": content.strip(),
                         "endpoint": endpoint_info.get("endpoint", "/api/endpoint"),
                         "method": endpoint_info.get("method", "POST")
                     })
 
             elif HeadingBasedParser._is_security_section(section):
                 # Security requirements
-                for subsection in section.get("subsections", []):
-                    ba_doc["guvenlik_gereksinimleri"].append({
-                        "gereksinim": subsection["heading"],
-                        "aciklama": subsection.get("content", "")
-                    })
+                if section.get("subsections"):
+                    # Has subsections - process each
+                    for subsection in section.get("subsections", []):
+                        ba_doc["guvenlik_gereksinimleri"].append({
+                            "gereksinim": subsection["heading"],
+                            "aciklama": subsection.get("content", "")
+                        })
+                else:
+                    # No subsections - treat section itself as a requirement
+                    items = section.get("items", [])
+                    if items:
+                        # Create requirement from section with its items
+                        aciklama = section.get("content", "")
+                        if items:
+                            aciklama += "\n" + "\n".join(f"• {item}" for item in items)
+                        ba_doc["guvenlik_gereksinimleri"].append({
+                            "gereksinim": section["heading"],
+                            "aciklama": aciklama.strip()
+                        })
+                    elif section.get("content"):
+                        # Just content, no items
+                        ba_doc["guvenlik_gereksinimleri"].append({
+                            "gereksinim": section["heading"],
+                            "aciklama": section.get("content", "")
+                        })
 
             elif HeadingBasedParser._is_test_section(section):
                 # Test scenarios
-                for subsection in section.get("subsections", []):
-                    ba_doc["test_senaryolari"].append({
-                        "senaryo": subsection["heading"],
-                        "adimlar": subsection.get("steps", [])
+                if section.get("subsections"):
+                    for subsection in section.get("subsections", []):
+                        ba_doc["test_senaryolari"].append({
+                            "senaryo": subsection["heading"],
+                            "adimlar": subsection.get("steps", [])
+                        })
+                else:
+                    # No subsections - treat section itself as a test scenario
+                    steps = section.get("steps", [])
+                    items = section.get("items", [])
+                    if steps or items:
+                        ba_doc["test_senaryolari"].append({
+                            "senaryo": section["heading"],
+                            "adimlar": steps if steps else items
+                        })
+
+            else:
+                # Unmatched section - treat as general requirement
+                # (fallback for sections that don't fit other categories)
+                items = section.get("items", [])
+                content = section.get("content", "")
+
+                if items or content:
+                    aciklama = content
+                    if items:
+                        if aciklama:
+                            aciklama += "\n"
+                        aciklama += "\n".join(f"• {item}" for item in items)
+
+                    ba_doc["guvenlik_gereksinimleri"].append({
+                        "gereksinim": section["heading"],
+                        "aciklama": aciklama.strip()
                     })
 
         return ba_doc
@@ -284,21 +407,87 @@ class HeadingBasedParser:
             "ekran", "screen", "ui", "interface", "page", "view", "form",
             "arayüz", "sayfa", "görünüm", "kullanıcı arayüz", "user interface"
         ]
-        return any(kw in heading for kw in keywords)
+
+        # Check heading
+        if any(kw in heading for kw in keywords):
+            return True
+
+        # Also check subsection headings and content
+        for subsection in section.get("subsections", []):
+            sub_heading = subsection["heading"].lower()
+            if any(kw in sub_heading for kw in keywords):
+                return True
+
+        # Check if items look like UI fields (contain field descriptors)
+        items = section.get("items", [])
+        if items:
+            field_indicators = ["field", "button", "input", "checkbox", "alanı", "butonu"]
+            item_text = " ".join(items).lower()
+            if any(indicator in item_text for indicator in field_indicators):
+                return True
+
+        return False
 
     @staticmethod
     def _is_backend_section(section: Dict) -> bool:
         """Check if section contains backend/API content"""
         heading = section["heading"].lower()
         keywords = ["backend", "api", "endpoint", "servis", "service", "işlem", "operation"]
-        return any(kw in heading for kw in keywords)
+
+        # Check heading
+        if any(kw in heading for kw in keywords):
+            return True
+
+        # Check content for API patterns (GET, POST, etc.)
+        content = section.get("content", "")
+        if re.search(r'\b(GET|POST|PUT|DELETE|PATCH)\s+/', content):
+            return True
+
+        # Check items for API patterns
+        items = section.get("items", [])
+        if items:
+            item_text = " ".join(items)
+            if re.search(r'\b(GET|POST|PUT|DELETE|PATCH)\s+/', item_text):
+                return True
+
+        # Check subsections
+        for subsection in section.get("subsections", []):
+            sub_content = subsection.get("content", "")
+            if re.search(r'\b(GET|POST|PUT|DELETE|PATCH)\s+/', sub_content):
+                return True
+
+        return False
 
     @staticmethod
     def _is_security_section(section: Dict) -> bool:
         """Check if section contains security requirements"""
         heading = section["heading"].lower()
-        keywords = ["güvenlik", "security", "auth", "permission", "access"]
-        return any(kw in heading for kw in keywords)
+        keywords = ["güvenlik", "security", "auth", "permission", "access", "teknik", "technical", "gereksinim", "requirement"]
+
+        # Check heading
+        if any(kw in heading for kw in keywords):
+            return True
+
+        # Check items content for security-related terms
+        items = section.get("items", [])
+        if items:
+            security_indicators = ["güvenlik", "security", "encryption", "hash", "token", "authentication", "şifreleme"]
+            item_text = " ".join(items).lower()
+            if any(indicator in item_text for indicator in security_indicators):
+                return True
+
+        # Check subsections
+        for subsection in section.get("subsections", []):
+            sub_heading = subsection["heading"].lower()
+            if any(kw in sub_heading for kw in keywords):
+                return True
+            sub_items = subsection.get("items", [])
+            if sub_items:
+                sub_text = " ".join(sub_items).lower()
+                if any(indicator in sub_text for indicator in security_indicators):
+                    return True
+
+        return False
 
     @staticmethod
     def _is_test_section(section: Dict) -> bool:

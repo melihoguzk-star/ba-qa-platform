@@ -300,8 +300,9 @@ if step == 1:
 
                             if not has_content:
                                 st.warning("⚠️ Rule-based parser couldn't find structured content. Try:\n"
-                                         "1. Using clear section headings (Ekranlar, Backend, etc.)\n"
-                                         "2. Switching to AI-powered parsing")
+                                         "1. Using clear headings that end with ':' (e.g., 'Screens:', 'API:')\n"
+                                         "2. Organizing content with bullet points under headings\n"
+                                         "3. Switching to AI-powered parsing for unstructured text")
                             else:
                                 st.success("✅ Document parsed successfully with rule-based parser!")
 
