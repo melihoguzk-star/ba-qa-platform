@@ -207,6 +207,13 @@ def render_custom_sidebar(active_page="home"):
             "section": "tools"
         },
         {
+            "key": "smart_matching",
+            "icon": "🔍",
+            "label": "Smart Matching",
+            "url": "/Smart_Matching",
+            "section": "tools"
+        },
+        {
             "key": "brd_pipeline",
             "icon": "🚀",
             "label": "BRD Pipeline",
@@ -282,6 +289,9 @@ def render_custom_sidebar(active_page="home"):
                 elif page["key"] == "import_merge":
                     if st.button(f"{page['icon']} {page['label']}", key=f"nav_{page['key']}", use_container_width=True):
                         st.switch_page("pages/11_Import_Merge.py")
+                elif page["key"] == "smart_matching":
+                    if st.button(f"{page['icon']} {page['label']}", key=f"nav_{page['key']}", use_container_width=True):
+                        st.switch_page("pages/12_Smart_Matching.py")
 
         st.markdown('</div>', unsafe_allow_html=True)
 
