@@ -66,14 +66,19 @@ Be concise and focus on information that would help find relevant existing docum
     def analyze_task(
         self,
         task_description: str,
-        jira_key: Optional[str] = None
+        jira_key: Optional[str] = None,
+        force_ai: bool = False
     ) -> Dict:
         """
-        Analyze a task description and extract structured features.
+        Analyze a task description using tiered approach.
+
+        Tier 1: Rule-based analysis (fast, free)
+        Tier 2: AI analysis (slower, costs money)
 
         Args:
             task_description: The task description to analyze
             jira_key: Optional JIRA key for context
+            force_ai: Force AI analysis even for simple queries
 
         Returns:
             Dict containing:
@@ -84,37 +89,57 @@ Be concise and focus on information that would help find relevant existing docum
                 - doc_type_relevance: Relevance scores for BA/TA/TC
                 - complexity: Task complexity (low/medium/high)
                 - search_query: Optimized search query string
+                - analysis_method: 'rule_based' or 'ai'
         """
-        # Build user message
-        user_message = f"Task Description:\n{task_description}"
-        if jira_key:
-            user_message = f"JIRA Key: {jira_key}\n\n{user_message}"
+        # Tier 1: Try rule-based analysis first
+        from pipeline.rule_based_analyzer import get_rule_based_analyzer
 
-        # Call AI with prompt caching enabled
-        result = call_sonnet(
-            system_prompt=self.ANALYSIS_PROMPT,
-            user_content=user_message,
-            api_key=self.api_key,
-            model=self.model,
-            use_caching=True  # Enable prompt caching for cost optimization
-        )
+        rule_analyzer = get_rule_based_analyzer()
+        rule_analysis, confidence = rule_analyzer.analyze_task(task_description)
 
-        # call_sonnet returns a dict with 'content' key
-        response = result.get("content", "{}")
+        # Decision: Use rule-based if confidence is high (>0.7) and AI not forced
+        # High confidence means: simple query, clear intent, low complexity
+        use_rule_based = confidence > 0.7 and not force_ai
 
-        # Parse JSON response
+        if use_rule_based or not self.api_key:
+            # Use rule-based result
+            print(f"ℹ️  Using rule-based analysis (confidence: {confidence:.2f})")
+            return rule_analysis
+
+        # Tier 2: Use AI for complex queries or low confidence
+        print(f"🤖 Using AI analysis (complexity: {rule_analysis['complexity']}, confidence: {confidence:.2f})")
+
         try:
+            # Build user message
+            user_message = f"Task Description:\n{task_description}"
+            if jira_key:
+                user_message = f"JIRA Key: {jira_key}\n\n{user_message}"
+
+            # Call AI with prompt caching enabled
+            result = call_sonnet(
+                system_prompt=self.ANALYSIS_PROMPT,
+                user_content=user_message,
+                api_key=self.api_key,
+                model=self.model,
+                use_caching=True  # Enable prompt caching for cost optimization
+            )
+
+            # call_sonnet returns a dict with 'content' key
+            response = result.get("content", "{}")
+
+            # Parse JSON response
             analysis = json.loads(response)
 
             # Validate and normalize the response
             analysis = self._validate_analysis(analysis)
+            analysis['analysis_method'] = 'ai'
 
             return analysis
 
-        except json.JSONDecodeError as e:
-            # Fallback: extract basic features
-            print(f"Warning: Failed to parse AI response as JSON: {e}")
-            return self._fallback_analysis(task_description)
+        except (json.JSONDecodeError, Exception) as e:
+            # Fallback to rule-based on AI failure
+            print(f"⚠️  AI analysis failed: {e}, using rule-based fallback")
+            return rule_analysis
 
     def _validate_analysis(self, analysis: Dict) -> Dict:
         """
