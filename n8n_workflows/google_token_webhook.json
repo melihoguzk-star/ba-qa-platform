@@ -1,0 +1,85 @@
+{
+  "name": "Google OAuth Token Provider for BA-QA Platform",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "google-token",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 300],
+      "notes": "Receives request for OAuth token"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get OAuth token from Google Drive credential\n// n8n automatically provides the token via credential\n\nconst credentials = await this.getCredentials('googleDriveOAuth2Api');\n\nif (!credentials || !credentials.oauthTokenData) {\n  throw new Error('No Google Drive OAuth credentials configured');\n}\n\nconst tokenData = credentials.oauthTokenData;\n\nreturn {\n  token: tokenData.access_token,\n  token_type: tokenData.token_type || 'Bearer',\n  expires_in: tokenData.expires_in,\n  scope: tokenData.scope\n};"
+      },
+      "id": "get-token",
+      "name": "Get OAuth Token",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [500, 300],
+      "notes": "Extract OAuth token from credentials",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "your-google-oauth-credential-id",
+          "name": "Google Drive OAuth2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}"
+      },
+      "id": "webhook-response",
+      "name": "Respond with Token",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [750, 300],
+      "notes": "Return token to caller"
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Get OAuth Token",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get OAuth Token": {
+      "main": [
+        [
+          {
+            "node": "Respond with Token",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [
+    "oauth",
+    "google-drive",
+    "authentication"
+  ],
+  "triggerCount": 0,
+  "updatedAt": "2026-02-16T10:00:00.000Z",
+  "versionId": "1",
+  "notes": "Simple webhook that returns Google OAuth token.\nSimilar to BA/TC evaluation webhook pattern.\nApp uses token to make direct Google Drive API calls."
+}

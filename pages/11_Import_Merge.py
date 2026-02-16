@@ -19,7 +19,8 @@ from data.database import (
 from pipeline.document_matching import find_similar
 from pipeline.document_adaptation import DocumentAdapter
 from pipeline.document_parser_v2 import parse_text_to_json
-from pipeline.document_reader import read_docx, read_document_from_drive, export_google_doc_as_text
+from pipeline.document_reader import read_docx, read_document_from_drive, export_google_doc_as_text, extract_google_drive_file_id
+from pipeline.google_drive_client import GoogleDriveClient
 from agents.ai_client import call_gemini
 
 st.set_page_config(page_title="Import & Merge", page_icon="📥", layout="wide")
@@ -762,40 +763,33 @@ Return ONLY valid JSON."""
 
     elif import_method == "🔗 Google Drive (n8n)":
         st.markdown("### Import from Google Drive (via n8n Webhook)")
-        st.info("💡 For private/company documents - Uses n8n webhook with OAuth authentication")
+        st.info("💡 For private/company documents - Uses n8n webhook for OAuth token (same pattern as BA/TC evaluation)")
 
         st.markdown("""
         **Benefits:**
         - ✅ No public sharing required
         - ✅ Works with company/private documents
         - ✅ OAuth authentication via n8n
-        - ✅ Secure access control
+        - ✅ Same pattern as BA/TC evaluation stages
+        - ✅ Token-based, direct API access
 
-        **Setup:** See `N8N_GOOGLE_DOCS_SETUP.md` for configuration
+        **Your n8n Webhooks:**
+        - Google Docs: https://sh0tdie.app.n8n.cloud/workflow/AzlnBnFIffKIN79P_WkY7
+        - Google Sheets: https://sh0tdie.app.n8n.cloud/workflow/dqJS78_cIKH0mHLgizlNj
         """)
 
-        # Get webhook URL from settings
-        n8n_webhook_url = st.session_state.get("n8n_webhook_url") or os.environ.get("N8N_GOOGLE_DOCS_WEBHOOK_URL", "")
+        # Get webhook URLs from settings or environment
+        docs_webhook = st.session_state.get("n8n_docs_webhook") or os.environ.get("N8N_GOOGLE_DOCS_WEBHOOK", "https://sh0tdie.app.n8n.cloud/workflow/AzlnBnFIffKIN79P_WkY7")
+        sheets_webhook = st.session_state.get("n8n_sheets_webhook") or os.environ.get("N8N_GOOGLE_SHEETS_WEBHOOK", "https://sh0tdie.app.n8n.cloud/workflow/dqJS78_cIKH0mHLgizlNj")
 
-        if not n8n_webhook_url:
-            st.warning("⚠️ n8n webhook URL not configured")
-
-            webhook_url_input = st.text_input(
-                "n8n Webhook URL",
-                placeholder="https://n8n.example.com/webhook/read-google-doc",
-                help="Enter your n8n webhook URL for Google Docs reading"
-            )
-
-            if webhook_url_input:
-                if st.button("💾 Save Webhook URL"):
-                    st.session_state["n8n_webhook_url"] = webhook_url_input
-                    st.success("✅ Webhook URL saved to session")
-                    st.rerun()
-        else:
-            st.success(f"✅ Using webhook: {n8n_webhook_url}")
-            if st.button("🔄 Change Webhook URL"):
-                st.session_state["n8n_webhook_url"] = ""
-                st.rerun()
+        # Show configured webhooks
+        with st.expander("⚙️ Webhook Configuration", expanded=False):
+            col1, col2 = st.columns(2)
+            with col1:
+                st.text_input("Google Docs Webhook", value=docs_webhook, disabled=True, key="show_docs_webhook")
+            with col2:
+                st.text_input("Google Sheets Webhook", value=sheets_webhook, disabled=True, key="show_sheets_webhook")
+            st.caption("💡 These URLs are configured in your n8n instance and return OAuth tokens")
 
         drive_url = st.text_input(
             "Google Docs/Drive URL",
@@ -825,9 +819,7 @@ Return ONLY valid JSON."""
                 else:
                     try:
                         # Extract document ID from URL
-                        with st.spinner("📤 Extracting document ID..."):
-                            from pipeline.document_reader import extract_google_drive_file_id
-
+                        with st.spinner("📤 Analyzing URL..."):
                             doc_id = extract_google_drive_file_id(drive_url)
                             if not doc_id:
                                 st.error("❌ Could not extract document ID from URL")
@@ -835,37 +827,17 @@ Return ONLY valid JSON."""
 
                         st.info(f"📄 Document ID: {doc_id}")
 
-                        # Call n8n webhook
-                        with st.spinner("🔗 Calling n8n webhook..."):
-                            import requests
-
-                            webhook_data = {
-                                "documentId": doc_id
-                            }
-
-                            # Add API key if configured
-                            headers = {"Content-Type": "application/json"}
-                            webhook_api_key = st.session_state.get("n8n_api_key") or os.environ.get("N8N_WEBHOOK_API_KEY")
-                            if webhook_api_key:
-                                headers["X-API-Key"] = webhook_api_key
-
-                            response = requests.post(
-                                n8n_webhook_url,
-                                json=webhook_data,
-                                headers=headers,
-                                timeout=60
+                        # Create Google Drive client with n8n webhooks
+                        with st.spinner("🔗 Getting OAuth token from n8n..."):
+                            client = GoogleDriveClient(
+                                n8n_docs_webhook=docs_webhook,
+                                n8n_sheets_webhook=sheets_webhook
                             )
-                            response.raise_for_status()
-                            result = response.json()
 
-                        # Check response
-                        if not result.get('success'):
-                            error_msg = result.get('error', 'Unknown error')
-                            st.error(f"❌ n8n webhook error: {error_msg}")
-                            st.stop()
-
-                        extracted_text = result.get('content', '')
-                        char_count = result.get('characterCount', len(extracted_text))
+                        # Download document using OAuth token
+                        with st.spinner("☁️ Downloading document with OAuth..."):
+                            extracted_text, doc_type_detected = client.read_document_from_url(drive_url)
+                            char_count = len(extracted_text)
 
                         st.success(f"✅ Downloaded via n8n webhook: {char_count} characters")
 
