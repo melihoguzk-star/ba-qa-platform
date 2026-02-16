@@ -18,6 +18,7 @@ from data.database import (
 )
 from pipeline.document_matching import find_similar
 from pipeline.document_adaptation import DocumentAdapter
+from pipeline.document_parser import parse_text_to_json
 from agents.ai_client import call_gemini
 
 st.set_page_config(page_title="Import & Merge", page_icon="📥", layout="wide")
@@ -247,13 +248,24 @@ if step == 1:
 
     elif import_method == "📝 Paste Text (AI Parse)":
         st.markdown("### Paste Text Document")
-        st.info("💡 AI will parse your text into structured format")
+
+        # Let user choose parsing method
+        parse_method = st.radio(
+            "Choose parsing method:",
+            ["⚡ Rule-based (Fast, Free)", "🤖 AI-powered (Flexible, Requires API Key)"],
+            help="Rule-based parser works best with structured documents with clear headings"
+        )
+
+        if parse_method.startswith("⚡"):
+            st.info("💡 Rule-based parser analyzes headings and structure - works best with organized documents")
+        else:
+            st.info("💡 AI parser understands context and handles unstructured text better")
 
         text_input = st.text_area(
             "Document Text",
             height=300,
-            placeholder="Paste your BA/TA/TC document here...",
-            help="Paste unstructured text, AI will convert to JSON"
+            placeholder="Paste your BA/TA/TC document here...\n\nFor best results with rule-based parsing, use clear headings:\n- Ekranlar / Screens\n- Backend / API\n- Güvenlik / Security\n- Test Senaryoları / Test Scenarios",
+            help="Paste text content from Word, Confluence, or any source"
         )
 
         col1, col2 = st.columns(2)
@@ -262,19 +274,77 @@ if step == 1:
         with col2:
             title = st.text_input("Document Title*", placeholder="e.g., Face ID Login Analysis", key="text_title")
 
-        if st.button("🤖 Parse with AI", type="primary"):
+        # Choose button based on parse method
+        if parse_method.startswith("⚡"):
+            parse_button_label = "⚡ Parse with Rules"
+        else:
+            parse_button_label = "🤖 Parse with AI"
+
+        if st.button(parse_button_label, type="primary"):
             if not text_input or not title:
                 st.error("❌ Please provide both text and title")
             else:
-                # Check API key
-                gemini_key = st.session_state.get("gemini_key") or os.environ.get("GEMINI_API_KEY", "")
-                if not gemini_key:
-                    st.error("❌ Gemini API key not found. Please set it in Settings.")
-                else:
-                    with st.spinner("🤖 AI is parsing your document..."):
+                # RULE-BASED PARSING
+                if parse_method.startswith("⚡"):
+                    with st.spinner("⚡ Analyzing document structure..."):
                         try:
-                            # Build parsing prompt based on document type
-                            if doc_type == "BA":
+                            # Use rule-based parser
+                            parsed_json = parse_text_to_json(text_input, doc_type.lower())
+
+                            # Check if parsing produced meaningful results
+                            has_content = False
+                            for key, value in parsed_json.items():
+                                if isinstance(value, list) and len(value) > 0:
+                                    has_content = True
+                                    break
+
+                            if not has_content:
+                                st.warning("⚠️ Rule-based parser couldn't find structured content. Try:\n"
+                                         "1. Using clear section headings (Ekranlar, Backend, etc.)\n"
+                                         "2. Switching to AI-powered parsing")
+                            else:
+                                st.success("✅ Document parsed successfully with rule-based parser!")
+
+                                # Show preview
+                                with st.expander("📋 Parsed JSON Preview", expanded=True):
+                                    st.json(parsed_json)
+
+                                # Show parsing stats
+                                stats = []
+                                for key, value in parsed_json.items():
+                                    if isinstance(value, list):
+                                        stats.append(f"{key}: {len(value)} items")
+
+                                if stats:
+                                    st.caption("📊 " + " | ".join(stats))
+
+                                # Save to session state
+                                st.session_state['imported_doc'] = {
+                                    'title': title,
+                                    'doc_type': doc_type.lower(),
+                                    'content_json': parsed_json,
+                                    'import_method': 'rule_parse'
+                                }
+
+                                st.session_state['import_step'] = 2
+                                st.rerun()
+
+                        except Exception as e:
+                            st.error(f"❌ Error parsing document: {str(e)}")
+                            st.info("💡 Try AI-powered parsing for better flexibility")
+
+                # AI PARSING
+                else:
+                    # Check API key
+                    gemini_key = st.session_state.get("gemini_key") or os.environ.get("GEMINI_API_KEY", "")
+                    if not gemini_key:
+                        st.error("❌ Gemini API key not found. Please set it in Settings.")
+                        st.info("💡 Or try rule-based parsing (free, no API key needed)")
+                    else:
+                        with st.spinner("🤖 AI is parsing your document..."):
+                            try:
+                                # Build parsing prompt based on document type
+                                if doc_type == "BA":
                                 system_prompt = """You are a Business Analyst documentation expert.
 Parse the given text and convert it into a structured BA (Business Analysis) JSON format.
 
@@ -312,8 +382,8 @@ The JSON structure should follow this schema:
 
 Return ONLY valid JSON, no markdown formatting or explanations."""
 
-                            elif doc_type == "TA":
-                                system_prompt = """You are a Technical Architect documentation expert.
+                                elif doc_type == "TA":
+                                    system_prompt = """You are a Technical Architect documentation expert.
 Parse the given text and convert it into a structured TA (Technical Analysis) JSON format.
 
 The JSON structure should follow this schema:
@@ -343,8 +413,8 @@ The JSON structure should follow this schema:
 
 Return ONLY valid JSON, no markdown formatting or explanations."""
 
-                            else:  # TC
-                                system_prompt = """You are a QA Test Case documentation expert.
+                                else:  # TC
+                                    system_prompt = """You are a QA Test Case documentation expert.
 Parse the given text and convert it into a structured TC (Test Cases) JSON format.
 
 The JSON structure should follow this schema:
@@ -369,42 +439,43 @@ The JSON structure should follow this schema:
 
 Return ONLY valid JSON, no markdown formatting or explanations."""
 
-                            # Call AI
-                            result = call_gemini(
-                                system_prompt=system_prompt,
-                                user_content=f"Parse this {doc_type} document:\n\n{text_input}",
-                                api_key=gemini_key,
-                                max_tokens=8000
-                            )
+                                # Call AI
+                                result = call_gemini(
+                                    system_prompt=system_prompt,
+                                    user_content=f"Parse this {doc_type} document:\n\n{text_input}",
+                                    api_key=gemini_key,
+                                    max_tokens=8000
+                                )
 
-                            # Check if we got valid JSON
-                            if result.get('error'):
-                                st.error(f"❌ AI parsing error: {result['error']}")
-                            elif result.get('content'):
-                                parsed_json = result['content']
+                                # Check if we got valid JSON
+                                if result.get('error'):
+                                    st.error(f"❌ AI parsing error: {result['error']}")
+                                elif result.get('content'):
+                                    parsed_json = result['content']
 
-                                st.success("✅ Document parsed successfully!")
+                                    st.success("✅ Document parsed successfully with AI!")
 
-                                # Show preview
-                                with st.expander("📋 Parsed JSON Preview", expanded=True):
-                                    st.json(parsed_json)
+                                    # Show preview
+                                    with st.expander("📋 Parsed JSON Preview", expanded=True):
+                                        st.json(parsed_json)
 
-                                # Save to session state
-                                st.session_state['imported_doc'] = {
-                                    'title': title,
-                                    'doc_type': doc_type.lower(),
-                                    'content_json': parsed_json,
-                                    'import_method': 'ai_parse'
-                                }
+                                    # Save to session state
+                                    st.session_state['imported_doc'] = {
+                                        'title': title,
+                                        'doc_type': doc_type.lower(),
+                                        'content_json': parsed_json,
+                                        'import_method': 'ai_parse'
+                                    }
 
-                                st.session_state['import_step'] = 2
-                                st.rerun()
-                            else:
-                                st.error("❌ AI returned empty response")
+                                    st.session_state['import_step'] = 2
+                                    st.rerun()
+                                else:
+                                    st.error("❌ AI returned empty response")
 
-                        except Exception as e:
-                            st.error(f"❌ Error parsing document: {str(e)}")
-                            st.exception(e)
+                            except Exception as e:
+                                st.error(f"❌ Error parsing document: {str(e)}")
+                                st.exception(e)
+                                st.info("💡 Try rule-based parsing as alternative")
 
 # ═══════════════════════════════════════════════════════════════
 # STEP 2: DETECT SIMILAR DOCUMENTS
