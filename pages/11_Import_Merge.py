@@ -345,7 +345,7 @@ if step == 1:
                             try:
                                 # Build parsing prompt based on document type
                                 if doc_type == "BA":
-                                system_prompt = """You are a Business Analyst documentation expert.
+                                    system_prompt = """You are a Business Analyst documentation expert.
 Parse the given text and convert it into a structured BA (Business Analysis) JSON format.
 
 The JSON structure should follow this schema:
