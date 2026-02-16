@@ -72,7 +72,9 @@ class SmartMatcher:
         )
 
         # Step 3: Calculate confidence scores and build match results
-        matches = []
+        # Use dictionary to deduplicate by document_id (keep best chunk per document)
+        seen_documents = {}
+
         for result in search_results:
             # Calculate confidence score
             confidence_score, breakdown = self._calculate_confidence(
@@ -85,9 +87,11 @@ class SmartMatcher:
             if confidence_score < self.confidence_threshold:
                 continue
 
+            doc_id = result["document_id"]
+
             # Build match result
             match = {
-                "document_id": result["document_id"],
+                "document_id": doc_id,
                 "title": result.get("title", "Unknown"),
                 "doc_type": result.get("doc_type", "unknown"),
                 "version": result.get("version", ""),
@@ -100,25 +104,30 @@ class SmartMatcher:
                 "keyword_score": result.get("keyword_score", 0.0)
             }
 
-            # Generate explanation and suggestion using match_explainer
-            reasoning = self.match_explainer.explain_match(
-                task_description=search_query,
-                matched_doc=match,
-                scores=breakdown
-            )
+            # Deduplication: Keep only the best chunk per document
+            if doc_id not in seen_documents or confidence_score > seen_documents[doc_id]["confidence"]:
+                # Generate explanation and suggestion only for the best chunk
+                reasoning = self.match_explainer.explain_match(
+                    task_description=search_query,
+                    matched_doc=match,
+                    scores=breakdown
+                )
 
-            suggestion_result = self.match_explainer.suggest_action(
-                task_features=task_features,
-                matched_doc=match,
-                confidence=confidence_score
-            )
+                suggestion_result = self.match_explainer.suggest_action(
+                    task_features=task_features,
+                    matched_doc=match,
+                    confidence=confidence_score
+                )
 
-            # Add reasoning and suggestion to match
-            match["reasoning"] = reasoning
-            match["suggestion"] = suggestion_result["suggestion"]
-            match["suggestion_reasoning"] = suggestion_result["reasoning"]
+                # Add reasoning and suggestion to match
+                match["reasoning"] = reasoning
+                match["suggestion"] = suggestion_result["suggestion"]
+                match["suggestion_reasoning"] = suggestion_result["reasoning"]
 
-            matches.append(match)
+                seen_documents[doc_id] = match
+
+        # Convert deduplicated dictionary to list
+        matches = list(seen_documents.values())
 
         # Step 4: Sort by confidence and return top K
         matches.sort(key=lambda x: x["confidence"], reverse=True)

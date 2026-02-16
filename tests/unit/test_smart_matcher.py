@@ -480,3 +480,89 @@ class TestSmartMatcherEdgeCases:
         # Should propagate error
         with pytest.raises(Exception):
             self.matcher.find_matches_for_task("Test task")
+
+    @patch('pipeline.smart_matcher.hybrid_search')
+    @patch('pipeline.smart_matcher.TaskAnalyzer.analyze_task')
+    @patch('pipeline.smart_matcher.MatchExplainer.explain_match')
+    @patch('pipeline.smart_matcher.MatchExplainer.suggest_action')
+    def test_document_deduplication(
+        self,
+        mock_suggest,
+        mock_explain,
+        mock_analyze,
+        mock_search
+    ):
+        """Test that duplicate documents (multiple chunks) are deduplicated."""
+        # Mock task analysis
+        mock_analyze.return_value = {
+            'keywords': ['login'],
+            'doc_type_relevance': {'ba': 0.9, 'ta': 0.5, 'tc': 0.3},
+            'search_query': 'login authentication'
+        }
+
+        # Mock explanation and suggestion
+        mock_explain.return_value = "Match explanation"
+        mock_suggest.return_value = {
+            'suggestion': 'UPDATE_EXISTING',
+            'reasoning': 'Good match'
+        }
+
+        # Mock search results with DUPLICATE document_id (3 chunks from same doc)
+        mock_search.return_value = [
+            {
+                'document_id': 1,  # Same document
+                'title': 'Login BA',
+                'doc_type': 'ba',
+                'version': 'v1',
+                'chunk_text': 'Login Screen - User authentication with password',
+                'semantic_score': 0.9,
+                'keyword_score': 0.8,
+                'combined_score': 0.85
+            },
+            {
+                'document_id': 1,  # DUPLICATE - Same document, different chunk
+                'title': 'Login BA',
+                'doc_type': 'ba',
+                'version': 'v1',
+                'chunk_text': 'Dashboard - After successful login redirect',
+                'semantic_score': 0.6,  # Lower score
+                'keyword_score': 0.5,
+                'combined_score': 0.55
+            },
+            {
+                'document_id': 1,  # DUPLICATE - Same document, another chunk
+                'title': 'Login BA',
+                'doc_type': 'ba',
+                'version': 'v1',
+                'chunk_text': 'Settings Screen - User preferences',
+                'semantic_score': 0.4,  # Even lower score
+                'keyword_score': 0.3,
+                'combined_score': 0.35
+            },
+            {
+                'document_id': 2,  # Different document
+                'title': 'Payment BA',
+                'doc_type': 'ba',
+                'version': 'v1',
+                'chunk_text': 'Payment processing flow',
+                'semantic_score': 0.7,
+                'keyword_score': 0.6,
+                'combined_score': 0.65
+            }
+        ]
+
+        # Find matches
+        matches = self.matcher.find_matches_for_task("Add login feature")
+
+        # Should return only 2 documents (not 4), deduplicated by document_id
+        assert len(matches) == 2
+
+        # First match should be document 1 (higher overall score)
+        assert matches[0]['document_id'] == 1
+        # Should keep the BEST chunk (highest confidence) from document 1
+        assert 'Login Screen' in matches[0]['section_matched']  # Best chunk text
+        assert 'Dashboard' not in matches[0]['section_matched']  # Not second chunk
+        assert 'Settings' not in matches[0]['section_matched']  # Not third chunk
+
+        # Second match should be document 2
+        assert matches[1]['document_id'] == 2
