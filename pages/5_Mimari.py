@@ -405,28 +405,32 @@ st.markdown("""
 
 # ── Quick Stats ──
 st.markdown("""
-<div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 24px;">
-    <div style="background: #1a2236; border: 1px solid #2a3654; border-radius: 12px; padding: 18px; text-align: center;">
+<div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 14px; margin-bottom: 24px;">
+    <div style="background: linear-gradient(135deg, rgba(59,130,246,0.1), rgba(59,130,246,0.05)); border: 1px solid rgba(59,130,246,0.3); border-radius: 12px; padding: 18px; text-align: center;">
         <div style="font-family: 'Space Grotesk', sans-serif; font-size: 32px; font-weight: 700; color: #3b82f6; margin-bottom: 4px;">15</div>
         <div style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #64748b; text-transform: uppercase;">AI Agents</div>
     </div>
-    <div style="background: #1a2236; border: 1px solid #2a3654; border-radius: 12px; padding: 18px; text-align: center;">
-        <div style="font-family: 'Space Grotesk', sans-serif; font-size: 32px; font-weight: 700; color: #8b5cf6; margin-bottom: 4px;">6</div>
+    <div style="background: linear-gradient(135deg, rgba(139,92,246,0.1), rgba(139,92,246,0.05)); border: 1px solid rgba(139,92,246,0.3); border-radius: 12px; padding: 18px; text-align: center;">
+        <div style="font-family: 'Space Grotesk', sans-serif; font-size: 32px; font-weight: 700; color: #8b5cf6; margin-bottom: 4px;">8</div>
         <div style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #64748b; text-transform: uppercase;">Entegrasyonlar</div>
     </div>
-    <div style="background: #1a2236; border: 1px solid #2a3654; border-radius: 12px; padding: 18px; text-align: center;">
-        <div style="font-family: 'Space Grotesk', sans-serif; font-size: 32px; font-weight: 700; color: #10b981; margin-bottom: 4px;">9</div>
+    <div style="background: linear-gradient(135deg, rgba(16,185,129,0.1), rgba(16,185,129,0.05)); border: 1px solid rgba(16,185,129,0.3); border-radius: 12px; padding: 18px; text-align: center;">
+        <div style="font-family: 'Space Grotesk', sans-serif; font-size: 32px; font-weight: 700; color: #10b981; margin-bottom: 4px;">13</div>
         <div style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #64748b; text-transform: uppercase;">Sayfalar</div>
     </div>
-    <div style="background: #1a2236; border: 1px solid #2a3654; border-radius: 12px; padding: 18px; text-align: center;">
+    <div style="background: linear-gradient(135deg, rgba(245,158,11,0.1), rgba(245,158,11,0.05)); border: 1px solid rgba(245,158,11,0.3); border-radius: 12px; padding: 18px; text-align: center;">
         <div style="font-family: 'Space Grotesk', sans-serif; font-size: 32px; font-weight: 700; color: #f59e0b; margin-bottom: 4px;">4</div>
         <div style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #64748b; text-transform: uppercase;">Pipeline</div>
+    </div>
+    <div style="background: linear-gradient(135deg, rgba(6,182,212,0.1), rgba(6,182,212,0.05)); border: 1px solid rgba(6,182,212,0.3); border-radius: 12px; padding: 18px; text-align: center;">
+        <div style="font-family: 'Space Grotesk', sans-serif; font-size: 32px; font-weight: 700; color: #06b6d4; margin-bottom: 4px;">571</div>
+        <div style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #64748b; text-transform: uppercase;">Doc Chunks</div>
     </div>
 </div>
 """, unsafe_allow_html=True)
 
 # ── Tab Navigation ──
-tab1, tab2, tab3, tab4 = st.tabs(["🤖 AI Agents", "🔗 Entegrasyonlar", "🔄 Pipeline Akışları", "⚙️ Tech Stack"])
+tab1, tab2, tab3, tab4, tab5 = st.tabs(["🤖 AI Agents", "📚 Document Intelligence", "🔗 Entegrasyonlar", "🔄 Pipeline Akışları", "⚙️ Tech Stack"])
 
 # ═══════════════════════════════════════════════════════════
 # TAB 1: AI AGENTS
@@ -808,9 +812,274 @@ with tab1:
         """, unsafe_allow_html=True)
 
 # ═══════════════════════════════════════════════════════════
-# TAB 2: INTEGRATIONS
+# TAB 2: DOCUMENT INTELLIGENCE (Phase 2)
 # ═══════════════════════════════════════════════════════════
 with tab2:
+    st.markdown('<div style="font-family: \'Space Grotesk\', sans-serif; font-size: 22px; font-weight: 600; color: #f1f5f9; margin-bottom: 20px;">📚 Document Intelligence System (Phase 2)</div>', unsafe_allow_html=True)
+
+    st.markdown("""
+    <div style="background: linear-gradient(135deg, rgba(6,182,212,0.1), rgba(16,185,129,0.1)); border: 1px solid rgba(6,182,212,0.3); border-radius: 12px; padding: 20px; margin-bottom: 24px;">
+        <div style="font-size: 14px; color: #cbd5e1; line-height: 1.7;">
+            <strong style="color: #06b6d4;">🚀 Phase 2 Özellikleri:</strong> Doküman depolama, akıllı arama, AI-destekli eşleştirme ve doküman yönetimi özellikleri içeren kapsamlı bir doküman repository sistemi.
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # 1. Document Repository
+    st.markdown("### 📁 Document Repository")
+    st.caption("Merkezi doküman depolama ve yönetim sistemi")
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+        st.markdown("""
+        <div class="agent-detail-card blue">
+            <div class="agent-name">📚 Document Library</div>
+            <div class="agent-role">Centralized Document Management</div>
+            <div class="agent-description">
+                Tüm BA, TA ve TC dokümanlarını merkezi bir yerde depolar, versiyonlar ve kategorize eder.
+            </div>
+            <div class="agent-instructions">
+                <div class="agent-instructions-title">Özellikler</div>
+                <div class="agent-instruction-item">Multi-tab arayüz (Dashboard, Upload, Search, Edit, Analytics)</div>
+                <div class="agent-instruction-item">Doküman tipi bazlı filtreleme (BA/TA/TC)</div>
+                <div class="agent-instruction-item">Proje ve JIRA entegrasyonu</div>
+                <div class="agent-instruction-item">Versiyon yönetimi ve tarihçe</div>
+                <div class="agent-instruction-item">Google Docs/Sheets import</div>
+                <div class="agent-instruction-item">Doküman önizleme ve indirme</div>
+            </div>
+            <div style="margin-top: 12px; padding: 8px 12px; background: rgba(59,130,246,0.1); border-radius: 6px; border-left: 3px solid #3b82f6;">
+                <div style="font-size: 11px; color: #94a3b8; line-height: 1.6;">
+                    <strong style="color: #3b82f6;">Veri Modeli:</strong><br>
+                    • documents table: metadata, versioning, JIRA linking<br>
+                    • document_content table: full text + enriched chunks<br>
+                    • Automatic chunking with field extraction
+                </div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    with col2:
+        st.markdown("""
+        <div class="agent-detail-card green">
+            <div class="agent-name">🔀 Import & Merge</div>
+            <div class="agent-role">Batch Operations & Deduplication</div>
+            <div class="agent-description">
+                Google Drive klasörlerinden toplu doküman import eder, duplicate detection yapar ve mevcut dokümanları günceller.
+            </div>
+            <div class="agent-instructions">
+                <div class="agent-instructions-title">Görevler</div>
+                <div class="agent-instruction-item">Folder ID ile batch import</div>
+                <div class="agent-instruction-item">Akıllı duplicate detection (başlık, proje, tip)</div>
+                <div class="agent-instruction-item">Merge stratejileri (yeni versiyon/üzerine yaz/atla)</div>
+                <div class="agent-instruction-item">Import sonuç raporları</div>
+                <div class="agent-instruction-item">ChromaDB otomatik reindexing</div>
+            </div>
+            <div style="margin-top: 12px; padding: 8px 12px; background: rgba(16,185,129,0.1); border-radius: 6px; border-left: 3px solid #10b981;">
+                <div style="font-size: 11px; color: #94a3b8; line-height: 1.6;">
+                    <strong style="color: #10b981;">n8n Entegrasyonu:</strong><br>
+                    • Google Drive folder listing webhook<br>
+                    • Automated content fetch<br>
+                    • Batch processing support
+                </div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    st.markdown("---")
+
+    # 2. Hybrid Search System
+    st.markdown("### 🔍 Hybrid Search System")
+    st.caption("Semantic + Keyword dual search engine")
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+        st.markdown("""
+        <div class="agent-detail-card purple">
+            <div class="agent-name">🧠 ChromaDB Vector Store</div>
+            <div class="agent-role">Semantic Embedding & Similarity Search</div>
+            <div class="agent-description">
+                Claude 3.5 Sonnet embeddings kullanarak dokümanları vektör uzayında depolar ve semantic similarity araması yapar.
+            </div>
+            <div class="agent-instructions">
+                <div class="agent-instructions-title">Teknik Detaylar</div>
+                <div class="agent-instruction-item">Embedding Model: voyage-3 (1024 dimensions)</div>
+                <div class="agent-instruction-item">Collection: ba_qa_documents (571 chunks)</div>
+                <div class="agent-instruction-item">Chunking Strategy: doc-type specific</div>
+                <div class="agent-instruction-item">Metadata: doc_id, type, project, JIRA key</div>
+                <div class="agent-instruction-item">Cosine similarity ranking</div>
+            </div>
+            <div style="margin-top: 12px; padding: 8px 12px; background: rgba(139,92,246,0.1); border-radius: 6px; border-left: 3px solid #8b5cf6;">
+                <div style="font-size: 11px; color: #94a3b8; line-height: 1.6;">
+                    <strong style="color: #8b5cf6;">Enriched Chunks:</strong><br>
+                    BA: fonksiyonel_gereksinimler, is_kurallari, kabul_kriterleri, validasyonlar<br>
+                    TA: request_body, response_body, hata_kodlari<br>
+                    TC: precondition, test_data
+                </div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    with col2:
+        st.markdown("""
+        <div class="agent-detail-card purple">
+            <div class="agent-name">📝 TF-IDF Keyword Search</div>
+            <div class="agent-role">Term Frequency Exact Match</div>
+            <div class="agent-description">
+                scikit-learn TF-IDF vectorizer ile keyword-based arama yapar. Exact match ve technical term detection için optimize edilmiş.
+            </div>
+            <div class="agent-instructions">
+                <div class="agent-instructions-title">Özellikler</div>
+                <div class="agent-instruction-item">TF-IDF vectorization (max_features=5000)</div>
+                <div class="agent-instruction-item">Cosine similarity ranking</div>
+                <div class="agent-instruction-item">N-gram support (1-2)</div>
+                <div class="agent-instruction-item">Stop words filtering</div>
+                <div class="agent-instruction-item">Fast exact match (technical terms, IDs)</div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    st.markdown("""
+    <div style="background: #1a2236; border: 1px solid #2a3654; border-radius: 12px; padding: 20px; margin-top: 16px;">
+        <div style="font-family: 'Space Grotesk', sans-serif; font-size: 16px; font-weight: 600; color: #f1f5f9; margin-bottom: 12px;">
+            ⚡ Hybrid Fusion Algorithm
+        </div>
+        <div style="font-size: 13px; color: #94a3b8; line-height: 1.7;">
+            <strong>Formül:</strong> <code style="background: rgba(0,0,0,0.3); padding: 2px 6px; border-radius: 4px; color: #06b6d4;">hybrid_score = 0.4 × keyword_score + 0.6 × semantic_score</code><br><br>
+            <strong>Alpha Weighting:</strong> %40 keyword (exact match) + %60 semantic (intent match)<br>
+            <strong>Result Deduplication:</strong> Chunk-level → Document-level aggregation (best chunk per document)<br>
+            <strong>Ortalama Performans:</strong> <2s response time, 85%+ relevance
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    st.markdown("---")
+
+    # 3. Smart Matching System
+    st.markdown("### 🎯 Smart Matching System")
+    st.caption("AI-powered task-to-document matching")
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+        st.markdown("""
+        <div class="agent-detail-card blue">
+            <div class="agent-name">🧪 Rule-Based Analyzer (Tier 1)</div>
+            <div class="agent-role">Fast, Free Task Analysis</div>
+            <div class="agent-description">
+                NLP heuristikleri ile görev açıklamalarını analiz eder. Basit sorgular için AI maliyeti olmadan çalışır (%70 maliyet tasarrufu).
+            </div>
+            <div class="agent-instructions">
+                <div class="agent-instructions-title">Complexity Metrics</div>
+                <div class="agent-instruction-item">Sentence count, word count, technical terms</div>
+                <div class="agent-instruction-item">Ambiguous words, conditional statements</div>
+                <div class="agent-instruction-item">Intent detection (ADD_FEATURE/UPDATE/FIX_BUG)</div>
+                <div class="agent-instruction-item">Keyword extraction with TF-IDF</div>
+                <div class="agent-instruction-item">Scope identification</div>
+            </div>
+            <div style="margin-top: 12px; padding: 8px 12px; background: rgba(59,130,246,0.1); border-radius: 6px; border-left: 3px solid #3b82f6;">
+                <div style="font-size: 11px; color: #94a3b8; line-height: 1.6;">
+                    <strong style="color: #3b82f6;">Tiered Approach:</strong><br>
+                    • Confidence >0.7 → Use rule-based (free)<br>
+                    • Confidence <0.7 → Fall back to AI (costs $0.002)
+                </div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+        st.markdown("""
+        <div class="agent-detail-card green">
+            <div class="agent-name">📊 Match Explainer</div>
+            <div class="agent-role">Human-Readable Reasoning Generator</div>
+            <div class="agent-description">
+                Eşleşme nedenlerini açıklar ve kullanıcıya aksiyon önerisi sunar (GÜNCELLE/YENİ OLUŞTUR/DEĞERLENDİR).
+            </div>
+            <div class="agent-instructions">
+                <div class="agent-instructions-title">Explanation Modes</div>
+                <div class="agent-instruction-item">Template-based (high confidence, free)</div>
+                <div class="agent-instruction-item">AI-generated (low confidence, detailed)</div>
+                <div class="agent-instruction-item">Action suggestions with reasoning</div>
+                <div class="agent-instruction-item">Score breakdown (semantic/keyword/metadata)</div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    with col2:
+        st.markdown("""
+        <div class="agent-detail-card blue">
+            <div class="agent-name">🤖 AI Task Analyzer (Tier 2)</div>
+            <div class="agent-role">Deep Semantic Analysis</div>
+            <div class="agent-description">
+                Karmaşık görevler için Claude Sonnet ile detaylı analiz yapar. Keywords, intent, scope, entities ve doc_type_relevance çıkarır.
+            </div>
+            <div class="agent-instructions">
+                <div class="agent-instructions-title">AI Features</div>
+                <div class="agent-instruction-item">Deep intent classification</div>
+                <div class="agent-instruction-item">Entity extraction (özellikler, bileşenler)</div>
+                <div class="agent-instruction-item">Doc type relevance scoring (BA/TA/TC)</div>
+                <div class="agent-instruction-item">Optimized search query generation</div>
+                <div class="agent-instruction-item">Prompt caching (90% cost reduction)</div>
+            </div>
+            <div style="margin-top: 12px; padding: 8px 12px; background: rgba(59,130,246,0.1); border-radius: 6px; border-left: 3px solid #3b82f6;">
+                <div style="font-size: 11px; color: #94a3b8; line-height: 1.6;">
+                    <strong style="color: #3b82f6;">Output Schema:</strong><br>
+                    keywords, intent, scope, entities,<br>
+                    doc_type_relevance, complexity, search_query
+                </div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+        st.markdown("""
+        <div class="agent-detail-card green">
+            <div class="agent-name">🎯 Smart Matcher Orchestrator</div>
+            <div class="agent-role">End-to-End Matching Pipeline</div>
+            <div class="agent-description">
+                Tüm bileşenleri birleştirerek görevden eşleşen dokümanları bulur, skorlar ve sıralar.
+            </div>
+            <div class="agent-instructions">
+                <div class="agent-instructions-title">Workflow</div>
+                <div class="agent-instruction-item">Task analysis (tiered: rule-based → AI)</div>
+                <div class="agent-instruction-item">Hybrid search (semantic + keyword)</div>
+                <div class="agent-instruction-item">Document-level deduplication</div>
+                <div class="agent-instruction-item">Confidence scoring & ranking</div>
+                <div class="agent-instruction-item">Match explanation generation</div>
+                <div class="agent-instruction-item">Analytics tracking (acceptance rate)</div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    st.markdown("""
+    <div style="background: #1a2236; border: 1px solid #2a3654; border-radius: 12px; padding: 20px; margin-top: 16px;">
+        <div style="font-family: 'Space Grotesk', sans-serif; font-size: 16px; font-weight: 600; color: #f1f5f9; margin-bottom: 12px;">
+            📈 Smart Matching Metrics
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;">
+            <div style="text-align: center; padding: 12px; background: rgba(59,130,246,0.05); border-radius: 8px;">
+                <div style="font-size: 24px; font-weight: 700; color: #3b82f6;">85%</div>
+                <div style="font-size: 11px; color: #64748b; margin-top: 4px;">MATCH ACCURACY</div>
+            </div>
+            <div style="text-align: center; padding: 12px; background: rgba(16,185,129,0.05); border-radius: 8px;">
+                <div style="font-size: 24px; font-weight: 700; color: #10b981;">73%</div>
+                <div style="font-size: 11px; color: #64748b; margin-top: 4px;">ACCEPTANCE RATE</div>
+            </div>
+            <div style="text-align: center; padding: 12px; background: rgba(245,158,11,0.05); border-radius: 8px;">
+                <div style="font-size: 24px; font-weight: 700; color: #f59e0b;"><2s</div>
+                <div style="font-size: 11px; color: #64748b; margin-top: 4px;">RESPONSE TIME</div>
+            </div>
+            <div style="text-align: center; padding: 12px; background: rgba(139,92,246,0.05); border-radius: 8px;">
+                <div style="font-size: 24px; font-weight: 700; color: #8b5cf6;">$0.007</div>
+                <div style="font-size: 11px; color: #64748b; margin-top: 4px;">COST/QUERY</div>
+            </div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+# ═══════════════════════════════════════════════════════════
+# TAB 3: INTEGRATIONS
+# ═══════════════════════════════════════════════════════════
+with tab3:
     st.markdown('<div style="font-family: \'Space Grotesk\', sans-serif; font-size: 22px; font-weight: 600; color: #f1f5f9; margin-bottom: 20px;">Platform Entegrasyonları</div>', unsafe_allow_html=True)
 
     col1, col2 = st.columns(2)
@@ -984,19 +1253,48 @@ with tab2:
             <div class="integration-methods">
                 <span class="method-badge">analyses</span>
                 <span class="method-badge">pipeline_runs</span>
-                <span class="method-badge">stage_outputs</span>
-                <span class="method-badge">design_results</span>
+                <span class="method-badge">documents</span>
+                <span class="method-badge">task_matches</span>
             </div>
             <div style="margin-top: 12px; font-size: 11px; color: #64748b;">
-                <strong>Tablolar:</strong> 6 ana tablo (analyses, ba_results, tc_results, design_results, pipeline_runs, stage_outputs)
+                <strong>Tablolar:</strong> 9 ana tablo (analyses, ba_results, tc_results, design_results, pipeline_runs, stage_outputs, documents, document_content, task_matches)
             </div>
         </div>
         """, unsafe_allow_html=True)
 
+    col1, col2 = st.columns(2)
+
+    with col1:
+        st.markdown("""
+        <div class="integration-card">
+            <div class="integration-header">
+                <div class="integration-icon">🧠</div>
+                <div>
+                    <div class="integration-name">8. ChromaDB Vector Database</div>
+                    <div class="integration-endpoint">Local Persist: data/chroma_db/</div>
+                </div>
+            </div>
+            <div class="integration-desc">
+                Doküman embedding'lerini depolar ve semantic similarity araması yapar. Voyage-3 embeddings kullanır (1024 dimensions).
+            </div>
+            <div class="integration-methods">
+                <span class="method-badge">Collection: ba_qa_documents</span>
+                <span class="method-badge">571 chunks</span>
+                <span class="method-badge">Cosine Similarity</span>
+            </div>
+            <div style="margin-top: 12px; font-size: 11px; color: #64748b;">
+                <strong>Özellikler:</strong> Persistent storage, metadata filtering, incremental updates, batch indexing
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    with col2:
+        st.markdown("")  # Empty column for balance
+
 # ═══════════════════════════════════════════════════════════
-# TAB 3: PIPELINE FLOWS
+# TAB 4: PIPELINE FLOWS
 # ═══════════════════════════════════════════════════════════
-with tab3:
+with tab4:
     st.markdown('<div style="font-family: \'Space Grotesk\', sans-serif; font-size: 22px; font-weight: 600; color: #f1f5f9; margin-bottom: 20px;">3 Farklı Pipeline Akışı</div>', unsafe_allow_html=True)
 
     # Pipeline 1: BA Değerlendirme
@@ -1186,9 +1484,9 @@ with tab3:
         """, unsafe_allow_html=True)
 
 # ═══════════════════════════════════════════════════════════
-# TAB 4: TECH STACK
+# TAB 5: TECH STACK
 # ═══════════════════════════════════════════════════════════
-with tab4:
+with tab5:
     st.markdown('<div style="font-family: \'Space Grotesk\', sans-serif; font-size: 22px; font-weight: 600; color: #f1f5f9; margin-bottom: 20px;">Teknoloji Stack</div>', unsafe_allow_html=True)
 
     col1, col2, col3 = st.columns(3)
@@ -1201,7 +1499,9 @@ with tab4:
                 • Python 3.14<br>
                 • Streamlit 1.40+<br>
                 • Agno Framework 2.5+<br>
-                • asyncio
+                • asyncio<br>
+                • scikit-learn (TF-IDF)<br>
+                • ChromaDB (vector store)
             </div>
         </div>
 
@@ -1210,9 +1510,11 @@ with tab4:
             <div style="font-size: 13px; color: #cbd5e1; line-height: 1.8;">
                 • Gemini 2.5 Flash (Evaluation)<br>
                 • Anthropic Claude (Generation)<br>
+                • Voyage-3 (Embeddings - 1024d)<br>
                 • 200k-1M token context<br>
                 • Multimodal (vision)<br>
-                • Structured JSON output
+                • Structured JSON output<br>
+                • Prompt caching
             </div>
         </div>
         """, unsafe_allow_html=True)
@@ -1225,14 +1527,16 @@ with tab4:
                 • JIRA REST API v3<br>
                 • n8n Webhook Proxy<br>
                 • Google Docs/Sheets<br>
-                • Figma (design upload)
+                • Figma (design upload)<br>
+                • Google Drive API
             </div>
         </div>
 
         <div style="background: #1a2236; border: 1px solid #2a3654; border-radius: 12px; padding: 18px; margin-bottom: 12px;">
             <div style="font-size: 13px; color: #64748b; margin-bottom: 8px;">💾 Data Storage</div>
             <div style="font-size: 13px; color: #cbd5e1; line-height: 1.8;">
-                • SQLite (lokal)<br>
+                • SQLite (metadata)<br>
+                • ChromaDB (embeddings)<br>
                 • Session State<br>
                 • File cache (TTL: 1h)
             </div>
@@ -1265,6 +1569,7 @@ with tab4:
 st.markdown("---")
 st.markdown("""
 <div style="text-align: center; padding: 20px 0; color: #64748b; font-family: 'JetBrains Mono', monospace; font-size: 12px;">
-    BA&QA Intelligence Platform v1.0 — Architecture Document — February 2026
+    BA&QA Intelligence Platform v2.0 — Architecture Document — February 2026<br>
+    <span style="font-size: 10px; color: #475569;">Phase 2: Document Intelligence System Active ✨</span>
 </div>
 """, unsafe_allow_html=True)

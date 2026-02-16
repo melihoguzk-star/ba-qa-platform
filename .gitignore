@@ -7,6 +7,7 @@ secrets.toml
 
 # Python
 venv/
+venv_*/
 .venv/
 env/
 ENV/
@@ -21,6 +22,9 @@ __pycache__/
 data/custom_models.json
 # data/pipeline.db  # Uncommented to persist data on Streamlit Cloud
 data/chroma_db/  # ChromaDB vector store (Phase 2A)
+data/chroma_db.backup_*/  # ChromaDB backups
+data/*.db-shm  # SQLite shared memory files
+data/*.db-wal  # SQLite write-ahead log files
 data/reindex_checkpoint.json  # Reindexing progress checkpoint
 
 # IDE
@@ -41,6 +45,7 @@ coverage.xml
 *.cover
 .hypothesis/
 junit.xml
+test_*.py  # Test scripts (not unit tests)
 
 # Build & Distribution
 build/
