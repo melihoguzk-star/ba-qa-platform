@@ -14,6 +14,8 @@ class HeadingBasedParser:
         """
         Parse text into hierarchical structure based on headings
 
+        Context-aware: After an H1, next heading is likely H2 (subsection)
+
         Returns:
         {
             "sections": [
@@ -39,6 +41,7 @@ class HeadingBasedParser:
         structure = {"sections": []}
         current_section = None
         current_subsection = None
+        just_had_section = False  # Track if we just created a section
 
         for line in lines:
             line = line.strip()
@@ -46,7 +49,20 @@ class HeadingBasedParser:
                 continue
 
             # Detect heading level
-            level = HeadingBasedParser._detect_heading_level(line)
+            detected_level = HeadingBasedParser._detect_heading_level(line)
+
+            # Context-aware adjustment:
+            # If we just had an H1 section and detect another "heading",
+            # it's probably a subsection, not a new section
+            if detected_level == 1 and just_had_section and current_section:
+                # Check if this looks like a subsection
+                # (has content following it or has fewer than 4 words)
+                words = HeadingBasedParser._clean_heading(line).split()
+                if len(words) <= 3:
+                    # Treat as subsection
+                    detected_level = 2
+
+            level = detected_level
 
             if level == 1:
                 # H1 - Main section
@@ -58,6 +74,7 @@ class HeadingBasedParser:
                 }
                 structure["sections"].append(current_section)
                 current_subsection = None
+                just_had_section = True  # Mark that we just created a section
 
             elif level == 2:
                 # H2 - Subsection
@@ -69,6 +86,7 @@ class HeadingBasedParser:
                         "items": []
                     }
                     current_section["subsections"].append(current_subsection)
+                    just_had_section = False  # Reset flag
 
             elif line.startswith(('-', '•', '*', '+')):
                 # Bullet point - list item
@@ -80,6 +98,7 @@ class HeadingBasedParser:
                     if "items" not in current_section:
                         current_section["items"] = []
                     current_section["items"].append(item)
+                just_had_section = False  # Content found
 
             elif re.match(r'^\d+[.)]', line):
                 # Numbered item
@@ -92,6 +111,7 @@ class HeadingBasedParser:
                     if "steps" not in current_section:
                         current_section["steps"] = []
                     current_section["steps"].append(item)
+                just_had_section = False  # Content found
 
             else:
                 # Regular text - add to content
@@ -105,6 +125,7 @@ class HeadingBasedParser:
                         current_section["content"] += " " + line
                     else:
                         current_section["content"] = line
+                just_had_section = False  # Content found
 
         return structure
 
@@ -259,7 +280,10 @@ class HeadingBasedParser:
     def _is_screen_section(section: Dict) -> bool:
         """Check if section contains UI/screen content"""
         heading = section["heading"].lower()
-        keywords = ["ekran", "screen", "ui", "interface", "page", "view", "form"]
+        keywords = [
+            "ekran", "screen", "ui", "interface", "page", "view", "form",
+            "arayüz", "sayfa", "görünüm", "kullanıcı arayüz", "user interface"
+        ]
         return any(kw in heading for kw in keywords)
 
     @staticmethod
