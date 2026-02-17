@@ -324,3 +324,148 @@ def sample_loodos_ba_parsed(sample_loodos_ba_elements) -> dict:
     """
     from pipeline.ba_docx_parser import BADocxParser
     return BADocxParser().parse(sample_loodos_ba_elements)
+
+
+# ─────────────────────────────────────────────
+# TC XLSX Fixtures — Adım 6
+# ─────────────────────────────────────────────
+
+@pytest.fixture(scope="session")
+def sample_tc_xlsx() -> bytes:
+    """
+    Minimal ama kapsamlı bir TC XLSX dosyası oluşturur.
+
+    İçerik:
+      - Cover sheet        → meta bilgiler
+      - Login sheet        → Varyant 1 (TESTCASE, PRIORTY typo, 2 veri satırı + 3 boş)
+      - Sepet sheet        → Varyant 2 (TEST CASE — boşluklu)
+      - pinarÜrün sheet    → Varyant 4 (EXISTANCE 2/3/4, TEST CASE ID yok)
+      - Regresyon Seti     → OTOMASYON kolonu var
+      - DATA sheet         → skip edilmeli
+      - Revision Changes   → skip edilmeli
+    """
+    from openpyxl import Workbook
+    from io import BytesIO
+
+    wb = Workbook()
+
+    # ── Cover sheet ───────────────────────────────────────────────
+    ws_cover = wb.active
+    ws_cover.title = "Cover"
+    ws_cover["C2"] = "Document Code"; ws_cover["D2"] = "LDS-PDQA-MT-KD-1"
+    ws_cover["C3"] = "Project Name";  ws_cover["D3"] = "Kahve Dünyası"
+    ws_cover["C4"] = "Created By";    ws_cover["D4"] = "Salih Diken"
+    ws_cover["C5"] = "Create Date";   ws_cover["D5"] = "24.04.2024"
+
+    # ── Login sheet — Varyant 1 (TESTCASE, PRIORTY typo) ─────────
+    ws_login = wb.create_sheet("Login")
+    v1_headers = [
+        "EXISTANCE", "DATE", "APP BUNDLE", "TEST CASE ID", "BR ID", "TR ID",
+        "PRIORTY", "CHANNEL", "TESTCASE TYPE", "USER TYPE",
+        "TEST AREA", "TEST SCENARIO", "TESTCASE", "TEST STEPS",
+        "PRECONDITION", "TEST DATA", "EXPECTED RESULT",
+    ]
+    for i, h in enumerate(v1_headers, 1):
+        ws_login.cell(row=1, column=i, value=h)
+
+    # Satır 2: geçerli TC
+    row1 = ["New", "20.05.2024", "Kahve Dünyası", "TC_LDS_KD_LOGIN_0001",
+            None, None, "HIGH", "MOBILE", "Functional", "ALL",
+            "Login Ekranı", "Telefon ile Giriş", "Login TC Adı",
+            "1- Uygulama açılır\n2- Login yapılır", None, None,
+            "Başarılı giriş beklenir"]
+    for i, v in enumerate(row1, 1):
+        ws_login.cell(row=2, column=i, value=v)
+
+    # Satır 3: CRITICAL priority
+    row2 = ["New", "20.05.2024", "Kahve Dünyası", "TC_LDS_KD_LOGIN_0002",
+            None, None, "CRITICAL", "MOBILE", "UI", "ALL",
+            "Login Ekranı", "Hatalı Giriş", "Hatalı Login",
+            "1- Yanlış şifre girilir\n2- Hata mesajı kontrol edilir", None, None,
+            "Hata mesajı gösterilir"]
+    for i, v in enumerate(row2, 1):
+        ws_login.cell(row=3, column=i, value=v)
+
+    # Satır 4–6: tamamen boş (filtre edilmeli)
+    # (hiçbir şey yazılmaz → boş kalır)
+
+    # ── Sepet sheet — Varyant 2 (TEST CASE boşluklu) ─────────────
+    ws_sepet = wb.create_sheet("Sepet")
+    v2_headers = [
+        "EXISTANCE", "DATE", "APP BUNDLE", "TEST CASE ID", "BR ID", "TR ID",
+        "PRIORTY", "CHANNEL", "TESTCASE TYPE", "USER TYPE",
+        "TEST AREA", "TEST SCENARIO", "TEST CASE", "TEST STEPS",
+        "PRECONDITION", "TEST DATA", "EXPECTED RESULT",
+    ]
+    for i, h in enumerate(v2_headers, 1):
+        ws_sepet.cell(row=1, column=i, value=h)
+
+    sepet_row = ["Existing", "21.05.2024", "Kahve Dünyası", "TC_LDS_KD_SEPET_0001",
+                 None, None, "MEDIUM", "WEB", "UI", "Member",
+                 "Sepet Ekranı", "Ürün Ekleme", "Sepet Testi",
+                 "1- Ürün seçilir\n2- Sepete eklenir", None, None,
+                 "Ürün sepette görünür"]
+    for i, v in enumerate(sepet_row, 1):
+        ws_sepet.cell(row=2, column=i, value=v)
+
+    # ── pinarÜrün — Varyant 4 (EXISTANCE 2/3/4, TEST CASE ID yok) ──
+    ws_pinar = wb.create_sheet("pinarÜrünDetay")
+    v4_headers = [
+        "EXISTANCE", "EXISTANCE 2", "EXISTANCE 3", "EXISTANCE 4",
+        "DATE", "APP BUNDLE", "BR ID", "TR ID",
+        "PRIORTY", "CHANNEL", "TESTCASE TYPE", "USER TYPE",
+        "TEST AREA", "TEST SCENARIO", "TESTCASE", "TEST STEPS",
+        "PRECONDITION", "TEST DATA", "EXPECTED RESULT",
+    ]
+    for i, h in enumerate(v4_headers, 1):
+        ws_pinar.cell(row=1, column=i, value=h)
+
+    pinar_row = ["New", "v1", "v2", "v3",
+                 "22.05.2024", "Kahve Dünyası", None, None,
+                 "LOW", "MOBILE", "Functional", "ALL",
+                 "Ürün Detay", "Detay Görüntüleme", "Ürün Detay Testi",
+                 "1- Ürün tıklanır\n2- Detay sayfası açılır", None, None,
+                 "Detay sayfası yüklenir"]
+    for i, v in enumerate(pinar_row, 1):
+        ws_pinar.cell(row=2, column=i, value=v)
+
+    # ── Regresyon Seti — OTOMASYON kolonu ────────────────────────
+    ws_reg = wb.create_sheet("Regresyon Seti")
+    reg_headers = [
+        "EXISTANCE", "DATE", "APP BUNDLE", "TEST CASE ID", "BR ID", "TR ID",
+        "PRIORTY", "CHANNEL", "TESTCASE TYPE", "USER TYPE",
+        "TEST AREA", "TEST SCENARIO", "TESTCASE", "TEST STEPS",
+        "PRECONDITION", "TEST DATA", "EXPECTED RESULT", "OTOMASYON",
+    ]
+    for i, h in enumerate(reg_headers, 1):
+        ws_reg.cell(row=1, column=i, value=h)
+
+    reg_row = ["New", "23.05.2024", "Kahve Dünyası", "TC_REG_0001",
+               None, None, "HIGH", "MOBILE", "Regression", "ALL",
+               "Splash", "Splash Kontrolü", "Splash Regresyon",
+               "1- App açılır\n2- Splash kontrol edilir", None, None,
+               "Splash görünür", "Otomasyon Hazır"]
+    for i, v in enumerate(reg_row, 1):
+        ws_reg.cell(row=2, column=i, value=v)
+
+    # ── Skip sheet'ler ────────────────────────────────────────────
+    wb.create_sheet("DATA")
+    wb.create_sheet("Revision Changes")
+
+    buf = BytesIO()
+    wb.save(buf)
+    return buf.getvalue()
+
+
+@pytest.fixture(scope="session")
+def sample_tc_raw(sample_tc_xlsx) -> dict:
+    """read_tc_xlsx() çıktısı (raw, parse edilmemiş)."""
+    from pipeline.tc_xlsx_reader import read_tc_xlsx
+    return read_tc_xlsx(sample_tc_xlsx)
+
+
+@pytest.fixture(scope="session")
+def sample_tc_parsed(sample_tc_raw) -> dict:
+    """TCExcelParser().parse() çıktısı (normalize edilmiş)."""
+    from pipeline.tc_xlsx_parser import TCExcelParser
+    return TCExcelParser(sample_tc_raw).parse()
