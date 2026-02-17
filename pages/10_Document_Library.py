@@ -355,7 +355,7 @@ with tab3:
                     doc_ids_with_data = {}
                     for result in all_results:
                         doc_id = result['document_id']
-                        score = result.get('hybrid_score', result.get('similarity', 0))
+                        score = result.get('hybrid_score', result.get('similarity', result.get('tfidf_score', 0)))
 
                         # Keep the result with highest score for each document
                         if doc_id not in doc_ids_with_data or score > doc_ids_with_data[doc_id]['score']:

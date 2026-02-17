@@ -44,10 +44,7 @@ def index_all_documents():
         else:
             content_dict = content
 
-        # Sections'ları extract et
-        sections = content_dict.get('sections', [])
-
-        if not sections:
+        if not content_dict:
             print(f"   ⚠️  {doc_title}: İçerik yok, atlanıyor")
             continue
 
