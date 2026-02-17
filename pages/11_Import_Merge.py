@@ -609,19 +609,23 @@ Return ONLY valid JSON, no markdown formatting or explanations."""
                         else:
                             projects = get_projects()
                             project_id = projects[0]['id'] if projects else None
-                            try:
-                                create_document(
+                            with st.spinner("Kaydediliyor ve ChromaDB'ye index ediliyor..."):
+                                from pipeline.tc_xlsx_db import save_tc_import
+                                result = save_tc_import(
+                                    parsed_data=parsed,
+                                    source_file=uploaded_file.name,
                                     project_id=project_id,
-                                    doc_type='tc',
                                     title=tc_title.strip(),
-                                    content_json=parsed,
-                                    description=f"XLSX import: {uploaded_file.name}",
-                                    tags=['xlsx_import', 'test_case'],
-                                    created_by='xlsx_upload',
                                 )
-                                st.success(f"'{tc_title}' başarıyla import edildi!")
-                            except Exception as e:
-                                st.error(f"Import hatası: {e}")
+                            if result["errors"]:
+                                for e in result["errors"]:
+                                    st.warning(e)
+                            if result["imported"]:
+                                st.success(f"'{tc_title}' import edildi! (doc_id={result['doc_id']}, {result['chunks']} chunk index'lendi)")
+                            elif result["updated"]:
+                                st.info(f"'{tc_title}' mevcut kayıt güncellendi! (doc_id={result['doc_id']}, {result['chunks']} chunk)")
+                            elif not result["errors"]:
+                                st.warning("İşlem tamamlanamadı.")
 
                 # ---- BA DOCX yolu (mevcut adım bazlı akış) ----
                 else:
@@ -819,7 +823,11 @@ Return ONLY valid JSON, no markdown formatting or explanations."""
                     project_id = projects[0]['id'] if projects else None
                     progress = st.progress(0)
                     imported_count = 0
+                    updated_count = 0
+                    total_chunks = 0
                     error_msgs = []
+
+                    from pipeline.tc_xlsx_db import save_tc_import
 
                     for i, (uf, doc_info, entry) in enumerate(file_results):
                         if not entry["success"]:
@@ -830,15 +838,17 @@ Return ONLY valid JSON, no markdown formatting or explanations."""
                         title = (titles.get(i) or uf.name).strip()
                         try:
                             if entry["type"] == "tc":
-                                create_document(
+                                r = save_tc_import(
+                                    parsed_data=entry["data"],
+                                    source_file=uf.name,
                                     project_id=project_id,
-                                    doc_type='tc',
                                     title=title,
-                                    content_json=entry["data"],
-                                    description=f"XLSX import: {uf.name}",
-                                    tags=['xlsx_import', 'test_case'],
-                                    created_by='xlsx_upload',
                                 )
+                                imported_count += r["imported"]
+                                updated_count  += r["updated"]
+                                total_chunks   += r["chunks"]
+                                for e in r["errors"]:
+                                    error_msgs.append(f"{uf.name}: {e}")
                             else:
                                 create_document(
                                     project_id=project_id,
@@ -849,13 +859,15 @@ Return ONLY valid JSON, no markdown formatting or explanations."""
                                     tags=['docx_import'],
                                     created_by='docx_upload',
                                 )
-                            imported_count += 1
+                                imported_count += 1
                         except Exception as e:
                             error_msgs.append(f"{uf.name}: {e}")
                         progress.progress((i + 1) / len(file_results))
 
                     if imported_count:
-                        st.success(f"{imported_count} doküman başarıyla import edildi!")
+                        st.success(f"{imported_count} yeni doküman import edildi! ({total_chunks} chunk ChromaDB'ye eklendi)")
+                    if updated_count:
+                        st.info(f"{updated_count} mevcut doküman güncellendi.")
                     for msg in error_msgs:
                         st.error(msg)
 
