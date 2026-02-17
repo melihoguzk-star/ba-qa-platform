@@ -506,25 +506,36 @@ Return ONLY valid JSON, no markdown formatting or explanations."""
             # ----------------------------------------------------------------
             if len(uploaded_files) == 1:
                 uploaded_file = uploaded_files[0]
-                file_bytes = uploaded_file.read()
+                result_key = f"file_result_{uploaded_file.name}_{uploaded_file.size}"
 
-                doc_info = detect_document_type(file_bytes, uploaded_file.name)
+                # Detect + parse → tek seferlik, tüm sonuçlar session_state'te
+                if result_key not in st.session_state:
+                    file_bytes = uploaded_file.read()
+                    with st.spinner(f"{uploaded_file.name} analiz ediliyor..."):
+                        doc_info = detect_document_type(file_bytes, uploaded_file.name)
+                        if doc_info["template"] == "loodos_test_case":
+                            from pipeline.tc_xlsx_reader import read_tc_xlsx
+                            from pipeline.tc_xlsx_parser import TCExcelParser
+                            raw = read_tc_xlsx(file_bytes)
+                            parsed_tc = TCExcelParser(raw).parse()
+                            st.session_state[result_key] = {
+                                "type": "tc", "doc_info": doc_info, "data": parsed_tc
+                            }
+                        else:
+                            result_docx = DocxImportOrchestrator().import_docx(file_bytes)
+                            st.session_state[result_key] = {
+                                "type": "ba", "doc_info": doc_info, "data": result_docx
+                            }
+
+                cached = st.session_state[result_key]
+                doc_info = cached["doc_info"]
 
                 st.success(f"{uploaded_file.name} ({uploaded_file.size / 1024:.1f} KB) — "
                            f"Tip: **{doc_info['template']}** / Güven: **{doc_info['confidence']:.0%}**")
 
                 # ---- TC XLSX yolu ----
-                if doc_info["template"] == "loodos_test_case":
-                    cache_key = f"tc_result_{uploaded_file.name}_{uploaded_file.size}"
-                    if cache_key not in st.session_state:
-                        with st.spinner("Test Case Excel analiz ediliyor..."):
-                            from pipeline.tc_xlsx_reader import read_tc_xlsx
-                            from pipeline.tc_xlsx_parser import TCExcelParser
-                            raw = read_tc_xlsx(file_bytes)
-                            parsed = TCExcelParser(raw).parse()
-                            st.session_state[cache_key] = parsed
-                    else:
-                        parsed = st.session_state[cache_key]
+                if cached["type"] == "tc":
+                    parsed = cached["data"]
 
                     summary = parsed["summary"]
                     col1, col2, col3, col4 = st.columns(4)
@@ -629,13 +640,7 @@ Return ONLY valid JSON, no markdown formatting or explanations."""
 
                 # ---- BA DOCX yolu (mevcut adım bazlı akış) ----
                 else:
-                    cache_key = f"docx_result_{uploaded_file.name}_{uploaded_file.size}"
-                    if cache_key not in st.session_state:
-                        with st.spinner("Doküman analiz ediliyor..."):
-                            result = DocxImportOrchestrator().import_docx(file_bytes)
-                            st.session_state[cache_key] = result
-                    else:
-                        result = st.session_state[cache_key]
+                    result = cached["data"]
 
                     if result["success"]:
                         st.markdown("#### Analiz Sonucu")

@@ -27,7 +27,7 @@ class EmbeddingPipeline:
         """
         self.model_name = model_name or os.getenv(
             'EMBEDDING_MODEL',
-            'intfloat/multilingual-e5-base'
+            'sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2'
         )
         self._model = None  # Lazy loaded
         self._cache = {}    # Session cache: hash -> embedding
@@ -105,7 +105,7 @@ class EmbeddingPipeline:
         if not texts:
             return []
 
-        batch_size = batch_size or int(os.getenv('CHROMA_MAX_BATCH_SIZE', 32))
+        batch_size = batch_size or int(os.getenv('CHROMA_MAX_BATCH_SIZE', 64))
 
         # Check cache for all texts - create result list with None placeholders
         embeddings = [None] * len(texts)
@@ -174,16 +174,30 @@ class EmbeddingPipeline:
         return hashlib.md5(text.encode('utf-8')).hexdigest()
 
 
-# Singleton instance (per session)
+# Streamlit cache_resource ile model process boyunca tek yüklenir
+# Streamlit dışında çalışırken fallback olarak module-level singleton kullanılır
 _pipeline = None
 
 
 def get_embedding_pipeline() -> EmbeddingPipeline:
-    """Get singleton embedding pipeline instance."""
-    global _pipeline
-    if _pipeline is None:
-        _pipeline = EmbeddingPipeline()
-    return _pipeline
+    """
+    Singleton embedding pipeline.
+    Streamlit ortamında @st.cache_resource ile model bir kez yüklenir;
+    plain Python'da module-level singleton kullanılır.
+    """
+    try:
+        import streamlit as st
+        # cache_resource: sunucu process'i boyunca tek instance
+        @st.cache_resource(show_spinner="Embedding modeli yükleniyor...")
+        def _cached_pipeline():
+            return EmbeddingPipeline()
+        return _cached_pipeline()
+    except Exception:
+        # Streamlit dışında (testler, CLI) → module singleton
+        global _pipeline
+        if _pipeline is None:
+            _pipeline = EmbeddingPipeline()
+        return _pipeline
 
 
 def embed_text(text: str) -> List[float]:
