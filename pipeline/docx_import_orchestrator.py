@@ -267,7 +267,8 @@ def _detect_xlsx_type(file_content: bytes) -> Dict[str, Any]:
     """
     try:
         import openpyxl
-        wb = openpyxl.load_workbook(BytesIO(file_content), data_only=True, read_only=True)
+        # read_only=False — read_only modunda max_column/max_row None döner
+        wb = openpyxl.load_workbook(BytesIO(file_content), data_only=True)
     except Exception as exc:
         return {
             "file_type":  "xlsx",
@@ -289,7 +290,7 @@ def _detect_xlsx_type(file_content: bytes) -> Dict[str, Any]:
     # Revision Changes sheet → extra signal (not scored separately)
     details["has_revision"] = "Revision Changes" in sheet_names
 
-    # Scan first content sheet for known TC headers
+    # Scan content sheets for known TC headers
     tc_name_found    = False
     priority_found   = False
     steps_found      = False
@@ -300,21 +301,24 @@ def _detect_xlsx_type(file_content: bytes) -> Dict[str, Any]:
     _STEPS_ALIAS       = "TEST STEPS"
     _EXPECTED_ALIAS    = "EXPECTED RESULT"
 
-    from pipeline.tc_xlsx_reader import SKIP_SHEETS, _find_header_row
+    from pipeline.tc_xlsx_reader import SKIP_SHEETS
 
     for sheet_name in sheet_names:
         if sheet_name in SKIP_SHEETS:
             continue
         ws = wb[sheet_name]
-        header_row = _find_header_row(ws, max_search=5)
-        if header_row is None:
-            continue
 
+        # iter_rows ile ilk max_search satırı tara
         headers_upper = set()
-        for col in range(1, ws.max_column + 1):
-            val = ws.cell(row=header_row, column=col).value
-            if val:
-                headers_upper.add(str(val).strip().upper())
+        for row_idx, row in enumerate(ws.iter_rows(min_row=1, max_row=5, values_only=True), start=1):
+            non_empty = [str(v).strip().upper() for v in row if v is not None and str(v).strip()]
+            if not non_empty:
+                continue
+            # Header satırı: bilinen alias'lardan biri içeriyor mu?
+            all_aliases_upper = _TC_NAME_ALIASES | _PRIORITY_ALIASES | {_STEPS_ALIAS, _EXPECTED_ALIAS}
+            if any(v in all_aliases_upper for v in non_empty) or len(non_empty) >= 3:
+                headers_upper = set(non_empty)
+                break
 
         if headers_upper & _TC_NAME_ALIASES:
             tc_name_found = True

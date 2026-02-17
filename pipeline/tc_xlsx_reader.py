@@ -160,9 +160,10 @@ def _find_header_row(ws, max_search: int = 10) -> Optional[int]:
     all_aliases_upper = set(_ALIAS_LOOKUP.keys())
 
     for row_idx in range(1, max_search + 1):
+        max_col = ws.max_column or 0
         row_values = [
             ws.cell(row=row_idx, column=c).value
-            for c in range(1, ws.max_column + 1)
+            for c in range(1, max_col + 1)
         ]
         non_empty = [v for v in row_values if v is not None and str(v).strip()]
 
@@ -191,7 +192,7 @@ def _map_headers(ws, header_row: int) -> dict[int, str]:
     """
     col_map: dict[int, str] = {}
 
-    for col_idx in range(1, ws.max_column + 1):
+    for col_idx in range(1, (ws.max_column or 0) + 1):
         cell_val = ws.cell(row=header_row, column=col_idx).value
         if cell_val is None:
             continue
