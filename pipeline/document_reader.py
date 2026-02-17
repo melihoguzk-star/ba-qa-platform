@@ -4,7 +4,7 @@ Document Reader - Extract text from Word documents and Google Drive
 import io
 import re
 import tempfile
-from typing import Optional, Tuple
+from typing import Optional, Tuple, List, Dict, Any
 import requests
 
 
@@ -251,3 +251,153 @@ def export_google_doc_as_text(doc_url: str) -> str:
     except requests.RequestException as e:
         # Fallback to regular download method
         return read_document_from_drive(doc_url)
+
+
+# ---------------------------------------------------------------------------
+# Adım 1: Enhanced DOCX Reader — Bullet Level + Hyperlink + Bold
+# ---------------------------------------------------------------------------
+
+def read_docx_structured(file_content: bytes) -> List[Dict[str, Any]]:
+    """
+    DOCX dosyasını yapısal element listesi olarak döndür.
+    Body element sırasını korur; heading'leri (H1-H6), liste öğelerini
+    (level 0-3), bold segment'leri ve inline hyperlink'leri çıkarır.
+
+    Returns:
+        List of elements:
+        - {"type": "heading",   "level": 1, "text": "Proje Açıklaması"}
+        - {"type": "heading",   "level": 2, "text": "Splash"}
+        - {"type": "list_item", "level": 0, "text": "...", "bold_segments": [], "links": []}
+        - {"type": "paragraph", "text": "...", "bold_segments": [], "links": []}
+        - {"type": "table",     "headers": [...], "rows": [[...], ...]}
+    """
+    try:
+        from docx import Document
+        from docx.oxml.ns import qn
+    except ImportError:
+        raise ImportError("python-docx library is required. Install with: pip install python-docx")
+
+    doc = Document(io.BytesIO(file_content))
+    rels = doc.part.rels
+
+    # O(1) lookup: XML element → python-docx object
+    para_map  = {p._element: p for p in doc.paragraphs}
+    table_map = {t._element: t for t in doc.tables}
+
+    elements = []
+
+    for child in doc.element.body:
+        tag = child.tag.split('}')[-1] if '}' in child.tag else child.tag
+
+        if tag == 'sdt':
+            continue  # Skip TOC block (structured document tag)
+
+        if tag == 'p':
+            para = para_map.get(child)
+            if not para or not para.text.strip():
+                continue
+            element = _parse_paragraph_element(para, rels)
+            if element:
+                elements.append(element)
+
+        elif tag == 'tbl':
+            table = table_map.get(child)
+            if table:
+                elements.append(_parse_table_element(table))
+
+    return elements
+
+
+def _parse_paragraph_element(para, rels) -> Optional[Dict[str, Any]]:
+    """Paragraph'ı type, text, bold_segments ve links bilgisiyle parse et."""
+    from docx.oxml.ns import qn
+
+    style = para.style.name.lower() if para.style else ''
+    text  = para.text.strip()
+
+    # 1. Heading tespiti (H1-H6)
+    for i in range(1, 7):
+        if f'heading {i}' in style or (i == 1 and 'title' in style):
+            if not text:
+                return None
+            return {"type": "heading", "level": i, "text": text}
+
+    # 2. List level tespiti (numPr/ilvl XML attribute'ünden)
+    list_level = None
+    pPr = para._element.find(qn('w:pPr'))
+    if pPr is not None:
+        numPr = pPr.find(qn('w:numPr'))
+        if numPr is not None:
+            ilvl_el = numPr.find(qn('w:ilvl'))
+            if ilvl_el is not None:
+                list_level = int(ilvl_el.get(qn('w:val'), '0'))
+
+    # 3. Bold segments (run-level bold detection)
+    bold_segments = [r.text for r in para.runs if r.bold and r.text.strip()]
+
+    # 4. Hyperlinks
+    links = _extract_hyperlinks_from_para(para._element, rels)
+
+    if list_level is not None:
+        return {
+            "type":          "list_item",
+            "level":         list_level,
+            "text":          text,
+            "bold_segments": bold_segments,
+            "links":         links,
+        }
+
+    return {
+        "type":          "paragraph",
+        "text":          text,
+        "bold_segments": bold_segments,
+        "links":         links,
+    }
+
+
+def _extract_hyperlinks_from_para(p_element, rels) -> List[str]:
+    """Paragraph içindeki w:hyperlink elementlerinden URL'leri çıkar."""
+    from docx.oxml.ns import qn
+    links = []
+    for hyperlink in p_element.findall('.//' + qn('w:hyperlink')):
+        # r:id attribute — relationships namespace
+        r_id = hyperlink.get(
+            '{http://schemas.openxmlformats.org/officeDocument/2006/relationships}id'
+        )
+        if r_id and r_id in rels:
+            url = rels[r_id].target_ref
+            if url and url not in links:
+                links.append(url)
+    return links
+
+
+def _parse_table_element(table) -> Dict[str, Any]:
+    """Table'ı headers + rows formatında parse et."""
+    rows_data = []
+    for row in table.rows:
+        cells = []
+        for cell in row.cells:
+            cell_text = '\n'.join(
+                p.text.strip() for p in cell.paragraphs if p.text.strip()
+            )
+            cells.append(cell_text)
+        rows_data.append(_deduplicate_merged_cells(cells))
+
+    if not rows_data:
+        return {'type': 'table', 'headers': [], 'rows': []}
+
+    return {
+        'type':    'table',
+        'headers': rows_data[0],
+        'rows':    rows_data[1:] if len(rows_data) > 1 else [],
+    }
+
+
+def _deduplicate_merged_cells(row: list) -> list:
+    """python-docx'in merged cell tekrarlarını boş string ile değiştir."""
+    if not row:
+        return row
+    result = [row[0]]
+    for i in range(1, len(row)):
+        result.append('' if row[i] == row[i - 1] else row[i])
+    return result
