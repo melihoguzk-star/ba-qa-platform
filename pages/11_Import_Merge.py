@@ -487,142 +487,255 @@ Return ONLY valid JSON, no markdown formatting or explanations."""
                                 st.info("💡 Try rule-based parsing as alternative")
 
     elif import_method == "📎 Upload Word Document":
-        st.markdown("### Upload Word Document")
-        st.info("Loodos BA doküman formatı (Kahve Dünyası stili) otomatik algılanır. Tek veya birden fazla .docx dosyası yükleyebilirsiniz.")
+        st.markdown("### Doküman Yükle")
+        st.info("BA (.docx) veya Test Case (.xlsx) dosyaları otomatik algılanır. Tek veya birden fazla dosya seçebilirsiniz.")
 
         uploaded_files = st.file_uploader(
-            "Word dosyası seç (.docx)",
-            type=['docx'],
+            "BA (.docx) veya Test Case (.xlsx) dosyası seç",
+            type=['docx', 'xlsx'],
             accept_multiple_files=True,
-            help="Tek veya birden fazla .docx dosyası seçebilirsiniz",
+            help="Birden fazla dosya seçerek toplu import yapabilirsiniz.",
             key="word_uploader"
         )
 
         if uploaded_files:
-            from pipeline.docx_import_orchestrator import DocxImportOrchestrator
+            from pipeline.docx_import_orchestrator import DocxImportOrchestrator, detect_document_type
 
             # ----------------------------------------------------------------
-            # Tek dosya → mevcut adım bazlı akış (similarity matching dahil)
+            # Tek dosya
             # ----------------------------------------------------------------
             if len(uploaded_files) == 1:
                 uploaded_file = uploaded_files[0]
-                st.success(f"{uploaded_file.name} ({uploaded_file.size / 1024:.1f} KB)")
+                file_bytes = uploaded_file.read()
 
-                cache_key = f"docx_result_{uploaded_file.name}_{uploaded_file.size}"
-                if cache_key not in st.session_state:
-                    with st.spinner("Doküman analiz ediliyor..."):
-                        file_bytes = uploaded_file.read()
-                        uploaded_file.seek(0)
-                        result = DocxImportOrchestrator().import_docx(file_bytes)
-                        st.session_state[cache_key] = result
-                else:
-                    result = st.session_state[cache_key]
+                doc_info = detect_document_type(file_bytes, uploaded_file.name)
 
-                if result["success"]:
-                    # ---- Analiz dashboard ----
-                    st.markdown("#### Analiz Sonucu")
+                st.success(f"{uploaded_file.name} ({uploaded_file.size / 1024:.1f} KB) — "
+                           f"Tip: **{doc_info['template']}** / Güven: **{doc_info['confidence']:.0%}**")
+
+                # ---- TC XLSX yolu ----
+                if doc_info["template"] == "loodos_test_case":
+                    cache_key = f"tc_result_{uploaded_file.name}_{uploaded_file.size}"
+                    if cache_key not in st.session_state:
+                        with st.spinner("Test Case Excel analiz ediliyor..."):
+                            from pipeline.tc_xlsx_reader import read_tc_xlsx
+                            from pipeline.tc_xlsx_parser import TCExcelParser
+                            raw = read_tc_xlsx(file_bytes)
+                            parsed = TCExcelParser(raw).parse()
+                            st.session_state[cache_key] = parsed
+                    else:
+                        parsed = st.session_state[cache_key]
+
+                    summary = parsed["summary"]
                     col1, col2, col3, col4 = st.columns(4)
-                    template_label = {
-                        "loodos_ba_bullet": "Loodos BA (Bullet)",
-                        "loodos_ba_table":  "Loodos BA (Tablo)",
-                        "generic":          "Genel Doküman",
-                    }.get(result["template"], result["template"])
-                    col1.metric("Sablon", template_label)
-                    col2.metric("Guven", f"{result['confidence']:.0%}")
-                    col3.metric("Ekranlar", result["stats"]["screens"])
-                    col4.metric("Is Kurallari", result["stats"]["list_items"])
+                    col1.metric("Sheet", summary["total_sheets"])
+                    col2.metric("Test Case", summary["total_test_cases"])
+                    col3.metric("Güven", f"{doc_info['confidence']:.0%}")
+                    col4.metric("Uyarı", len(parsed.get("warnings", [])))
 
-                    for w in result["warnings"]:
-                        st.warning(w)
+                    if parsed.get("warnings"):
+                        with st.expander("Uyarılar"):
+                            for w in parsed["warnings"]:
+                                st.warning(w)
 
-                    tab_screens, tab_rules, tab_links, tab_json = st.tabs([
-                        "Ekranlar", "Is Kurallari", "Linkler", "JSON"
+                    tab_sheets, tab_summary, tab_detail, tab_json = st.tabs([
+                        "Sheet Bazlı", "Özet", "Detaylı TC", "JSON"
                     ])
-                    ekranlar = result["content_json"].get("ekranlar", [])
 
-                    with tab_screens:
-                        if ekranlar:
-                            for ekran in ekranlar:
-                                rule_count = sum(
-                                    len(ia.get("kurallar", []))
-                                    for ia in ekran.get("is_akislari", [])
-                                )
-                                with st.expander(
-                                    f"{ekran['ekran_adi']}  —  {rule_count} kural",
-                                    expanded=False
-                                ):
-                                    if ekran.get("aciklama"):
-                                        st.caption(ekran["aciklama"])
-                                    for ia in ekran.get("is_akislari", []):
-                                        st.markdown(f"**{ia['baslik']}**")
-                                        for k in ia.get("kurallar", [])[:5]:
-                                            indent = "&nbsp;" * (k.get("level", 0) * 4)
-                                            st.markdown(
-                                                f"{indent}- {k['kural'][:140]}",
-                                                unsafe_allow_html=True
-                                            )
-                                        if len(ia.get("kurallar", [])) > 5:
-                                            st.caption(f"... +{len(ia['kurallar']) - 5} kural daha")
-                        else:
-                            st.info("Ekran bulunamadı. Dokümanın 'Mobil Uygulama Gereksinimleri' bölümü var mı?")
+                    with tab_sheets:
+                        import pandas as pd
+                        for sheet in parsed["sheets"]:
+                            tc_count = sheet["stats"]["total_rows"]
+                            with st.expander(f"{sheet['sheet_name']} ({tc_count} TC)", expanded=False):
+                                if sheet["test_cases"]:
+                                    df = pd.DataFrame(sheet["test_cases"])
+                                    display_cols = ["test_case_id", "testcase_name", "priority",
+                                                    "channel", "testcase_type", "test_area"]
+                                    existing = [c for c in display_cols if c in df.columns]
+                                    st.dataframe(df[existing], use_container_width=True)
+                                else:
+                                    st.info("Bu sheet'te test case bulunamadı.")
 
-                    with tab_rules:
-                        total_rules = sum(
-                            len(ia.get("kurallar", []))
-                            for e in ekranlar
-                            for ia in e.get("is_akislari", [])
-                        )
-                        st.metric("Toplam Kural", total_rules)
-                        for ekran in ekranlar:
-                            for ia in ekran.get("is_akislari", []):
-                                if ia.get("kurallar"):
-                                    st.markdown(f"**{ekran['ekran_adi']} — {ia['baslik']}**")
-                                    for k in ia["kurallar"][:3]:
-                                        st.markdown(f"- {k['kural'][:120]}")
-                                    if len(ia["kurallar"]) > 3:
-                                        st.caption(f"  ... +{len(ia['kurallar']) - 3} kural")
+                    with tab_summary:
+                        c1, c2 = st.columns(2)
+                        with c1:
+                            st.write("**Priority Dağılımı:**")
+                            for k, v in summary.get("by_priority", {}).items():
+                                st.write(f"- {k}: {v}")
+                        with c2:
+                            st.write("**Channel Dağılımı:**")
+                            for k, v in summary.get("by_channel", {}).items():
+                                st.write(f"- {k}: {v}")
+                        if summary.get("by_type"):
+                            st.write("**Tip Dağılımı:**")
+                            for k, v in summary["by_type"].items():
+                                st.write(f"- {k}: {v}")
 
-                    with tab_links:
-                        linkler = result["content_json"].get("linkler", {})
-                        for kategori, urls in linkler.items():
-                            if urls:
-                                st.markdown(f"**{kategori.upper()} ({len(urls)})**")
-                                for url in urls:
-                                    st.markdown(f"- [{url[:80]}]({url})")
+                    with tab_detail:
+                        search_q = st.text_input("TC Ara (isim veya ID)", key="tc_search_single")
+                        all_tcs = [tc for s in parsed["sheets"] for tc in s["test_cases"]]
+                        if search_q:
+                            sq = search_q.lower()
+                            all_tcs = [tc for tc in all_tcs
+                                       if sq in (tc.get("testcase_name") or "").lower()
+                                       or sq in (tc.get("test_case_id") or "").lower()]
+                        st.caption(f"{len(all_tcs)} TC gösteriliyor")
+                        for tc in all_tcs[:50]:
+                            with st.expander(f"{tc.get('test_case_id','')} — {tc.get('testcase_name','')}", expanded=False):
+                                c1, c2, c3 = st.columns(3)
+                                c1.write(f"**Priority:** {tc.get('priority','—')}")
+                                c2.write(f"**Channel:** {tc.get('channel','—')}")
+                                c3.write(f"**Tip:** {tc.get('testcase_type','—')}")
+                                if tc.get("test_steps"):
+                                    st.write("**Adımlar:**")
+                                    st.text(tc["test_steps"])
+                                if tc.get("expected_result"):
+                                    st.write("**Beklenen:** " + tc["expected_result"][:200])
+                        if len(all_tcs) > 50:
+                            st.caption(f"... {len(all_tcs) - 50} TC daha (arama yaparak filtreleyin)")
 
                     with tab_json:
-                        st.json(result["content_json"])
+                        st.json(parsed)
 
-                    # ---- Import formu ----
                     st.markdown("---")
-                    col_title, col_type = st.columns([3, 1])
-                    with col_title:
-                        title = st.text_input(
-                            "Dokuman Basligi *",
-                            value=uploaded_file.name.replace('.docx', ''),
-                            key="word_title"
-                        )
-                    with col_type:
-                        st.selectbox("Tip", ["BA"], key="word_doc_type", disabled=True)
-
-                    if st.button("Import & Devam Et", type="primary", key="word_import_btn"):
-                        if not title.strip():
+                    tc_title = st.text_input(
+                        "Doküman Başlığı *",
+                        value=uploaded_file.name.replace('.xlsx', ''),
+                        key="tc_title_single"
+                    )
+                    if st.button("Import Test Case", type="primary", key="tc_import_single_btn"):
+                        if not tc_title.strip():
                             st.error("Lütfen bir başlık girin.")
                         else:
-                            st.session_state['imported_doc'] = {
-                                'title':         title.strip(),
-                                'doc_type':      'ba',
-                                'content_json':  result["content_json"],
-                                'import_method': 'docx_structured',
-                            }
-                            st.session_state['import_step'] = 2
-                            st.rerun()
+                            projects = get_projects()
+                            project_id = projects[0]['id'] if projects else None
+                            try:
+                                create_document(
+                                    project_id=project_id,
+                                    doc_type='tc',
+                                    title=tc_title.strip(),
+                                    content_json=parsed,
+                                    description=f"XLSX import: {uploaded_file.name}",
+                                    tags=['xlsx_import', 'test_case'],
+                                    created_by='xlsx_upload',
+                                )
+                                st.success(f"'{tc_title}' başarıyla import edildi!")
+                            except Exception as e:
+                                st.error(f"Import hatası: {e}")
 
+                # ---- BA DOCX yolu (mevcut adım bazlı akış) ----
                 else:
-                    st.error("Doküman parse edilemedi. Düşük confidence veya desteklenmeyen format.")
-                    st.metric("Güven Skoru", f"{result['confidence']:.0%}")
-                    with st.expander("Hata Detayları"):
-                        st.json(result)
+                    cache_key = f"docx_result_{uploaded_file.name}_{uploaded_file.size}"
+                    if cache_key not in st.session_state:
+                        with st.spinner("Doküman analiz ediliyor..."):
+                            result = DocxImportOrchestrator().import_docx(file_bytes)
+                            st.session_state[cache_key] = result
+                    else:
+                        result = st.session_state[cache_key]
+
+                    if result["success"]:
+                        st.markdown("#### Analiz Sonucu")
+                        col1, col2, col3, col4 = st.columns(4)
+                        template_label = {
+                            "loodos_ba_bullet": "Loodos BA (Bullet)",
+                            "loodos_ba_table":  "Loodos BA (Tablo)",
+                            "generic":          "Genel Doküman",
+                        }.get(result["template"], result["template"])
+                        col1.metric("Sablon", template_label)
+                        col2.metric("Guven", f"{result['confidence']:.0%}")
+                        col3.metric("Ekranlar", result["stats"]["screens"])
+                        col4.metric("Is Kurallari", result["stats"]["list_items"])
+
+                        for w in result["warnings"]:
+                            st.warning(w)
+
+                        tab_screens, tab_rules, tab_links, tab_json = st.tabs([
+                            "Ekranlar", "Is Kurallari", "Linkler", "JSON"
+                        ])
+                        ekranlar = result["content_json"].get("ekranlar", [])
+
+                        with tab_screens:
+                            if ekranlar:
+                                for ekran in ekranlar:
+                                    rule_count = sum(
+                                        len(ia.get("kurallar", []))
+                                        for ia in ekran.get("is_akislari", [])
+                                    )
+                                    with st.expander(
+                                        f"{ekran['ekran_adi']}  —  {rule_count} kural",
+                                        expanded=False
+                                    ):
+                                        if ekran.get("aciklama"):
+                                            st.caption(ekran["aciklama"])
+                                        for ia in ekran.get("is_akislari", []):
+                                            st.markdown(f"**{ia['baslik']}**")
+                                            for k in ia.get("kurallar", [])[:5]:
+                                                indent = "&nbsp;" * (k.get("level", 0) * 4)
+                                                st.markdown(
+                                                    f"{indent}- {k['kural'][:140]}",
+                                                    unsafe_allow_html=True
+                                                )
+                                            if len(ia.get("kurallar", [])) > 5:
+                                                st.caption(f"... +{len(ia['kurallar']) - 5} kural daha")
+                            else:
+                                st.info("Ekran bulunamadı. Dokümanın 'Mobil Uygulama Gereksinimleri' bölümü var mı?")
+
+                        with tab_rules:
+                            total_rules = sum(
+                                len(ia.get("kurallar", []))
+                                for e in ekranlar
+                                for ia in e.get("is_akislari", [])
+                            )
+                            st.metric("Toplam Kural", total_rules)
+                            for ekran in ekranlar:
+                                for ia in ekran.get("is_akislari", []):
+                                    if ia.get("kurallar"):
+                                        st.markdown(f"**{ekran['ekran_adi']} — {ia['baslik']}**")
+                                        for k in ia["kurallar"][:3]:
+                                            st.markdown(f"- {k['kural'][:120]}")
+                                        if len(ia["kurallar"]) > 3:
+                                            st.caption(f"  ... +{len(ia['kurallar']) - 3} kural")
+
+                        with tab_links:
+                            linkler = result["content_json"].get("linkler", {})
+                            for kategori, urls in linkler.items():
+                                if urls:
+                                    st.markdown(f"**{kategori.upper()} ({len(urls)})**")
+                                    for url in urls:
+                                        st.markdown(f"- [{url[:80]}]({url})")
+
+                        with tab_json:
+                            st.json(result["content_json"])
+
+                        st.markdown("---")
+                        col_title, col_type = st.columns([3, 1])
+                        with col_title:
+                            title = st.text_input(
+                                "Dokuman Basligi *",
+                                value=uploaded_file.name.replace('.docx', ''),
+                                key="word_title"
+                            )
+                        with col_type:
+                            st.selectbox("Tip", ["BA"], key="word_doc_type", disabled=True)
+
+                        if st.button("Import & Devam Et", type="primary", key="word_import_btn"):
+                            if not title.strip():
+                                st.error("Lütfen bir başlık girin.")
+                            else:
+                                st.session_state['imported_doc'] = {
+                                    'title':         title.strip(),
+                                    'doc_type':      'ba',
+                                    'content_json':  result["content_json"],
+                                    'import_method': 'docx_structured',
+                                }
+                                st.session_state['import_step'] = 2
+                                st.rerun()
+
+                    else:
+                        st.error("Doküman parse edilemedi. Düşük confidence veya desteklenmeyen format.")
+                        st.metric("Güven Skoru", f"{result['confidence']:.0%}")
+                        with st.expander("Hata Detayları"):
+                            st.json(result)
 
             # ----------------------------------------------------------------
             # Çoklu dosya → her biri ayrı parse edilir, toplu import
@@ -630,78 +743,116 @@ Return ONLY valid JSON, no markdown formatting or explanations."""
             else:
                 st.info(f"{len(uploaded_files)} dosya seçildi. Her biri ayrı doküman olarak import edilecek.")
 
-                orchestrator = DocxImportOrchestrator()
+                from pipeline.tc_xlsx_reader import read_tc_xlsx
+                from pipeline.tc_xlsx_parser import TCExcelParser
+
                 file_results = []
+                total_tc_count = 0
 
                 for uf in uploaded_files:
-                    cache_key = f"docx_result_{uf.name}_{uf.size}"
+                    file_bytes = uf.read()
+                    doc_info = detect_document_type(file_bytes, uf.name)
+                    cache_key = f"file_result_{uf.name}_{uf.size}"
+
                     if cache_key not in st.session_state:
                         with st.spinner(f"{uf.name} analiz ediliyor..."):
-                            file_bytes = uf.read()
-                            result = orchestrator.import_docx(file_bytes)
-                            st.session_state[cache_key] = result
-                    else:
-                        result = st.session_state[cache_key]
-                    file_results.append((uf, result))
+                            if doc_info["template"] == "loodos_test_case":
+                                raw = read_tc_xlsx(file_bytes)
+                                parsed = TCExcelParser(raw).parse()
+                                st.session_state[cache_key] = {"type": "tc", "data": parsed, "success": True}
+                            else:
+                                result = DocxImportOrchestrator().import_docx(file_bytes)
+                                st.session_state[cache_key] = {"type": "ba", "data": result, "success": result["success"]}
+                    entry = st.session_state[cache_key]
+                    file_results.append((uf, doc_info, entry))
 
-                # ---- Her dosya için özet kart + başlık input ----
+                    if entry["type"] == "tc":
+                        total_tc_count += entry["data"]["summary"]["total_test_cases"]
+
+                # ---- Her dosya için özet kart ----
                 st.markdown("---")
                 titles = {}
-                for i, (uf, result) in enumerate(file_results):
-                    icon = "✅" if result["success"] else "❌"
+                for i, (uf, doc_info, entry) in enumerate(file_results):
+                    icon = "✅" if entry["success"] else "❌"
                     with st.expander(
                         f"{icon} {uf.name} ({uf.size / 1024:.1f} KB)",
                         expanded=True
                     ):
-                        if result["success"]:
-                            col1, col2, col3, col4 = st.columns(4)
-                            template_label = {
-                                "loodos_ba_bullet": "Loodos BA (Bullet)",
-                                "loodos_ba_table":  "Loodos BA (Tablo)",
-                                "generic":          "Genel Doküman",
-                            }.get(result["template"], result["template"])
-                            col1.metric("Sablon", template_label)
-                            col2.metric("Guven", f"{result['confidence']:.0%}")
-                            col3.metric("Ekranlar", result["stats"]["screens"])
-                            col4.metric("Is Kurallari", result["stats"]["list_items"])
-                            for w in result["warnings"]:
-                                st.warning(w)
+                        if entry["success"]:
+                            if entry["type"] == "tc":
+                                parsed = entry["data"]
+                                col1, col2, col3 = st.columns(3)
+                                col1.metric("Tip", "Test Case XLSX")
+                                col2.metric("Sheet", parsed["summary"]["total_sheets"])
+                                col3.metric("TC", parsed["summary"]["total_test_cases"])
+                            else:
+                                result = entry["data"]
+                                col1, col2, col3, col4 = st.columns(4)
+                                template_label = {
+                                    "loodos_ba_bullet": "Loodos BA (Bullet)",
+                                    "loodos_ba_table":  "Loodos BA (Tablo)",
+                                    "generic":          "Genel Doküman",
+                                }.get(result["template"], result["template"])
+                                col1.metric("Tip", template_label)
+                                col2.metric("Güven", f"{result['confidence']:.0%}")
+                                col3.metric("Ekranlar", result["stats"]["screens"])
+                                col4.metric("Kurallar", result["stats"]["list_items"])
                         else:
-                            st.error(f"Parse başarısız — güven skoru: {result['confidence']:.0%}")
+                            st.error(f"Parse başarısız — güven: {doc_info['confidence']:.0%}")
 
+                        ext = uf.name.rsplit('.', 1)[-1].lower()
                         titles[i] = st.text_input(
                             "Başlık",
-                            value=uf.name.replace('.docx', ''),
-                            key=f"word_title_{i}"
+                            value=uf.name.replace(f'.{ext}', ''),
+                            key=f"bulk_title_{i}"
                         )
 
-                # ---- Toplu import butonu ----
-                st.markdown("---")
-                if st.button("Tumunu Import Et", type="primary", key="word_import_all_btn"):
+                # ---- Bulk import alt bar ----
+                st.divider()
+                info_parts = [f"{len(uploaded_files)} dosya"]
+                if total_tc_count:
+                    info_parts.append(f"toplam {total_tc_count} test case")
+                st.info(" • ".join(info_parts))
+
+                if st.button("Tumunu Import Et", type="primary", key="bulk_import_all_btn"):
                     projects = get_projects()
                     project_id = projects[0]['id'] if projects else None
-
+                    progress = st.progress(0)
                     imported_count = 0
                     error_msgs = []
 
-                    for i, (uf, result) in enumerate(file_results):
-                        if not result["success"]:
+                    for i, (uf, doc_info, entry) in enumerate(file_results):
+                        if not entry["success"]:
                             error_msgs.append(f"{uf.name}: parse başarısız, atlandı")
+                            progress.progress((i + 1) / len(file_results))
                             continue
-                        title = (titles.get(i) or uf.name.replace('.docx', '')).strip()
+
+                        title = (titles.get(i) or uf.name).strip()
                         try:
-                            create_document(
-                                project_id=project_id,
-                                doc_type='ba',
-                                title=title,
-                                content_json=result["content_json"],
-                                description=f"DOCX import: {uf.name}",
-                                tags=['docx_import'],
-                                created_by='docx_upload',
-                            )
+                            if entry["type"] == "tc":
+                                create_document(
+                                    project_id=project_id,
+                                    doc_type='tc',
+                                    title=title,
+                                    content_json=entry["data"],
+                                    description=f"XLSX import: {uf.name}",
+                                    tags=['xlsx_import', 'test_case'],
+                                    created_by='xlsx_upload',
+                                )
+                            else:
+                                create_document(
+                                    project_id=project_id,
+                                    doc_type='ba',
+                                    title=title,
+                                    content_json=entry["data"]["content_json"],
+                                    description=f"DOCX import: {uf.name}",
+                                    tags=['docx_import'],
+                                    created_by='docx_upload',
+                                )
                             imported_count += 1
                         except Exception as e:
                             error_msgs.append(f"{uf.name}: {e}")
+                        progress.progress((i + 1) / len(file_results))
 
                     if imported_count:
                         st.success(f"{imported_count} doküman başarıyla import edildi!")
