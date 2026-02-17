@@ -661,3 +661,93 @@ class TestDocxImportOrchestratorIntegration:
         stats = result['stats']
         assert stats['screens'] >= 2
         assert stats['headings'] > 0
+
+
+# ---------------------------------------------------------------------------
+# Fixture tabanlı testler — conftest.py sample_loodos_ba_docx kullanır
+# ---------------------------------------------------------------------------
+
+class TestWithFixtures:
+    """
+    conftest.py'deki sample_loodos_ba_docx fixture'ını kullanan testler.
+    Gerçek doküman yapısını doğrular: H1 meta, H2 ekranlar, H3 alt bölümler,
+    nested bullet list, hyperlink'ler, bold run'lar.
+    """
+
+    def test_fixture_produces_bytes(self, sample_loodos_ba_docx):
+        """Fixture geçerli bytes döndürmeli."""
+        assert isinstance(sample_loodos_ba_docx, bytes)
+        assert len(sample_loodos_ba_docx) > 0
+        # DOCX (ZIP) formatı PK ile başlar
+        assert sample_loodos_ba_docx[:2] == b'PK'
+
+    def test_fixture_elements_has_headings(self, sample_loodos_ba_elements):
+        """Element listesinde heading'ler olmalı."""
+        headings = [e for e in sample_loodos_ba_elements if e['type'] == 'heading']
+        assert len(headings) > 0
+
+    def test_fixture_elements_has_list_items(self, sample_loodos_ba_elements):
+        """Element listesinde list item'lar olmalı."""
+        list_items = [e for e in sample_loodos_ba_elements if e['type'] == 'list_item']
+        assert len(list_items) > 0
+
+    def test_fixture_h2_screens_present(self, sample_loodos_ba_elements):
+        """Splash ve Login H2 heading'leri mevcut olmalı."""
+        h2_texts = [e['text'] for e in sample_loodos_ba_elements
+                    if e['type'] == 'heading' and e['level'] == 2]
+        assert 'Splash' in h2_texts
+        assert 'Login' in h2_texts
+
+    def test_fixture_h3_subsections_present(self, sample_loodos_ba_elements):
+        """İş Akışı ve Açıklama H3 başlıkları mevcut olmalı."""
+        h3_texts = {e['text'] for e in sample_loodos_ba_elements
+                    if e['type'] == 'heading' and e['level'] == 3}
+        assert 'İş Akışı' in h3_texts
+        assert 'Açıklama' in h3_texts
+        assert 'Tasarım Dosyaları' in h3_texts
+
+    def test_fixture_hyperlinks_present(self, sample_loodos_ba_elements):
+        """Figma ve Lottie linkleri element listesinde bulunmalı."""
+        all_links = [url for e in sample_loodos_ba_elements for url in e.get('links', [])]
+        assert any('figma.com' in url for url in all_links)
+        assert any('lottiefiles.com' in url for url in all_links)
+
+    def test_fixture_parsed_screens(self, sample_loodos_ba_parsed):
+        """Parse sonucunda Splash ve Login ekranları çıkarılmalı."""
+        names = [e['ekran_adi'] for e in sample_loodos_ba_parsed['ekranlar']]
+        assert 'Splash' in names
+        assert 'Login' in names
+
+    def test_fixture_parsed_is_akislari(self, sample_loodos_ba_parsed):
+        """Her ekranın is_akislari listesi dolu olmalı."""
+        for ekran in sample_loodos_ba_parsed['ekranlar']:
+            assert len(ekran['is_akislari']) >= 1
+
+    def test_fixture_parsed_rule_tree_nested(self, sample_loodos_ba_parsed):
+        """Splash iş akışı L0 → L1 nesting içermeli."""
+        splash = next(e for e in sample_loodos_ba_parsed['ekranlar']
+                      if e['ekran_adi'] == 'Splash')
+        ia = splash['is_akislari'][0]
+        l0_with_children = [k for k in ia['kurallar'] if k['alt_detaylar']]
+        assert len(l0_with_children) >= 1
+
+    def test_fixture_parsed_meta(self, sample_loodos_ba_parsed):
+        """Meta bilgileri çıkarılmalı: platform ve proje açıklaması."""
+        meta = sample_loodos_ba_parsed['meta']
+        assert meta['proje_aciklamasi'] != ''
+        assert meta['platform'] != ''
+
+    def test_fixture_parsed_links_categorized(self, sample_loodos_ba_parsed):
+        """Figma ve Lottie linkleri doğru kategorilere gitmiş olmalı."""
+        linkler = sample_loodos_ba_parsed['linkler']
+        assert len(linkler['figma']) >= 1
+        assert len(linkler['lottie']) >= 1
+
+    def test_fixture_orchestrator_end_to_end(self, sample_loodos_ba_docx):
+        """Orchestrator fixture DOCX üzerinde başarıyla çalışmalı."""
+        from pipeline.docx_import_orchestrator import DocxImportOrchestrator
+        result = DocxImportOrchestrator().import_docx(sample_loodos_ba_docx)
+        assert result['success'] is True
+        assert result['template'] == 'loodos_ba_bullet'
+        assert result['confidence'] > 0.5
+        assert result['stats']['screens'] >= 2
