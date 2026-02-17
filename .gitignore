@@ -18,9 +18,9 @@ __pycache__/
 .Python
 
 # Data & Databases
-# data/baqa.db  # Uncommented to persist data on Streamlit Cloud
+data/baqa.db
+data/pipeline.db
 data/custom_models.json
-# data/pipeline.db  # Uncommented to persist data on Streamlit Cloud
 data/chroma_db/  # ChromaDB vector store (Phase 2A)
 data/chroma_db.backup_*/  # ChromaDB backups
 data/*.db-shm  # SQLite shared memory files
