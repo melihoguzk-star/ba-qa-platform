@@ -488,137 +488,142 @@ Return ONLY valid JSON, no markdown formatting or explanations."""
 
     elif import_method == "📎 Upload Word Document":
         st.markdown("### Upload Word Document")
-        st.info("💡 Upload a .docx file and we'll extract the text and parse it")
+        st.info("Loodos BA doküman formatı (Kahve Dünyası stili) otomatik algılanır. Ekranlar, iş kuralları ve linkler yapısal olarak çıkarılır.")
 
         uploaded_file = st.file_uploader(
-            "Choose a Word document",
+            "Word dosyası seç (.docx)",
             type=['docx'],
-            help="Upload a .docx file (Microsoft Word format)"
+            help=".docx formatında Microsoft Word dosyası yükleyin",
+            key="word_uploader"
         )
 
         if uploaded_file is not None:
-            # Show file info
-            st.success(f"✅ Uploaded: {uploaded_file.name} ({uploaded_file.size / 1024:.1f} KB)")
+            st.success(f"{uploaded_file.name} ({uploaded_file.size / 1024:.1f} KB)")
 
-            col1, col2 = st.columns(2)
-            with col1:
-                doc_type = st.selectbox("Document Type", ["BA", "TA", "TC"], key="word_doc_type")
-            with col2:
-                default_title = uploaded_file.name.replace('.docx', '')
-                title = st.text_input("Document Title*", value=default_title, key="word_title")
+            # Otomatik analiz — dosya yüklenir yüklenmez çalışır
+            from pipeline.docx_import_orchestrator import DocxImportOrchestrator
 
-            # Choose parsing method
-            parse_method = st.radio(
-                "Choose parsing method:",
-                ["⚡ Rule-based (Fast, Free)", "🤖 AI-powered (Flexible, Requires API Key)"],
-                help="Rule-based parser works best with structured documents",
-                key="word_parse_method"
-            )
+            cache_key = f"docx_result_{uploaded_file.name}_{uploaded_file.size}"
+            if cache_key not in st.session_state:
+                with st.spinner("Doküman analiz ediliyor..."):
+                    file_bytes = uploaded_file.read()
+                    uploaded_file.seek(0)
+                    result = DocxImportOrchestrator().import_docx(file_bytes)
+                    st.session_state[cache_key] = result
+            else:
+                result = st.session_state[cache_key]
 
-            if st.button("📄 Extract & Parse", type="primary"):
-                if not title:
-                    st.error("❌ Please provide a title")
-                else:
-                    try:
-                        # Read Word document
-                        with st.spinner("📄 Reading Word document..."):
-                            file_content = uploaded_file.read()
-                            extracted_text = read_docx(file_content)
+            if result["success"]:
+                # ---- Analiz dashboard ----
+                st.markdown("#### Analiz Sonucu")
+                col1, col2, col3, col4 = st.columns(4)
+                template_label = {
+                    "loodos_ba_bullet": "Loodos BA (Bullet)",
+                    "loodos_ba_table":  "Loodos BA (Tablo)",
+                    "generic":          "Genel Doküman",
+                }.get(result["template"], result["template"])
+                col1.metric("Sablon", template_label)
+                col2.metric("Guven", f"{result['confidence']:.0%}")
+                col3.metric("Ekranlar", result["stats"]["screens"])
+                col4.metric("Is Kurallari", result["stats"]["list_items"])
 
-                        st.success(f"✅ Extracted {len(extracted_text)} characters from Word document")
+                # ---- Uyarılar ----
+                for w in result["warnings"]:
+                    st.warning(w)
 
-                        # Show preview
-                        with st.expander("📝 Extracted Text Preview", expanded=False):
-                            st.text_area("Text", extracted_text[:1000] + "..." if len(extracted_text) > 1000 else extracted_text, height=200, disabled=True)
+                # ---- Preview tabs ----
+                tab_screens, tab_rules, tab_links, tab_json = st.tabs([
+                    "Ekranlar",
+                    "Is Kurallari",
+                    "Linkler",
+                    "JSON"
+                ])
 
-                        # Parse the extracted text
-                        if parse_method.startswith("⚡"):
-                            # Rule-based parsing
-                            with st.spinner("⚡ Parsing with rule-based parser..."):
-                                parsed_json = parse_text_to_json(extracted_text, doc_type.lower())
+                ekranlar = result["content_json"].get("ekranlar", [])
 
-                                # Check if parsing produced meaningful results
-                                has_content = any(isinstance(v, list) and len(v) > 0 for v in parsed_json.values())
+                with tab_screens:
+                    if ekranlar:
+                        for ekran in ekranlar:
+                            rule_count = sum(
+                                len(ia.get("kurallar", []))
+                                for ia in ekran.get("is_akislari", [])
+                            )
+                            with st.expander(
+                                f"{ekran['ekran_adi']}  —  {rule_count} kural",
+                                expanded=False
+                            ):
+                                if ekran.get("aciklama"):
+                                    st.caption(ekran["aciklama"])
+                                for ia in ekran.get("is_akislari", []):
+                                    st.markdown(f"**{ia['baslik']}**")
+                                    for k in ia.get("kurallar", [])[:5]:
+                                        indent = "&nbsp;" * (k.get("level", 0) * 4)
+                                        st.markdown(
+                                            f"{indent}- {k['kural'][:140]}",
+                                            unsafe_allow_html=True
+                                        )
+                                    if len(ia.get("kurallar", [])) > 5:
+                                        st.caption(f"... +{len(ia['kurallar']) - 5} kural daha")
+                    else:
+                        st.info("Ekran bulunamadı. Dokümanın 'Mobil Uygulama Gereksinimleri' bölümü var mı?")
 
-                                if not has_content:
-                                    st.warning("⚠️ Rule-based parser couldn't find structured content. Try AI-powered parsing.")
-                                else:
-                                    st.success("✅ Document parsed successfully!")
+                with tab_rules:
+                    total_rules = sum(
+                        len(ia.get("kurallar", []))
+                        for e in ekranlar
+                        for ia in e.get("is_akislari", [])
+                    )
+                    st.metric("Toplam Kural", total_rules)
+                    for ekran in ekranlar:
+                        for ia in ekran.get("is_akislari", []):
+                            if ia.get("kurallar"):
+                                st.markdown(f"**{ekran['ekran_adi']} — {ia['baslik']}**")
+                                for k in ia["kurallar"][:3]:
+                                    st.markdown(f"- {k['kural'][:120]}")
+                                if len(ia["kurallar"]) > 3:
+                                    st.caption(f"  ... +{len(ia['kurallar']) - 3} kural")
 
-                                    with st.expander("📋 Parsed JSON Preview", expanded=True):
-                                        st.json(parsed_json)
+                with tab_links:
+                    linkler = result["content_json"].get("linkler", {})
+                    for kategori, urls in linkler.items():
+                        if urls:
+                            st.markdown(f"**{kategori.upper()} ({len(urls)})**")
+                            for url in urls:
+                                st.markdown(f"- [{url[:80]}]({url})")
 
-                                    st.session_state['imported_doc'] = {
-                                        'title': title,
-                                        'doc_type': doc_type.lower(),
-                                        'content_json': parsed_json,
-                                        'import_method': 'word_upload'
-                                    }
+                with tab_json:
+                    st.json(result["content_json"])
 
-                                    st.session_state['import_step'] = 2
-                                    st.rerun()
+                # ---- Import formu ----
+                st.markdown("---")
+                col_title, col_type = st.columns([3, 1])
+                with col_title:
+                    title = st.text_input(
+                        "Dokuman Basligi *",
+                        value=uploaded_file.name.replace('.docx', ''),
+                        key="word_title"
+                    )
+                with col_type:
+                    st.selectbox("Tip", ["BA"], key="word_doc_type", disabled=True)
 
-                        else:
-                            # AI parsing
-                            gemini_key = st.session_state.get("gemini_key") or os.environ.get("GEMINI_API_KEY", "")
-                            if not gemini_key:
-                                st.error("❌ Gemini API key not found. Please set it in Settings.")
-                            else:
-                                with st.spinner("🤖 AI is parsing your document..."):
-                                    # Use the same prompts as text parsing
-                                    if doc_type == "BA":
-                                        system_prompt = """You are a Business Analyst documentation expert.
-Parse the given text and convert it into a structured BA (Business Analysis) JSON format.
+                if st.button("Import & Devam Et", type="primary", key="word_import_btn"):
+                    if not title.strip():
+                        st.error("Lütfen bir başlık girin.")
+                    else:
+                        st.session_state['imported_doc'] = {
+                            'title':         title.strip(),
+                            'doc_type':      'ba',
+                            'content_json':  result["content_json"],
+                            'import_method': 'docx_structured',
+                        }
+                        st.session_state['import_step'] = 2
+                        st.rerun()
 
-The JSON structure should follow this schema:
-{
-  "ekranlar": [...],
-  "backend_islemler": [...],
-  "guvenlik_gereksinimleri": [...],
-  "test_senaryolari": [...]
-}
-
-Return ONLY valid JSON, no markdown formatting or explanations."""
-                                    elif doc_type == "TA":
-                                        system_prompt = """You are a Technical Architect documentation expert.
-Parse the given text into structured TA (Technical Analysis) JSON format.
-Return ONLY valid JSON."""
-                                    else:  # TC
-                                        system_prompt = """You are a Test Engineer documentation expert.
-Parse the given text into structured TC (Test Cases) JSON format.
-Return ONLY valid JSON."""
-
-                                    result = call_gemini(
-                                        system_prompt=system_prompt,
-                                        user_content=f"Parse this {doc_type} document:\n\n{extracted_text}",
-                                        api_key=gemini_key,
-                                        max_tokens=8000
-                                    )
-
-                                    if result.get('error'):
-                                        st.error(f"❌ AI parsing error: {result['error']}")
-                                    elif result.get('content'):
-                                        parsed_json = result['content']
-                                        st.success("✅ Document parsed successfully with AI!")
-
-                                        with st.expander("📋 Parsed JSON Preview", expanded=True):
-                                            st.json(parsed_json)
-
-                                        st.session_state['imported_doc'] = {
-                                            'title': title,
-                                            'doc_type': doc_type.lower(),
-                                            'content_json': parsed_json,
-                                            'import_method': 'word_upload_ai'
-                                        }
-
-                                        st.session_state['import_step'] = 2
-                                        st.rerun()
-                                    else:
-                                        st.error("❌ AI returned empty response")
-
-                    except Exception as e:
-                        st.error(f"❌ Error processing Word document: {str(e)}")
-                        st.exception(e)
+            else:
+                st.error("Doküman parse edilemedi. Düşük confidence veya desteklenmeyen format.")
+                st.metric("Güven Skoru", f"{result['confidence']:.0%}")
+                with st.expander("Hata Detayları"):
+                    st.json(result)
 
     elif import_method == "☁️ Google Drive (Public)":
         st.markdown("### Import from Google Drive (Public)")
