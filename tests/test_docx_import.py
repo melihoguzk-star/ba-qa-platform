@@ -361,3 +361,303 @@ class TestElementOrderPreserved:
 
         els = _elements(build)
         assert els == []
+
+
+# ---------------------------------------------------------------------------
+# DocxImportOrchestrator — Adım 3 testleri
+# ---------------------------------------------------------------------------
+
+class TestDocxImportOrchestratorStats:
+    """_calculate_stats() doğru sayıları döndürmeli."""
+
+    def _stats(self, elements):
+        from pipeline.docx_import_orchestrator import DocxImportOrchestrator
+        return DocxImportOrchestrator()._calculate_stats(elements)
+
+    def _h(self, level, text):
+        return {"type": "heading", "level": level, "text": text}
+
+    def _li(self, level, text, links=None):
+        return {"type": "list_item", "level": level, "text": text, "links": links or []}
+
+    def _p(self, text, links=None):
+        return {"type": "paragraph", "text": text, "links": links or []}
+
+    def _tbl(self):
+        return {"type": "table", "headers": [], "rows": []}
+
+    def test_empty_document(self):
+        stats = self._stats([])
+        assert stats == {"headings": 0, "screens": 0, "list_items": 0,
+                         "paragraphs": 0, "tables": 0, "links": 0}
+
+    def test_heading_counts(self):
+        elements = [self._h(1, "H1"), self._h(2, "H2a"), self._h(2, "H2b"), self._h(3, "H3")]
+        stats = self._stats(elements)
+        assert stats["headings"] == 4
+        assert stats["screens"] == 2  # sadece H2 sayılır
+
+    def test_list_item_count(self):
+        elements = [self._li(0, "A"), self._li(1, "B"), self._li(2, "C")]
+        stats = self._stats(elements)
+        assert stats["list_items"] == 3
+
+    def test_table_count(self):
+        elements = [self._tbl(), self._tbl()]
+        stats = self._stats(elements)
+        assert stats["tables"] == 2
+
+    def test_link_count(self):
+        url1 = "https://figma.com/a"
+        url2 = "https://lottiefiles.com/b"
+        elements = [
+            self._p("Para", links=[url1]),
+            self._li(0, "Item", links=[url2]),
+        ]
+        stats = self._stats(elements)
+        assert stats["links"] == 2
+
+
+class TestDocxImportOrchestratorDetect:
+    """_detect_template() şablon tipini doğru algılamalı."""
+
+    def _detect(self, elements, stats=None):
+        from pipeline.docx_import_orchestrator import DocxImportOrchestrator
+        orch = DocxImportOrchestrator()
+        if stats is None:
+            stats = orch._calculate_stats(elements)
+        return orch._detect_template(elements, stats)
+
+    def _h(self, level, text):
+        return {"type": "heading", "level": level, "text": text}
+
+    def _li(self, level, text):
+        return {"type": "list_item", "level": level, "text": text, "links": []}
+
+    def _tbl(self):
+        return {"type": "table", "headers": [], "rows": []}
+
+    def test_loodos_ba_bullet_detected_with_2_markers(self):
+        elements = [
+            self._h(3, "Açıklama"),
+            self._h(3, "İş Akışı"),
+            self._li(0, "Kural 1"),
+            self._li(0, "Kural 2"),
+        ]
+        assert self._detect(elements) == "loodos_ba_bullet"
+
+    def test_loodos_ba_bullet_detected_with_all_3_markers(self):
+        elements = [
+            self._h(3, "Açıklama"),
+            self._h(3, "İş Akışı"),
+            self._h(3, "Tasarım Dosyaları"),
+            self._li(0, "Kural"),
+        ]
+        assert self._detect(elements) == "loodos_ba_bullet"
+
+    def test_loodos_ba_bullet_case_insensitive(self):
+        """Başlıklar küçük harfle de eşleşmeli."""
+        elements = [
+            self._h(3, "açıklama"),
+            self._h(3, "iş akışı"),
+            self._li(0, "Kural"),
+        ]
+        assert self._detect(elements) == "loodos_ba_bullet"
+
+    def test_one_marker_not_enough_for_bullet(self):
+        """Tek marker → loodos_ba_bullet değil."""
+        elements = [
+            self._h(3, "İş Akışı"),
+            self._li(0, "Kural"),
+        ]
+        result = self._detect(elements)
+        assert result != "loodos_ba_bullet"
+
+    def test_loodos_ba_table_detected_with_many_tables(self):
+        elements = [self._tbl() for _ in range(5)]
+        stats = {"headings": 0, "screens": 0, "list_items": 0,
+                 "paragraphs": 0, "tables": 5, "links": 0}
+        assert self._detect(elements, stats) == "loodos_ba_table"
+
+    def test_3_tables_not_enough_for_table_template(self):
+        stats = {"tables": 3, "list_items": 0}
+        assert self._detect([], stats) != "loodos_ba_table"
+
+    def test_generic_when_no_markers(self):
+        elements = [
+            self._h(1, "Giriş"),
+            self._h(2, "Bölüm 1"),
+        ]
+        assert self._detect(elements) == "generic"
+
+    def test_bullet_preferred_over_table_when_list_items_dominate(self):
+        """2 Loodos marker + list_items > tables → bullet seçilmeli."""
+        elements = [
+            self._h(3, "Açıklama"),
+            self._h(3, "İş Akışı"),
+            self._li(0, "K1"),
+            self._li(0, "K2"),
+            self._tbl(),
+        ]
+        assert self._detect(elements) == "loodos_ba_bullet"
+
+
+class TestDocxImportOrchestratorConfidence:
+    """_calculate_confidence() doğru skor hesaplamalı."""
+
+    def _conf(self, ekranlar, stats=None):
+        from pipeline.docx_import_orchestrator import DocxImportOrchestrator
+        content_json = {"ekranlar": ekranlar}
+        s = stats or {"links": 0, "tables": 0}
+        return DocxImportOrchestrator()._calculate_confidence(content_json, s)
+
+    def _screen(self, name, has_rules=True):
+        kurallar = [{"kural": "Kural", "level": 0, "alt_detaylar": [],
+                     "bold_refs": [], "links": []}] if has_rules else []
+        return {
+            "ekran_adi": name,
+            "aciklama": "",
+            "tasarim_dosyalari": [],
+            "is_akislari": [{"baslik": "İş Akışı", "kurallar": kurallar}],
+        }
+
+    def test_no_screens_zero_confidence(self):
+        assert self._conf([]) == 0.0
+
+    def test_one_screen_no_rules(self):
+        screen = {
+            "ekran_adi": "X",
+            "is_akislari": [{"baslik": "İş Akışı", "kurallar": []}],
+        }
+        score = self._conf([screen])
+        assert score == pytest.approx(0.3)  # sadece "en az 1 ekran" puanı
+
+    def test_one_screen_with_rules(self):
+        score = self._conf([self._screen("Splash")])
+        # 0.3 (ekran var) + 0.3 (kural var) + 0.2 (oran=1.0)
+        assert score == pytest.approx(0.8)
+
+    def test_five_screens_all_with_rules(self):
+        screens = [self._screen(f"Ekran{i}") for i in range(5)]
+        score = self._conf(screens)
+        # 0.3 + 0.2 (>=5) + 0.3 + 0.2 = 1.0
+        assert score == pytest.approx(1.0)
+
+    def test_partial_rules_reduces_score(self):
+        """5 ekranın 2'sinde kural var → oran=0.4."""
+        screens = [self._screen(f"E{i}", has_rules=(i < 2)) for i in range(5)]
+        score = self._conf(screens)
+        # 0.3 + 0.2 + 0.3 + 0.4*0.2 = 0.88
+        assert score == pytest.approx(0.88)
+
+    def test_confidence_capped_at_1(self):
+        screens = [self._screen(f"E{i}") for i in range(10)]
+        assert self._conf(screens) <= 1.0
+
+
+class TestDocxImportOrchestratorWarnings:
+    """_generate_warnings() doğru uyarıları üretmeli."""
+
+    def _warn(self, ekranlar, links=0):
+        from pipeline.docx_import_orchestrator import DocxImportOrchestrator
+        content_json = {"ekranlar": ekranlar}
+        stats = {"links": links}
+        return DocxImportOrchestrator()._generate_warnings(content_json, stats)
+
+    def _screen(self, name, has_rules=True):
+        kurallar = [{"kural": "K"}] if has_rules else []
+        return {
+            "ekran_adi": name,
+            "is_akislari": [{"baslik": "İş Akışı", "kurallar": kurallar}],
+        }
+
+    def test_no_warnings_when_all_ok(self):
+        warnings = self._warn([self._screen("Splash")], links=3)
+        assert warnings == []
+
+    def test_warning_for_screen_without_rules(self):
+        warnings = self._warn([self._screen("OTP", has_rules=False)])
+        assert any("OTP" in w for w in warnings)
+
+    def test_warning_for_no_links(self):
+        warnings = self._warn([self._screen("Splash")], links=0)
+        assert any("link" in w.lower() for w in warnings)
+
+    def test_multiple_screens_multiple_warnings(self):
+        screens = [
+            self._screen("A", has_rules=False),
+            self._screen("B", has_rules=True),
+            self._screen("C", has_rules=False),
+        ]
+        warnings = self._warn(screens, links=0)
+        assert len(warnings) == 3  # 2 ekran + 1 link
+
+    def test_screen_with_empty_is_akislari(self):
+        """is_akislari boş olan ekran da uyarı almalı."""
+        screen = {"ekran_adi": "Boş Ekran", "is_akislari": []}
+        warnings = self._warn([screen])
+        assert any("Boş Ekran" in w for w in warnings)
+
+
+class TestDocxImportOrchestratorIntegration:
+    """import_docx() uçtan uca DOCX bytes ile çalışmalı."""
+
+    def _make_loodos_docx(self) -> bytes:
+        """Loodos BA bullet formatında test DOCX oluştur."""
+        doc = Document()
+        doc.add_heading('Mobil Uygulama Gereksinimleri', level=1)
+        doc.add_heading('Splash', level=2)
+        doc.add_heading('Açıklama', level=3)
+        doc.add_paragraph('Splash ekranı.')
+        doc.add_heading('İş Akışı', level=3)
+        # Bullet item için numPr ekliyoruz
+        from docx.oxml import OxmlElement
+        from docx.oxml.ns import qn
+        for text in ['Uygulama açılır.', 'Logo gösterilir.']:
+            p = doc.add_paragraph(text)
+            pPr = OxmlElement('w:pPr')
+            numPr = OxmlElement('w:numPr')
+            ilvl = OxmlElement('w:ilvl')
+            ilvl.set(qn('w:val'), '0')
+            numId = OxmlElement('w:numId')
+            numId.set(qn('w:val'), '1')
+            numPr.append(ilvl); numPr.append(numId)
+            pPr.append(numPr)
+            p._element.insert(0, pPr)
+        doc.add_heading('Login', level=2)
+        doc.add_heading('Tasarım Dosyaları', level=3)
+        buf = io.BytesIO()
+        doc.save(buf)
+        return buf.getvalue()
+
+    def test_import_returns_required_keys(self):
+        from pipeline.docx_import_orchestrator import DocxImportOrchestrator
+        result = DocxImportOrchestrator().import_docx(self._make_loodos_docx())
+        for key in ('success', 'doc_type', 'template', 'content_json',
+                    'confidence', 'stats', 'warnings'):
+            assert key in result
+
+    def test_loodos_ba_bullet_detected_end_to_end(self):
+        from pipeline.docx_import_orchestrator import DocxImportOrchestrator
+        result = DocxImportOrchestrator().import_docx(self._make_loodos_docx())
+        assert result['template'] == 'loodos_ba_bullet'
+
+    def test_screens_in_content_json(self):
+        from pipeline.docx_import_orchestrator import DocxImportOrchestrator
+        result = DocxImportOrchestrator().import_docx(self._make_loodos_docx())
+        screens = result['content_json'].get('ekranlar', [])
+        names = [s['ekran_adi'] for s in screens]
+        assert 'Splash' in names
+        assert 'Login' in names
+
+    def test_success_true_when_confidence_above_threshold(self):
+        from pipeline.docx_import_orchestrator import DocxImportOrchestrator
+        result = DocxImportOrchestrator().import_docx(self._make_loodos_docx())
+        assert result['success'] is True
+
+    def test_stats_populated(self):
+        from pipeline.docx_import_orchestrator import DocxImportOrchestrator
+        result = DocxImportOrchestrator().import_docx(self._make_loodos_docx())
+        stats = result['stats']
+        assert stats['screens'] >= 2
+        assert stats['headings'] > 0
