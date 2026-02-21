@@ -185,14 +185,14 @@ class VectorStore:
             logger.error(f"Failed to index document {doc_id}: {e}")
             raise
 
-    def search(self, query_text: str, doc_type: str, top_k: int = 10,
+    def search(self, query_text: str, doc_type: str = None, top_k: int = 10,
                filter_metadata: dict = None) -> List[Dict[str, Any]]:
         """
         Semantic search for similar document chunks.
 
         Args:
             query_text: Search query text
-            doc_type: Document type to search ('ba', 'ta', 'tc')
+            doc_type: Document type to search ('ba', 'ta', 'tc', or None for all)
             top_k: Number of results to return
             filter_metadata: Optional metadata filters (e.g., {'project_id': 1})
 
@@ -201,12 +201,38 @@ class VectorStore:
         """
         from pipeline.embedding_pipeline import embed_text
 
-        logger.info(f"Searching {doc_type} documents: '{query_text[:50]}...'")
+        logger.info(f"Searching {doc_type or 'all'} documents: '{query_text[:50]}...'")
 
         try:
             # Generate query embedding
             query_embedding = embed_text(query_text)
 
+            # If doc_type is None, search all collections and merge results
+            if doc_type is None:
+                all_results = []
+                for dt in ['ba', 'ta', 'tc']:
+                    try:
+                        results = self._search_collection(dt, query_embedding, top_k, filter_metadata)
+                        all_results.extend(results)
+                    except Exception as e:
+                        logger.warning(f"Search failed for {dt}: {e}")
+                        continue
+
+                # Sort by similarity and return top_k
+                all_results.sort(key=lambda x: x.get('similarity', 0), reverse=True)
+                return all_results[:top_k]
+
+            # Search single collection
+            return self._search_collection(doc_type, query_embedding, top_k, filter_metadata)
+
+        except Exception as e:
+            logger.error(f"Search failed: {e}")
+            return []
+
+    def _search_collection(self, doc_type: str, query_embedding: List[float],
+                          top_k: int, filter_metadata: dict = None) -> List[Dict[str, Any]]:
+        """Helper method to search a single collection"""
+        try:
             # Search collection
             collection = self.get_collection(doc_type)
 

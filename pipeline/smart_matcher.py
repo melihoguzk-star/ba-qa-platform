@@ -89,11 +89,14 @@ class SmartMatcher:
 
             doc_id = result["document_id"]
 
+            # Extract metadata (search results store these in metadata dict)
+            metadata = result.get("metadata", {})
+
             # Build match result
             match = {
                 "document_id": doc_id,
-                "title": result.get("title", "Unknown"),
-                "doc_type": result.get("doc_type", "unknown"),
+                "title": result.get("title") or metadata.get("title", "Unknown"),
+                "doc_type": result.get("doc_type") or metadata.get("doc_type", "unknown"),
                 "version": result.get("version", ""),
                 "confidence": confidence_score,
                 "section_matched": result.get("chunk_text", "")[:300],  # First 300 chars
