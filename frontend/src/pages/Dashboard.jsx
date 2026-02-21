@@ -1,10 +1,18 @@
 /**
- * Dashboard — Home page
+ * Dashboard — Home page with live stats
  */
-import { Card, Row, Col, Statistic } from 'antd';
+import { Card, Row, Col, Statistic, Spin, Alert } from 'antd';
 import { FileTextOutlined, ProjectOutlined, RocketOutlined, CheckCircleOutlined } from '@ant-design/icons';
+import { useProjects } from '../api/projects';
+import { useDocuments } from '../api/documents';
 
 export default function Dashboard() {
+  const { data: projects, isLoading: projectsLoading, error: projectsError } = useProjects();
+  const { data: documents, isLoading: documentsLoading } = useDocuments();
+
+  const totalProjects = projects?.length || 0;
+  const totalDocuments = documents?.length || 0;
+
   return (
     <div>
       <h1>Dashboard</h1>
@@ -12,25 +20,39 @@ export default function Dashboard() {
         BA&QA Intelligence Platform'a hoş geldiniz
       </p>
 
+      {projectsError && (
+        <Alert
+          message="API Bağlantı Hatası"
+          description={`Backend API'ye bağlanılamıyor: ${projectsError.message}. FastAPI server'ın çalıştığından emin olun (localhost:8000)`}
+          type="warning"
+          showIcon
+          style={{ marginBottom: 24 }}
+        />
+      )}
+
       <Row gutter={16}>
         <Col xs={24} sm={12} lg={6}>
           <Card>
-            <Statistic
-              title="Toplam Proje"
-              value={0}
-              prefix={<ProjectOutlined />}
-              valueStyle={{ color: '#3f8600' }}
-            />
+            <Spin spinning={projectsLoading}>
+              <Statistic
+                title="Toplam Proje"
+                value={totalProjects}
+                prefix={<ProjectOutlined />}
+                valueStyle={{ color: '#3f8600' }}
+              />
+            </Spin>
           </Card>
         </Col>
         <Col xs={24} sm={12} lg={6}>
           <Card>
-            <Statistic
-              title="Toplam Doküman"
-              value={0}
-              prefix={<FileTextOutlined />}
-              valueStyle={{ color: '#1890ff' }}
-            />
+            <Spin spinning={documentsLoading}>
+              <Statistic
+                title="Toplam Doküman"
+                value={totalDocuments}
+                prefix={<FileTextOutlined />}
+                valueStyle={{ color: '#1890ff' }}
+              />
+            </Spin>
           </Card>
         </Col>
         <Col xs={24} sm={12} lg={6}>
@@ -71,6 +93,12 @@ export default function Dashboard() {
           <li>Smart document matching</li>
           <li>Design compliance kontrolü</li>
         </ul>
+
+        {!projectsError && (
+          <p style={{ marginTop: 16, color: '#52c41a' }}>
+            ✓ Backend API bağlantısı başarılı
+          </p>
+        )}
       </Card>
     </div>
   );
