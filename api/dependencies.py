@@ -43,7 +43,6 @@ def get_db_context() -> Generator[sqlite3.Connection, None, None]:
 def get_ai_client():
     """
     Returns AI client instance (agents/ai_client.py).
-    Will be implemented in Task 0.4.
     """
-    # TODO: Import and return ai_client from agents/ai_client.py
-    pass
+    from api.services.ai_service import get_ai_service
+    return get_ai_service()
