@@ -41,3 +41,9 @@ sentence-transformers>=2.5.0
 torch>=2.1.0
 tqdm>=4.66.0
 # Note: Use Python 3.12 (venv_py312) for compatibility
+
+# FastAPI Backend (Phase 0)
+fastapi>=0.115.0
+uvicorn[standard]>=0.32.0
+pydantic-settings>=2.6.0
+python-multipart>=0.0.9
