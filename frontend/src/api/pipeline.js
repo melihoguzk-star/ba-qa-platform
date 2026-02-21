@@ -7,7 +7,21 @@ import client from './client';
 // Query keys
 export const pipelineKeys = {
   all: ['pipeline'],
+  runs: () => [...pipelineKeys.all, 'runs'],
   status: (runId) => [...pipelineKeys.all, 'status', runId],
+};
+
+/**
+ * Get pipeline runs
+ */
+export const usePipelineRuns = (params = {}) => {
+  return useQuery({
+    queryKey: pipelineKeys.runs(),
+    queryFn: async () => {
+      const { data } = await client.get('/pipeline', { params });
+      return data;
+    },
+  });
 };
 
 /**
