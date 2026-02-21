@@ -70,23 +70,55 @@ export const analyzeDesignStream = async (formData, { onProgress, onComplete, on
 
     const reader = response.body.getReader();
     const decoder = new TextDecoder();
+    let buffer = ''; // Buffer for incomplete chunks
 
     while (true) {
       const { done, value } = await reader.read();
 
       if (done) break;
 
-      // Decode chunk
-      const chunk = decoder.decode(value, { stream: true });
+      // Decode chunk and add to buffer
+      buffer += decoder.decode(value, { stream: true });
 
       // Parse SSE events (format: "data: {json}\n\n")
-      const lines = chunk.split('\n');
+      // Split by double newline to get complete messages
+      const messages = buffer.split('\n\n');
+
+      // Keep the last incomplete message in buffer
+      buffer = messages.pop() || '';
+
+      // Process complete messages
+      for (const message of messages) {
+        const lines = message.split('\n');
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            const jsonStr = line.slice(6); // Remove "data: " prefix
+            try {
+              const event = JSON.parse(jsonStr);
+
+              if (event.event_type === 'complete') {
+                onComplete?.(event.data);
+              } else if (event.event_type === 'error') {
+                onError?.(new Error(event.message));
+              } else {
+                onProgress?.(event);
+              }
+            } catch (e) {
+              console.error('Failed to parse SSE event:', e, 'JSON:', jsonStr);
+            }
+          }
+        }
+      }
+    }
+
+    // Process any remaining buffered data
+    if (buffer.trim()) {
+      const lines = buffer.split('\n');
       for (const line of lines) {
         if (line.startsWith('data: ')) {
-          const jsonStr = line.slice(6); // Remove "data: " prefix
+          const jsonStr = line.slice(6);
           try {
             const event = JSON.parse(jsonStr);
-
             if (event.event_type === 'complete') {
               onComplete?.(event.data);
             } else if (event.event_type === 'error') {
@@ -95,7 +127,7 @@ export const analyzeDesignStream = async (formData, { onProgress, onComplete, on
               onProgress?.(event);
             }
           } catch (e) {
-            console.error('Failed to parse SSE event:', e);
+            console.error('Failed to parse final SSE event:', e);
           }
         }
       }
