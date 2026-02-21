@@ -46,11 +46,17 @@ export default function DocumentsTab() {
     }
   };
 
-  const filteredDocuments = documents?.filter(doc =>
-    !debouncedSearch ||
-    doc.name.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
-    doc.doc_type.toLowerCase().includes(debouncedSearch.toLowerCase())
-  );
+  // Client-side filter with minimum 3 character requirement
+  const filteredDocuments = !documents
+    ? []
+    : !debouncedSearch || debouncedSearch.trim().length < 3
+    ? documents
+    : documents.filter(
+        (doc) =>
+          doc.name.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+          doc.doc_type.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+          (doc.project_name && doc.project_name.toLowerCase().includes(debouncedSearch.toLowerCase()))
+      );
 
   const columns = [
     {
