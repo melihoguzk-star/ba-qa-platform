@@ -64,14 +64,37 @@ def analyze_design_compliance(
 
     requirements_agent, screen_agent, compliance_agent, report_agent = agents
 
-    # Process images
+    # Process images (resize if needed to prevent API errors)
     design_images = []
     for img_bytes in image_files:
         try:
+            from PIL import Image
+            import io
+
+            # Open image with PIL
+            img = Image.open(io.BytesIO(img_bytes))
+
+            # Check dimensions and resize if needed
+            max_dimension = 8000
+            width, height = img.size
+
+            if width > max_dimension or height > max_dimension:
+                # Calculate new size maintaining aspect ratio
+                if width > height:
+                    new_width = max_dimension
+                    new_height = int(height * (max_dimension / width))
+                else:
+                    new_height = max_dimension
+                    new_width = int(width * (max_dimension / height))
+
+                # Resize image
+                img = img.resize((new_width, new_height), Image.Resampling.LANCZOS)
+                print(f"Resized image from {width}x{height} to {new_width}x{new_height}")
+
             # Save to temp file
             tmp_path = os.path.join(tempfile.gettempdir(), f"tmp_design_{len(design_images)}.png")
-            with open(tmp_path, "wb") as f:
-                f.write(img_bytes)
+            img.save(tmp_path, format='PNG')
+
             design_images.append(AgnoImage(filepath=Path(tmp_path)))
         except Exception as e:
             print(f"Warning: Failed to process image: {e}")
@@ -235,7 +258,7 @@ async def analyze_design_compliance_stream(
 
         requirements_agent, screen_agent, compliance_agent, report_agent = agents
 
-        # Process images
+        # Process images (resize if needed to prevent API errors)
         yield {
             "event_type": "progress",
             "progress": 5,
@@ -246,9 +269,33 @@ async def analyze_design_compliance_stream(
         design_images = []
         for img_bytes in image_files:
             try:
+                from PIL import Image
+                import io
+
+                # Open image with PIL
+                img = Image.open(io.BytesIO(img_bytes))
+
+                # Check dimensions and resize if needed
+                max_dimension = 8000
+                width, height = img.size
+
+                if width > max_dimension or height > max_dimension:
+                    # Calculate new size maintaining aspect ratio
+                    if width > height:
+                        new_width = max_dimension
+                        new_height = int(height * (max_dimension / width))
+                    else:
+                        new_height = max_dimension
+                        new_width = int(width * (max_dimension / height))
+
+                    # Resize image
+                    img = img.resize((new_width, new_height), Image.Resampling.LANCZOS)
+                    print(f"Resized image from {width}x{height} to {new_width}x{new_height}")
+
+                # Save to temp file
                 tmp_path = os.path.join(tempfile.gettempdir(), f"tmp_design_{len(design_images)}.png")
-                with open(tmp_path, "wb") as f:
-                    f.write(img_bytes)
+                img.save(tmp_path, format='PNG')
+
                 design_images.append(AgnoImage(filepath=Path(tmp_path)))
             except Exception as e:
                 print(f"Warning: Failed to process image: {e}")
