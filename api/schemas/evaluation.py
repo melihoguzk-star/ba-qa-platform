@@ -22,9 +22,8 @@ class EvaluationRequest(BaseModel):
     content_json: Optional[dict] = None
 
     # Option 3: Evaluate from JIRA task (auto-fetch Google Doc)
+    # Uses JIRA credentials from environment variables
     jira_task_key: Optional[str] = None
-    jira_email: Optional[str] = None
-    jira_token: Optional[str] = None
 
     # Optional reference document
     reference_document_id: Optional[int] = None

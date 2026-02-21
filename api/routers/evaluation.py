@@ -37,10 +37,19 @@ def extract_doc_id_from_description(description: str) -> tuple[str, str]:
     return "", ""
 
 
-def fetch_document_content_from_jira(task_key: str, jira_email: str, jira_token: str) -> str:
-    """Fetch Google Doc content linked in JIRA task"""
+def fetch_document_content_from_jira(task_key: str) -> str:
+    """Fetch Google Doc content linked in JIRA task (uses config credentials)"""
+    from ..config import get_settings
+    settings = get_settings()
+
+    if not settings.jira_email or not settings.jira_api_token:
+        raise HTTPException(
+            status_code=500,
+            detail="JIRA credentials not configured. Set JIRA_EMAIL and JIRA_API_TOKEN in .env"
+        )
+
     # Get JIRA task
-    issue = jira_get_issue(jira_email, jira_token, task_key, fields="description")
+    issue = jira_get_issue(settings.jira_email, settings.jira_api_token, task_key, fields="description")
     description = issue.get("fields", {}).get("description", "")
 
     # Extract doc ID
@@ -87,18 +96,8 @@ async def evaluate_ba(request: EvaluationRequest):
     """
     # Mode 1: JIRA task (auto-fetch Google Doc)
     if request.jira_task_key:
-        if not request.jira_email or not request.jira_token:
-            raise HTTPException(
-                status_code=400,
-                detail="jira_email and jira_token required when using jira_task_key"
-            )
-
-        # Fetch document content from JIRA + Google Docs
-        ba_text = fetch_document_content_from_jira(
-            request.jira_task_key,
-            request.jira_email,
-            request.jira_token
-        )
+        # Fetch document content from JIRA + Google Docs (uses config credentials)
+        ba_text = fetch_document_content_from_jira(request.jira_task_key)
 
         # Convert text to content_json (simple structure for now)
         content_json = {"text": ba_text}
@@ -170,18 +169,8 @@ async def evaluate_tc(request: EvaluationRequest):
     """
     # Mode 1: JIRA task (auto-fetch Google Doc/Sheets)
     if request.jira_task_key:
-        if not request.jira_email or not request.jira_token:
-            raise HTTPException(
-                status_code=400,
-                detail="jira_email and jira_token required when using jira_task_key"
-            )
-
-        # Fetch document content from JIRA + Google Docs/Sheets
-        tc_text = fetch_document_content_from_jira(
-            request.jira_task_key,
-            request.jira_email,
-            request.jira_token
-        )
+        # Fetch document content from JIRA + Google Docs/Sheets (uses config credentials)
+        tc_text = fetch_document_content_from_jira(request.jira_task_key)
 
         # Convert text to content_json
         content_json = {"text": tc_text}

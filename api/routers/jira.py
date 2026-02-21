@@ -7,16 +7,29 @@ from typing import Optional, List
 import base64
 import requests
 
-from ..config import settings
+from ..config import get_settings
 
 router = APIRouter(prefix="/jira", tags=["jira"])
 
-JIRA_BASE_URL = "https://loodos.atlassian.net"
+settings = get_settings()
 
 
 class JIRACredentials(BaseModel):
     email: str
     token: str
+
+
+def get_jira_credentials() -> JIRACredentials:
+    """Get JIRA credentials from settings"""
+    if not settings.jira_email or not settings.jira_api_token:
+        raise HTTPException(
+            status_code=500,
+            detail="JIRA credentials not configured. Set JIRA_EMAIL and JIRA_API_TOKEN in .env"
+        )
+    return JIRACredentials(
+        email=settings.jira_email,
+        token=settings.jira_api_token
+    )
 
 
 def jira_headers(creds: JIRACredentials) -> dict:
@@ -59,13 +72,26 @@ async def search_jira_issues(
         raise HTTPException(status_code=500, detail=f"JIRA API error: {str(e)}")
 
 
+@router.get("/status")
+async def get_jira_status():
+    """
+    Check if JIRA credentials are configured
+    """
+    return {
+        "configured": bool(settings.jira_email and settings.jira_api_token),
+        "jira_base_url": settings.jira_base_url,
+        "jira_email": settings.jira_email if settings.jira_email else None
+    }
+
+
 @router.get("/projects")
-async def get_jira_projects(email: str, token: str):
+async def get_jira_projects():
     """
     Get all JIRA projects accessible to the user
+    Uses credentials from environment variables
     """
-    creds = JIRACredentials(email=email, token=token)
-    url = f"{JIRA_BASE_URL}/rest/api/3/project"
+    creds = get_jira_credentials()
+    url = f"{settings.jira_base_url}/rest/api/3/project"
     
     try:
         resp = requests.get(
@@ -92,15 +118,14 @@ async def get_jira_projects(email: str, token: str):
 @router.get("/tasks")
 async def get_jira_tasks(
     project_key: str,
-    email: str,
-    token: str,
     doc_type: Optional[str] = None
 ):
     """
     Get tasks from a JIRA project
     Filters for tasks that have Google Doc links
+    Uses credentials from environment variables
     """
-    creds = JIRACredentials(email=email, token=token)
+    creds = get_jira_credentials()
     
     # Build JQL based on doc_type
     if doc_type == "ba":
@@ -109,8 +134,8 @@ async def get_jira_tasks(
         jql = f'project = {project_key} AND labels != tc-qa-tamamlandi AND labels != tc-qa-devam-ediyor AND status NOT IN (Cancelled,Done) AND created >= startOfYear() ORDER BY updated DESC'
     else:
         jql = f'project = {project_key} AND status NOT IN (Cancelled,Done) ORDER BY updated DESC'
-    
-    url = f"{JIRA_BASE_URL}/rest/api/3/search/jql"
+
+    url = f"{settings.jira_base_url}/rest/api/3/search/jql"
     params = {
         "jql": jql,
         "maxResults": 50,
@@ -165,18 +190,15 @@ async def get_jira_tasks(
 
 
 @router.get("/tasks/{task_key}/document")
-async def get_task_document(
-    task_key: str,
-    email: str,
-    token: str
-):
+async def get_task_document(task_key: str):
     """
     Get the Google Doc linked to a JIRA task
+    Uses credentials from environment variables
     """
-    creds = JIRACredentials(email=email, token=token)
-    
+    creds = get_jira_credentials()
+
     # Get task details
-    url = f"{JIRA_BASE_URL}/rest/api/3/issue/{task_key}"
+    url = f"{settings.jira_base_url}/rest/api/3/issue/{task_key}"
     params = {"fields": "description"}
     
     try:

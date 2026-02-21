@@ -1,5 +1,5 @@
 /**
- * TC Evaluation — JIRA task-tcsed TC document evaluation
+ * TC Evaluation — JIRA task-based TC document evaluation
  * Flow: JIRA Project → Tasks → Auto-fetch Document → Evaluate
  */
 import { useState } from 'react';
@@ -27,7 +27,7 @@ import {
   PlayCircleOutlined,
   ReloadOutlined
 } from '@ant-design/icons';
-import { useJIRAProjects, useJIRATasks } from '../api/jira';
+import { useJIRAStatus, useJIRAProjects, useJIRATasks } from '../api/jira';
 import { useDocuments } from '../api/documents';
 import { useEvaluateTC } from '../api/evaluation';
 
@@ -35,28 +35,15 @@ const { Panel } = Collapse;
 
 export default function BAEvaluation() {
   const [form] = Form.useForm();
-  const [jiraCredentials, setJiraCredentials] = useState({ email: '', token: '' });
   const [selectedProject, setSelectedProject] = useState(null);
   const [selectedTask, setSelectedTask] = useState(null);
   const [evaluationResult, setEvaluationResult] = useState(null);
 
-  const { data: projects, refetch: refetchProjects } = useJIRAProjects(
-    jiraCredentials.email,
-    jiraCredentials.token
-  );
-  const { data: tasks, refetch: refetchTasks } = useJIRATasks(
-    selectedProject,
-    jiraCredentials.email,
-    jiraCredentials.token,
-    'tc'
-  );
+  const { data: jiraStatus, isLoading: statusLoading } = useJIRAStatus();
+  const { data: projects, refetch: refetchProjects } = useJIRAProjects();
+  const { data: tasks, refetch: refetchTasks } = useJIRATasks(selectedProject, 'ba');
   const { data: documents } = useDocuments({ doc_type: 'ta' });
-  const evaluateMutation = useEvaluateBA();
-
-  const handleCredentialsSubmit = (values) => {
-    setJiraCredentials({ email: values.jira_email, token: values.jira_token });
-    message.success('JIRA tcğlantısı kuruldu');
-  };
+  const evaluateMutation = useEvaluateTC();
 
   const handleEvaluate = async (task) => {
     try {
@@ -64,8 +51,6 @@ export default function BAEvaluation() {
 
       const requestData = {
         jira_task_key: task.key,
-        jira_email: jiraCredentials.email,
-        jira_token: jiraCredentials.token,
         reference_document_id: form.getFieldValue('reference_document_id')
       };
 
@@ -73,7 +58,7 @@ export default function BAEvaluation() {
       setEvaluationResult(result);
       message.success('Değerlendirme tamamlandı');
     } catch (error) {
-      message.error('Değerlendirme tcşarısız oldu: ' + (error.response?.data?.detail || error.message));
+      message.error('Değerlendirme başarısız oldu: ' + (error.response?.data?.detail || error.message));
     }
   };
 
@@ -84,7 +69,7 @@ export default function BAEvaluation() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `tc-evaluation-${selectedTask?.key}-${Date.now()}.json`;
+    a.download = `ba-evaluation-${selectedTask?.key}-${Date.now()}.json`;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -152,43 +137,26 @@ export default function BAEvaluation() {
 
       {!evaluationResult ? (
         <Space direction="vertical" size="large" style={{ width: '100%' }}>
-          {/* Step 1: JIRA Credentials */}
-          {!jiraCredentials.email && (
-            <Card title="1. JIRA Bağlantısı">
-              <Form
-                form={form}
-                layout="vertical"
-                onFinish={handleCredentialsSubmit}
-              >
-                <Form.Item
-                  label="JIRA Email"
-                  name="jira_email"
-                  rules={[{ required: true, message: 'Email gerekli' }]}
-                >
-                  <Input placeholder="ornek@loodos.com" />
-                </Form.Item>
-
-                <Form.Item
-                  label="JIRA API Token"
-                  name="jira_token"
-                  rules={[{ required: true, message: 'Token gerekli' }]}
-                >
-                  <Input.Password placeholder="JIRA API token" />
-                </Form.Item>
-
-                <Form.Item>
-                  <Button type="primary" htmlType="submit">
-                    Bağlan
-                  </Button>
-                </Form.Item>
-              </Form>
+          {/* JIRA Status Check */}
+          {statusLoading && (
+            <Card>
+              <Skeleton active />
             </Card>
           )}
 
-          {/* Step 2: Project Selection */}
-          {jiraCredentials.email && !selectedProject && (
+          {!statusLoading && !jiraStatus?.configured && (
+            <Alert
+              message="JIRA Yapılandırılmamış"
+              description="JIRA entegrasyonu için .env dosyasına JIRA_EMAIL ve JIRA_API_TOKEN ekleyin."
+              type="error"
+              showIcon
+            />
+          )}
+
+          {/* Step 1: Project Selection */}
+          {jiraStatus?.configured && !selectedProject && (
             <Card
-              title="2. JIRA Proje Seçimi"
+              title="1. JIRA Proje Seçimi"
               extra={
                 <Button icon={<ReloadOutlined />} onClick={() => refetchProjects()}>
                   Yenile
@@ -208,10 +176,10 @@ export default function BAEvaluation() {
             </Card>
           )}
 
-          {/* Step 3: Task Selection */}
+          {/* Step 2: Task Selection */}
           {selectedProject && !selectedTask && (
             <Card
-              title={`3. Task Seçimi - ${selectedProject}`}
+              title={`2. Task Seçimi - ${selectedProject}`}
               extra={
                 <Space>
                   <Button onClick={() => setSelectedProject(null)}>
@@ -330,10 +298,10 @@ export default function BAEvaluation() {
               </div>
             </div>
 
-            {evaluationResult.feedtcck && (
+            {evaluationResult.feedback && (
               <Alert
                 message="Genel Geri Bildirim"
-                description={evaluationResult.feedtcck}
+                description={evaluationResult.feedback}
                 type="info"
                 showIcon
                 style={{ marginTop: 24 }}
@@ -374,9 +342,9 @@ export default function BAEvaluation() {
                         </span>
                       )}
                     </Descriptions.Item>
-                    {criterion.feedtcck && (
+                    {criterion.feedback && (
                       <Descriptions.Item label="Geri Bildirim">
-                        {criterion.feedtcck}
+                        {criterion.feedback}
                       </Descriptions.Item>
                     )}
                   </Descriptions>
