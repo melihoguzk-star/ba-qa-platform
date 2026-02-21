@@ -128,10 +128,12 @@ async def get_jira_tasks(
     creds = get_jira_credentials()
     
     # Build JQL based on doc_type
+    # Note: We filter out completed tasks in code (lines 168-171) since JIRA JQL label negation is complex
     if doc_type == "ba":
-        jql = f'project = {project_key} AND labels != qa-tamamlandi AND labels != qa-devam-ediyor AND status NOT IN (Cancelled,Done) AND created >= startOfYear() ORDER BY updated DESC'
+        jql = f'project = {project_key} AND status NOT IN (Cancelled,Done) AND created >= startOfYear() ORDER BY updated DESC'
     elif doc_type == "tc":
-        jql = f'project = {project_key} AND labels != tc-qa-tamamlandi AND labels != tc-qa-devam-ediyor AND status NOT IN (Cancelled,Done) AND created >= startOfYear() ORDER BY updated DESC'
+        # TC tasks have component = Test
+        jql = f'project = {project_key} AND component = Test AND status NOT IN (Cancelled,Done) AND created >= startOfYear() ORDER BY updated DESC'
     else:
         jql = f'project = {project_key} AND status NOT IN (Cancelled,Done) ORDER BY updated DESC'
 
@@ -139,7 +141,7 @@ async def get_jira_tasks(
     params = {
         "jql": jql,
         "maxResults": 50,
-        "fields": "summary,description,status,labels,assignee,updated"
+        "fields": "summary,description,status,labels,assignee,updated,issuelinks"  # Added issuelinks for TC
     }
     
     try:
@@ -159,22 +161,23 @@ async def get_jira_tasks(
             desc = fields.get("description", "")
             labels = fields.get("labels", [])
             
-            # Skip test tasks
+            # Skip test/dummy tasks (only for BA, not for TC since TC tasks ARE test tasks)
             summary = fields.get("summary", "")
-            if "test" in labels or "TEST TEST" in summary or summary.endswith("(Test)"):
+            if doc_type == "ba" and ("test" in labels or "test-task" in labels or "TEST TEST" in summary or summary.endswith("(Test)")):
                 continue
-                
+
             # Skip already completed tasks
             if doc_type == "ba" and ("qa-tamamlandi" in labels or "qa-devam-ediyor" in labels):
                 continue
             if doc_type == "tc" and ("tc-qa-tamamlandi" in labels or "tc-qa-devam-ediyor" in labels):
                 continue
             
-            # Extract Google Doc ID
-            doc_id, doc_url = extract_doc_id_from_desc(desc)
-            
+            # Extract Google Doc/Sheets ID (prefer Sheets for TC, Docs for BA)
+            prefer_sheets = (doc_type == "tc")
+            doc_id, doc_url = extract_doc_id_from_desc(desc, prefer_sheets=prefer_sheets)
+
             if doc_id:
-                tasks.append({
+                task_data = {
                     "key": issue["key"],
                     "summary": summary,
                     "assignee": (fields.get("assignee") or {}).get("displayName", ""),
@@ -182,7 +185,14 @@ async def get_jira_tasks(
                     "doc_url": doc_url,
                     "status": fields.get("status", {}).get("name", ""),
                     "labels": labels
-                })
+                }
+
+                # For TC tasks, extract linked BA
+                if doc_type == "tc":
+                    linked_ba = find_linked_ba_key(issue)
+                    task_data["linked_ba_key"] = linked_ba if linked_ba else None
+
+                tasks.append(task_data)
         
         return tasks
     except requests.RequestException as e:
@@ -225,31 +235,64 @@ async def get_task_document(task_key: str):
         raise HTTPException(status_code=500, detail=f"JIRA API error: {str(e)}")
 
 
-def extract_doc_id_from_desc(description: str) -> tuple[str, str]:
+def extract_doc_id_from_desc(description: str, prefer_sheets: bool = False) -> tuple[str, str]:
     """
-    Extract Google Doc ID from JIRA description
+    Extract Google Doc/Sheets ID from JIRA description
     Returns: (doc_id, doc_url)
+
+    Args:
+        description: JIRA description field
+        prefer_sheets: If True, look for Sheets first (for TC tasks), else Docs first (for BA tasks)
     """
     import re
-    
+
     if not description:
         return "", ""
-    
+
     # Convert description to plain text (it's in Atlassian Document Format)
     # For simplicity, we'll search the raw JSON string
     desc_str = str(description)
-    
-    # Look for Google Docs URL patterns
-    patterns = [
+
+    # Define pattern sets
+    sheets_patterns = [
+        r'docs\.google\.com/spreadsheets/d/([a-zA-Z0-9_-]+)',
+    ]
+
+    docs_patterns = [
         r'docs\.google\.com/document/d/([a-zA-Z0-9_-]+)',
         r'https://docs\.google\.com/.*?/d/([a-zA-Z0-9_-]+)'
     ]
-    
-    for pattern in patterns:
-        match = re.search(pattern, desc_str)
-        if match:
-            doc_id = match.group(1)
-            doc_url = f"https://docs.google.com/document/d/{doc_id}/edit"
-            return doc_id, doc_url
-    
+
+    # Try patterns based on preference
+    pattern_order = [sheets_patterns, docs_patterns] if prefer_sheets else [docs_patterns, sheets_patterns]
+
+    for pattern_set in pattern_order:
+        for pattern in pattern_set:
+            match = re.search(pattern, desc_str)
+            if match:
+                doc_id = match.group(1)
+                # Determine if it's a sheet or doc based on pattern
+                if 'spreadsheet' in pattern:
+                    doc_url = f"https://docs.google.com/spreadsheets/d/{doc_id}/edit"
+                else:
+                    doc_url = f"https://docs.google.com/document/d/{doc_id}/edit"
+                return doc_id, doc_url
+
     return "", ""
+
+
+def find_linked_ba_key(issue: dict) -> str:
+    """
+    Extract linked BA task key from issue links
+    Returns the first linked issue key found
+    """
+    issuelinks = issue.get("fields", {}).get("issuelinks", [])
+    for link in issuelinks:
+        # Check both inward and outward links
+        inward = link.get("inwardIssue", {})
+        outward = link.get("outwardIssue", {})
+        for linked in [inward, outward]:
+            key = linked.get("key", "")
+            if key:
+                return key
+    return ""

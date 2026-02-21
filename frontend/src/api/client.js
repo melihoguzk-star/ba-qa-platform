@@ -5,7 +5,7 @@ import axios from 'axios';
 
 const client = axios.create({
   baseURL: '/api/v1',
-  timeout: 30000,
+  timeout: 120000, // 2 minutes for AI evaluation requests
   headers: {
     'Content-Type': 'application/json',
   },

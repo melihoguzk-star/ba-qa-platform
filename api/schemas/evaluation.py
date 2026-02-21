@@ -28,6 +28,9 @@ class EvaluationRequest(BaseModel):
     # Optional reference document
     reference_document_id: Optional[int] = None
 
+    # Model selection (optional, defaults to Gemini 2.5 Flash)
+    model: Optional[str] = "gemini-2.5-flash"
+
 
 class EvaluationResponse(BaseModel):
     """Evaluation response schema"""
