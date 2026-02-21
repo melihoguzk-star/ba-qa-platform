@@ -14,6 +14,7 @@ import TCEvaluation from './pages/TCEvaluation';
 import DesignCompliance from './pages/DesignCompliance';
 import BRDPipeline from './pages/BRDPipeline';
 import SmartMatching from './pages/SmartMatch/SmartMatching';
+import Reports from './pages/Reports';
 import Settings from './pages/Settings';
 import { ROUTES } from './utils/constants';
 
@@ -54,6 +55,7 @@ export default function App() {
               <Route path={ROUTES.DESIGN_COMPLIANCE} element={<DesignCompliance />} />
               <Route path={ROUTES.BRD_PIPELINE} element={<BRDPipeline />} />
               <Route path={ROUTES.SMART_MATCHING} element={<SmartMatching />} />
+              <Route path={ROUTES.REPORTS} element={<Reports />} />
               <Route path={ROUTES.SETTINGS} element={<Settings />} />
               {/* More routes will be added in Phase 3 */}
             </Route>

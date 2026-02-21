@@ -17,6 +17,7 @@ from api.routers import (
     matching,
     jira,
     design,
+    reports,
     settings as settings_router
 )
 
@@ -87,6 +88,7 @@ app.include_router(search.router, prefix=f"{settings.api_prefix}/search", tags=[
 app.include_router(upload.router, prefix=f"{settings.api_prefix}/upload", tags=["Upload"])
 app.include_router(matching.router, prefix=f"{settings.api_prefix}/match", tags=["Matching"])
 app.include_router(design.router, prefix=f"{settings.api_prefix}", tags=["Design"])
+app.include_router(reports.router, prefix=f"{settings.api_prefix}", tags=["Reports"])
 app.include_router(jira.router, prefix=f"{settings.api_prefix}", tags=["JIRA"])
 app.include_router(settings_router.router, prefix=f"{settings.api_prefix}/settings", tags=["Settings"])
 
