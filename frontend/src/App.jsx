@@ -1,35 +1,38 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+/**
+ * App — Root component with routing
+ */
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { ConfigProvider } from 'antd';
+import trTR from 'antd/locale/tr_TR';
+import MainLayout from './layouts/MainLayout';
+import Dashboard from './pages/Dashboard';
+import Documents from './pages/Documents';
+import BAEvaluation from './pages/BAEvaluation';
+import Settings from './pages/Settings';
+import { ROUTES } from './utils/constants';
 
-function App() {
-  const [count, setCount] = useState(0)
-
+export default function App() {
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.jsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
+    <ConfigProvider
+      locale={trTR}
+      theme={{
+        token: {
+          colorPrimary: '#1890ff',
+          borderRadius: 8,
+        },
+      }}
+    >
+      <BrowserRouter>
+        <Routes>
+          <Route element={<MainLayout />}>
+            <Route index element={<Dashboard />} />
+            <Route path={ROUTES.DOCUMENTS} element={<Documents />} />
+            <Route path={ROUTES.BA_EVALUATION} element={<BAEvaluation />} />
+            <Route path={ROUTES.SETTINGS} element={<Settings />} />
+            {/* More routes will be added in later tasks */}
+          </Route>
+        </Routes>
+      </BrowserRouter>
+    </ConfigProvider>
+  );
 }
-
-export default App
