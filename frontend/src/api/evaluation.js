@@ -1,5 +1,5 @@
 /**
- * Evaluation API — React Query hooks
+ * Evaluation API — React Query hooks for BA/TC evaluation
  */
 import { useMutation } from '@tanstack/react-query';
 import client from './client';
