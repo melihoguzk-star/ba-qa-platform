@@ -33,6 +33,7 @@ import {
   LoadingOutlined,
 } from '@ant-design/icons';
 import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import {
   useAnalyzeDesign,
   useCheckTypes,
@@ -173,42 +174,80 @@ export default function DesignCompliance() {
 
   // Step indicator
   const getStepIndicator = () => {
-    const steps = {
-      requirements: { label: 'Gereksinim Çıkarma', icon: <FileTextOutlined /> },
-      screen_analysis: { label: 'Ekran Analizi', icon: <PictureOutlined /> },
-      compliance: { label: 'Uyumluluk Kontrolü', icon: <CheckCircleOutlined /> },
-      report: { label: 'Rapor Oluşturma', icon: <FileTextOutlined /> },
+    const steps = [
+      { key: 'requirements', label: 'Gereksinim Çıkarma', icon: <FileTextOutlined />, maxProgress: 30 },
+      { key: 'screen_analysis', label: 'Ekran Analizi', icon: <PictureOutlined />, maxProgress: 55 },
+      { key: 'compliance', label: 'Uyumluluk Kontrolü', icon: <CheckCircleOutlined />, maxProgress: 80 },
+      { key: 'report', label: 'Rapor Oluşturma', icon: <FileTextOutlined />, maxProgress: 95 },
+    ];
+
+    const getStepStatus = (stepKey, stepMaxProgress) => {
+      if (progress >= stepMaxProgress) return 'completed';
+      if (currentStep === stepKey) return 'active';
+      return 'pending';
     };
 
     return (
       <Space direction="vertical" style={{ width: '100%', marginBottom: 16 }}>
         <Row gutter={8}>
-          {Object.entries(steps).map(([key, step]) => (
-            <Col span={6} key={key}>
-              <Card
-                size="small"
-                style={{
-                  textAlign: 'center',
-                  backgroundColor: currentStep === key ? '#e6f7ff' : '#fafafa',
-                  borderColor: currentStep === key ? '#1890ff' : '#d9d9d9',
-                }}
-              >
-                <Space direction="vertical" size={4}>
-                  {currentStep === key ? <LoadingOutlined spin /> : step.icon}
-                  <Text
-                    style={{
-                      fontSize: 12,
-                      fontWeight: currentStep === key ? 600 : 400,
-                    }}
-                  >
-                    {step.label}
-                  </Text>
-                </Space>
-              </Card>
-            </Col>
-          ))}
+          {steps.map((step) => {
+            const status = getStepStatus(step.key, step.maxProgress);
+            return (
+              <Col span={6} key={step.key}>
+                <Card
+                  size="small"
+                  style={{
+                    textAlign: 'center',
+                    backgroundColor:
+                      status === 'completed'
+                        ? '#f6ffed'
+                        : status === 'active'
+                        ? '#e6f7ff'
+                        : '#fafafa',
+                    borderColor:
+                      status === 'completed'
+                        ? '#52c41a'
+                        : status === 'active'
+                        ? '#1890ff'
+                        : '#d9d9d9',
+                  }}
+                >
+                  <Space direction="vertical" size={4}>
+                    {status === 'active' ? (
+                      <LoadingOutlined spin style={{ color: '#1890ff' }} />
+                    ) : status === 'completed' ? (
+                      <CheckCircleOutlined style={{ color: '#52c41a' }} />
+                    ) : (
+                      <span style={{ color: '#d9d9d9' }}>{step.icon}</span>
+                    )}
+                    <Text
+                      style={{
+                        fontSize: 12,
+                        fontWeight: status === 'active' ? 600 : 400,
+                        color:
+                          status === 'completed'
+                            ? '#52c41a'
+                            : status === 'active'
+                            ? '#1890ff'
+                            : '#8c8c8c',
+                      }}
+                    >
+                      {step.label}
+                    </Text>
+                  </Space>
+                </Card>
+              </Col>
+            );
+          })}
         </Row>
-        <Progress percent={progress} status={isAnalyzing ? 'active' : 'normal'} />
+        <Progress
+          percent={progress}
+          status={isAnalyzing ? 'active' : progress === 100 ? 'success' : 'normal'}
+          strokeColor={{
+            '0%': '#108ee9',
+            '100%': '#87d068',
+          }}
+        />
       </Space>
     );
   };
@@ -409,6 +448,7 @@ export default function DesignCompliance() {
                       children: (
                         <Card size="small">
                           <div
+                            className="markdown-content"
                             style={{
                               maxHeight: 500,
                               overflowY: 'auto',
@@ -416,7 +456,7 @@ export default function DesignCompliance() {
                               backgroundColor: '#fafafa',
                             }}
                           >
-                            <ReactMarkdown>{analysisResult.report_output}</ReactMarkdown>
+                            <ReactMarkdown remarkPlugins={[remarkGfm]}>{analysisResult.report_output}</ReactMarkdown>
                           </div>
                         </Card>
                       ),
@@ -427,6 +467,7 @@ export default function DesignCompliance() {
                       children: (
                         <Card size="small">
                           <div
+                            className="markdown-content"
                             style={{
                               maxHeight: 500,
                               overflowY: 'auto',
@@ -434,7 +475,7 @@ export default function DesignCompliance() {
                               backgroundColor: '#fafafa',
                             }}
                           >
-                            <ReactMarkdown>{analysisResult.compliance_output}</ReactMarkdown>
+                            <ReactMarkdown remarkPlugins={[remarkGfm]}>{analysisResult.compliance_output}</ReactMarkdown>
                           </div>
                         </Card>
                       ),
@@ -445,6 +486,7 @@ export default function DesignCompliance() {
                       children: (
                         <Card size="small">
                           <div
+                            className="markdown-content"
                             style={{
                               maxHeight: 500,
                               overflowY: 'auto',
@@ -452,7 +494,7 @@ export default function DesignCompliance() {
                               backgroundColor: '#fafafa',
                             }}
                           >
-                            <ReactMarkdown>
+                            <ReactMarkdown remarkPlugins={[remarkGfm]}>
                               {analysisResult.requirements_output}
                             </ReactMarkdown>
                           </div>
@@ -465,6 +507,7 @@ export default function DesignCompliance() {
                       children: (
                         <Card size="small">
                           <div
+                            className="markdown-content"
                             style={{
                               maxHeight: 500,
                               overflowY: 'auto',
@@ -472,7 +515,7 @@ export default function DesignCompliance() {
                               backgroundColor: '#fafafa',
                             }}
                           >
-                            <ReactMarkdown>{analysisResult.screen_output}</ReactMarkdown>
+                            <ReactMarkdown remarkPlugins={[remarkGfm]}>{analysisResult.screen_output}</ReactMarkdown>
                           </div>
                         </Card>
                       ),
@@ -483,6 +526,7 @@ export default function DesignCompliance() {
                       children: (
                         <Card size="small">
                           <div
+                            className="markdown-content"
                             style={{
                               maxHeight: 500,
                               overflowY: 'auto',
@@ -490,7 +534,7 @@ export default function DesignCompliance() {
                               backgroundColor: '#fafafa',
                             }}
                           >
-                            <ReactMarkdown>{analysisResult.full_report}</ReactMarkdown>
+                            <ReactMarkdown remarkPlugins={[remarkGfm]}>{analysisResult.full_report}</ReactMarkdown>
                           </div>
                         </Card>
                       ),
