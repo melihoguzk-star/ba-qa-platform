@@ -11,6 +11,7 @@ import Documents from './pages/Documents';
 import Import from './pages/Import';
 import BAEvaluation from './pages/BAEvaluation';
 import TCEvaluation from './pages/TCEvaluation';
+import DesignCompliance from './pages/DesignCompliance';
 import BRDPipeline from './pages/BRDPipeline';
 import SmartMatching from './pages/SmartMatch/SmartMatching';
 import Settings from './pages/Settings';
@@ -50,6 +51,7 @@ export default function App() {
               <Route path={ROUTES.IMPORT} element={<Import />} />
               <Route path={ROUTES.BA_EVALUATION} element={<BAEvaluation />} />
               <Route path={ROUTES.TC_EVALUATION} element={<TCEvaluation />} />
+              <Route path={ROUTES.DESIGN_COMPLIANCE} element={<DesignCompliance />} />
               <Route path={ROUTES.BRD_PIPELINE} element={<BRDPipeline />} />
               <Route path={ROUTES.SMART_MATCHING} element={<SmartMatching />} />
               <Route path={ROUTES.SETTINGS} element={<Settings />} />
