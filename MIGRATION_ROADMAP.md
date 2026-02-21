@@ -1,5 +1,13 @@
 # BA&QA Intelligence Platform — Streamlit → React Migration Roadmap
 
+## Genel Kurallar — Her Task İçin Geçerli
+
+1. Her sayfa implementasyonuna başlamadan ÖNCE, o sayfanın mevcut Streamlit dosyasını ve ilgili tüm backend modüllerini oku
+2. Okuduğun akışın özetini ver, onay bekle
+3. Onay aldıktan sonra implement et
+4. Roadmap'teki açıklama ile mevcut Streamlit kodu çelişirse, HER ZAMAN mevcut Streamlit kodunu referans al
+5. Mevcut entegrasyonları (JIRA, n8n, Google Docs) atla veya basitleştirme — birebir taşı
+
 ## Hedef Stack
 - **Framework:** React 18 + Vite
 - **UI Library:** Ant Design (antd) v5
