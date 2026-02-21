@@ -1,5 +1,6 @@
 /**
- * TC Evaluation — TC document evaluation page
+ * TC Evaluation — JIRA task-tcsed TC document evaluation
+ * Flow: JIRA Project → Tasks → Auto-fetch Document → Evaluate
  */
 import { useState } from 'react';
 import {
@@ -13,7 +14,9 @@ import {
   Skeleton,
   Alert,
   Space,
-  Upload,
+  Input,
+  Table,
+  Tag,
   message
 } from 'antd';
 import {
@@ -21,34 +24,56 @@ import {
   DownloadOutlined,
   CheckCircleOutlined,
   CloseCircleOutlined,
-  UploadOutlined
+  PlayCircleOutlined,
+  ReloadOutlined
 } from '@ant-design/icons';
+import { useJIRAProjects, useJIRATasks } from '../api/jira';
 import { useDocuments } from '../api/documents';
 import { useEvaluateTC } from '../api/evaluation';
 
 const { Panel } = Collapse;
 
-export default function TCEvaluation() {
+export default function BAEvaluation() {
   const [form] = Form.useForm();
+  const [jiraCredentials, setJiraCredentials] = useState({ email: '', token: '' });
+  const [selectedProject, setSelectedProject] = useState(null);
+  const [selectedTask, setSelectedTask] = useState(null);
   const [evaluationResult, setEvaluationResult] = useState(null);
-  const [selectedMethod, setSelectedMethod] = useState('existing'); // 'existing' or 'upload'
 
-  const { data: documents } = useDocuments({ doc_type: 'tc' });
-  const evaluateMutation = useEvaluateTC();
+  const { data: projects, refetch: refetchProjects } = useJIRAProjects(
+    jiraCredentials.email,
+    jiraCredentials.token
+  );
+  const { data: tasks, refetch: refetchTasks } = useJIRATasks(
+    selectedProject,
+    jiraCredentials.email,
+    jiraCredentials.token,
+    'tc'
+  );
+  const { data: documents } = useDocuments({ doc_type: 'ta' });
+  const evaluateMutation = useEvaluateBA();
 
-  const handleEvaluate = async (values) => {
+  const handleCredentialsSubmit = (values) => {
+    setJiraCredentials({ email: values.jira_email, token: values.jira_token });
+    message.success('JIRA tcğlantısı kuruldu');
+  };
+
+  const handleEvaluate = async (task) => {
     try {
+      setSelectedTask(task);
+
       const requestData = {
-        document_id: selectedMethod === 'existing' ? values.document_id : undefined,
-        content_json: undefined, // TODO: implement for file upload
-        reference_document_id: values.reference_document_id
+        jira_task_key: task.key,
+        jira_email: jiraCredentials.email,
+        jira_token: jiraCredentials.token,
+        reference_document_id: form.getFieldValue('reference_document_id')
       };
 
       const result = await evaluateMutation.mutateAsync(requestData);
       setEvaluationResult(result);
       message.success('Değerlendirme tamamlandı');
     } catch (error) {
-      message.error('Değerlendirme başarısız oldu');
+      message.error('Değerlendirme tcşarısız oldu: ' + (error.response?.data?.detail || error.message));
     }
   };
 
@@ -59,14 +84,14 @@ export default function TCEvaluation() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `tc-evaluation-${Date.now()}.json`;
+    a.download = `tc-evaluation-${selectedTask?.key}-${Date.now()}.json`;
     a.click();
     URL.revokeObjectURL(url);
   };
 
   const handleReset = () => {
     setEvaluationResult(null);
-    form.resetFields();
+    setSelectedTask(null);
   };
 
   const getScoreColor = (score) => {
@@ -75,36 +100,166 @@ export default function TCEvaluation() {
     return '#f5222d';
   };
 
+  const taskColumns = [
+    {
+      title: 'Task Key',
+      dataIndex: 'key',
+      key: 'key',
+      width: 120,
+      render: (text) => <Tag color="blue">{text}</Tag>
+    },
+    {
+      title: 'Summary',
+      dataIndex: 'summary',
+      key: 'summary',
+      ellipsis: true
+    },
+    {
+      title: 'Assignee',
+      dataIndex: 'assignee',
+      key: 'assignee',
+      width: 150
+    },
+    {
+      title: 'Status',
+      dataIndex: 'status',
+      key: 'status',
+      width: 120
+    },
+    {
+      title: 'Action',
+      key: 'action',
+      width: 100,
+      render: (_, record) => (
+        <Button
+          type="primary"
+          size="small"
+          icon={<PlayCircleOutlined />}
+          onClick={() => handleEvaluate(record)}
+        >
+          Değerlendir
+        </Button>
+      )
+    }
+  ];
+
   return (
     <div>
-      <h1 style={{ marginBottom: 24 }}>TC Doküman Değerlendirme</h1>
+      <h1 style={{ marginBottom: 8 }}>TC Doküman Değerlendirme</h1>
+      <p style={{ color: '#8c8c8c', marginBottom: 24 }}>
+        JIRA görevlerinden TC dokümanlarını otomatik analiz eder ve kalite puanı hesaplar
+      </p>
 
       {!evaluationResult ? (
-        <Card title="Değerlendirme Ayarları" extra={<FileSearchOutlined />}>
-          <Form
-            form={form}
-            layout="vertical"
-            onFinish={handleEvaluate}
-          >
-            <Form.Item label="Değerlendirme Yöntemi">
-              <Select
-                value={selectedMethod}
-                onChange={setSelectedMethod}
-                options={[
-                  { label: 'Mevcut Doküman', value: 'existing' },
-                  { label: 'Dosya Yükle', value: 'upload' }
-                ]}
-              />
-            </Form.Item>
+        <Space direction="vertical" size="large" style={{ width: '100%' }}>
+          {/* Step 1: JIRA Credentials */}
+          {!jiraCredentials.email && (
+            <Card title="1. JIRA Bağlantısı">
+              <Form
+                form={form}
+                layout="vertical"
+                onFinish={handleCredentialsSubmit}
+              >
+                <Form.Item
+                  label="JIRA Email"
+                  name="jira_email"
+                  rules={[{ required: true, message: 'Email gerekli' }]}
+                >
+                  <Input placeholder="ornek@loodos.com" />
+                </Form.Item>
 
-            {selectedMethod === 'existing' ? (
+                <Form.Item
+                  label="JIRA API Token"
+                  name="jira_token"
+                  rules={[{ required: true, message: 'Token gerekli' }]}
+                >
+                  <Input.Password placeholder="JIRA API token" />
+                </Form.Item>
+
+                <Form.Item>
+                  <Button type="primary" htmlType="submit">
+                    Bağlan
+                  </Button>
+                </Form.Item>
+              </Form>
+            </Card>
+          )}
+
+          {/* Step 2: Project Selection */}
+          {jiraCredentials.email && !selectedProject && (
+            <Card
+              title="2. JIRA Proje Seçimi"
+              extra={
+                <Button icon={<ReloadOutlined />} onClick={() => refetchProjects()}>
+                  Yenile
+                </Button>
+              }
+            >
+              <Select
+                placeholder="JIRA projesi seçin"
+                style={{ width: '100%' }}
+                onChange={setSelectedProject}
+                options={projects?.map(p => ({
+                  label: `${p.key} - ${p.name}`,
+                  value: p.key
+                }))}
+                size="large"
+              />
+            </Card>
+          )}
+
+          {/* Step 3: Task Selection */}
+          {selectedProject && !selectedTask && (
+            <Card
+              title={`3. Task Seçimi - ${selectedProject}`}
+              extra={
+                <Space>
+                  <Button onClick={() => setSelectedProject(null)}>
+                    Proje Değiştir
+                  </Button>
+                  <Button icon={<ReloadOutlined />} onClick={() => refetchTasks()}>
+                    Yenile
+                  </Button>
+                </Space>
+              }
+            >
+              {tasks && tasks.length > 0 ? (
+                <>
+                  <Alert
+                    message={`${tasks.length} TC task bulundu`}
+                    type="info"
+                    showIcon
+                    style={{ marginBottom: 16 }}
+                  />
+                  <Table
+                    dataSource={tasks}
+                    columns={taskColumns}
+                    rowKey="key"
+                    pagination={false}
+                    size="small"
+                  />
+                </>
+              ) : (
+                <Alert
+                  message="Task bulunamadı"
+                  description="Bu projede değerlendirilecek TC task bulunmuyor."
+                  type="warning"
+                  showIcon
+                />
+              )}
+            </Card>
+          )}
+
+          {/* Optional: Reference Document */}
+          {selectedProject && (
+            <Card title="Opsiyonel: Referans Doküman">
               <Form.Item
-                label="TC Dokümanı"
-                name="document_id"
-                rules={[{ required: true, message: 'Doküman seçiniz' }]}
+                label="Referans BRD Dokümanı"
+                name="reference_document_id"
               >
                 <Select
-                  placeholder="Değerlendirilecek test case dokümanını seçin"
+                  placeholder="Karşılaştırma için BRD seçin (opsiyonel)"
+                  allowClear
                   showSearch
                   filterOption={(input, option) =>
                     (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
@@ -115,74 +270,28 @@ export default function TCEvaluation() {
                   }))}
                 />
               </Form.Item>
-            ) : (
-              <Form.Item
-                label="Dosya Yükle"
-                name="upload"
-              >
-                <Upload.Dragger
-                  beforeUpload={() => false}
-                  maxCount={1}
-                  accept=".docx,.pdf,.xlsx"
-                >
-                  <p className="ant-upload-drag-icon">
-                    <UploadOutlined />
-                  </p>
-                  <p className="ant-upload-text">Dosya yüklemek için tıklayın veya sürükleyin</p>
-                  <p className="ant-upload-hint">DOCX, PDF veya XLSX formatında TC dokümanı</p>
-                </Upload.Dragger>
-              </Form.Item>
-            )}
+            </Card>
+          )}
 
-            <Form.Item
-              label="Referans Doküman (Opsiyonel)"
-              name="reference_document_id"
-            >
-              <Select
-                placeholder="Karşılaştırma için referans doküman seçin"
-                allowClear
-                showSearch
-                filterOption={(input, option) =>
-                  (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
-                }
-                options={documents?.map(d => ({
-                  label: `${d.name} (v${d.current_version})`,
-                  value: d.id
-                }))}
-              />
-            </Form.Item>
-
-            <Form.Item>
-              <Button
-                type="primary"
-                htmlType="submit"
-                loading={evaluateMutation.isPending}
-                icon={<FileSearchOutlined />}
-                size="large"
-              >
-                Değerlendir
-              </Button>
-            </Form.Item>
-          </Form>
-
+          {/* Loading State */}
           {evaluateMutation.isPending && (
-            <div style={{ marginTop: 24 }}>
+            <Card>
               <Skeleton active />
               <Alert
                 message="Değerlendirme devam ediyor..."
-                description="AI model dokümanı analiz ediyor. Bu işlem 30-60 saniye sürebilir."
+                description={`${selectedTask?.key} - ${selectedTask?.summary} dokümanı analiz ediliyor. Bu işlem 30-60 saniye sürebilir.`}
                 type="info"
                 showIcon
                 style={{ marginTop: 16 }}
               />
-            </div>
+            </Card>
           )}
-        </Card>
+        </Space>
       ) : (
         <Space direction="vertical" size="large" style={{ width: '100%' }}>
           {/* Overall Score */}
           <Card
-            title="Genel Değerlendirme"
+            title={`Değerlendirme Sonucu: ${selectedTask?.key}`}
             extra={
               <Space>
                 <Button
@@ -221,10 +330,10 @@ export default function TCEvaluation() {
               </div>
             </div>
 
-            {evaluationResult.feedback && (
+            {evaluationResult.feedtcck && (
               <Alert
                 message="Genel Geri Bildirim"
-                description={evaluationResult.feedback}
+                description={evaluationResult.feedtcck}
                 type="info"
                 showIcon
                 style={{ marginTop: 24 }}
@@ -233,7 +342,7 @@ export default function TCEvaluation() {
           </Card>
 
           {/* Criteria Scores */}
-          <Card title="Kriter Bazlı Skorlar">
+          <Card title="Kriter Bazlı Skorlar (8 Kriter)">
             <Collapse accordion>
               {evaluationResult.criteria_scores?.map((criterion, index) => (
                 <Panel
@@ -241,9 +350,9 @@ export default function TCEvaluation() {
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <span>{criterion.name || `Kriter ${index + 1}`}</span>
                       <Progress
-                        percent={criterion.score}
+                        percent={criterion.score * 10}
                         steps={10}
-                        strokeColor={getScoreColor(criterion.score)}
+                        strokeColor={getScoreColor(criterion.score * 10)}
                         style={{ width: 200, marginLeft: 16 }}
                       />
                     </div>
@@ -252,10 +361,10 @@ export default function TCEvaluation() {
                 >
                   <Descriptions column={1} bordered size="small">
                     <Descriptions.Item label="Skor">
-                      {criterion.score} / 100
+                      {criterion.score} / 10
                     </Descriptions.Item>
                     <Descriptions.Item label="Durum">
-                      {criterion.score >= 60 ? (
+                      {criterion.score >= 6 ? (
                         <span style={{ color: '#52c41a' }}>
                           <CheckCircleOutlined /> Yeterli
                         </span>
@@ -265,18 +374,9 @@ export default function TCEvaluation() {
                         </span>
                       )}
                     </Descriptions.Item>
-                    {criterion.feedback && (
+                    {criterion.feedtcck && (
                       <Descriptions.Item label="Geri Bildirim">
-                        {criterion.feedback}
-                      </Descriptions.Item>
-                    )}
-                    {criterion.suggestions && criterion.suggestions.length > 0 && (
-                      <Descriptions.Item label="Öneriler">
-                        <ul style={{ margin: 0, paddingLeft: 20 }}>
-                          {criterion.suggestions.map((suggestion, i) => (
-                            <li key={i}>{suggestion}</li>
-                          ))}
-                        </ul>
+                        {criterion.feedtcck}
                       </Descriptions.Item>
                     )}
                   </Descriptions>

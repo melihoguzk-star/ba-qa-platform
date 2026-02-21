@@ -15,8 +15,18 @@ class CriteriaScore(BaseModel):
 
 class EvaluationRequest(BaseModel):
     """Evaluation request schema"""
+    # Option 1: Evaluate from database document
     document_id: Optional[int] = None
+
+    # Option 2: Evaluate direct content
     content_json: Optional[dict] = None
+
+    # Option 3: Evaluate from JIRA task (auto-fetch Google Doc)
+    jira_task_key: Optional[str] = None
+    jira_email: Optional[str] = None
+    jira_token: Optional[str] = None
+
+    # Optional reference document
     reference_document_id: Optional[int] = None
 
 
