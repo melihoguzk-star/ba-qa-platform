@@ -9,6 +9,8 @@ import MainLayout from './layouts/MainLayout';
 import Dashboard from './pages/Dashboard';
 import Documents from './pages/Documents';
 import BAEvaluation from './pages/BAEvaluation';
+import TCEvaluation from './pages/TCEvaluation';
+import BRDPipeline from './pages/BRDPipeline';
 import Settings from './pages/Settings';
 import { ROUTES } from './utils/constants';
 
@@ -44,8 +46,10 @@ export default function App() {
               <Route index element={<Dashboard />} />
               <Route path={ROUTES.DOCUMENTS} element={<Documents />} />
               <Route path={ROUTES.BA_EVALUATION} element={<BAEvaluation />} />
+              <Route path={ROUTES.TC_EVALUATION} element={<TCEvaluation />} />
+              <Route path={ROUTES.BRD_PIPELINE} element={<BRDPipeline />} />
               <Route path={ROUTES.SETTINGS} element={<Settings />} />
-              {/* More routes will be added in Phase 2 */}
+              {/* More routes will be added in Phase 3 */}
             </Route>
           </Routes>
         </BrowserRouter>
