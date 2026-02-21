@@ -203,6 +203,18 @@ async def get_supported_models():
                 "recommended": False
             },
             {
+                "id": "gemini-2.5-flash",
+                "name": "Gemini 2.5 Flash",
+                "provider": "Google",
+                "recommended": False
+            },
+            {
+                "id": "claude-sonnet-4-20250514",
+                "name": "Claude Sonnet 4",
+                "provider": "Anthropic",
+                "recommended": False
+            },
+            {
                 "id": "claude-3-5-sonnet-20241022",
                 "name": "Claude 3.5 Sonnet",
                 "provider": "Anthropic",
