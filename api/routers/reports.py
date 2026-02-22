@@ -9,6 +9,7 @@ import io
 from datetime import datetime
 
 from data.database import get_stats, get_recent_analyses
+from api.db import get_recent_pipeline_runs, get_pipeline_run_outputs
 
 router = APIRouter(prefix="/reports", tags=["Reports"])
 
@@ -105,3 +106,44 @@ async def export_analyses_csv(
             "Content-Disposition": f"attachment; filename={filename}"
         }
     )
+
+
+@router.get("/pipeline-runs")
+async def get_pipeline_runs(
+    limit: int = Query(20, ge=1, le=100, description="Maximum number of pipeline runs")
+):
+    """
+    Get recent BRD pipeline runs with available document info.
+
+    Returns list of pipeline runs with scores and available document types.
+    """
+    runs = get_recent_pipeline_runs(limit=limit)
+
+    results = []
+    for run in runs:
+        # Determine which documents are available from stage outputs
+        outputs = get_pipeline_run_outputs(run["id"])
+        available_docs = set()
+        for output in outputs:
+            stage = output.get("stage", "")
+            if stage in ("ba", "ba_gen"):
+                available_docs.add("ba")
+            elif stage in ("ta", "ta_gen"):
+                available_docs.add("ta")
+            elif stage in ("tc", "tc_gen"):
+                available_docs.add("tc")
+        available_docs = list(available_docs)
+
+        results.append({
+            "id": run["id"],
+            "project_name": run.get("project_name", ""),
+            "status": run.get("status", ""),
+            "current_stage": run.get("current_stage", ""),
+            "ba_score": run.get("ba_score"),
+            "ta_score": run.get("ta_score"),
+            "tc_score": run.get("tc_score"),
+            "created_at": run.get("created_at", ""),
+            "available_docs": available_docs,
+        })
+
+    return results

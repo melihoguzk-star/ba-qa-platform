@@ -41,6 +41,21 @@ export const useRecentAnalyses = (filters = {}) => {
 };
 
 /**
+ * Get recent BRD pipeline runs
+ */
+export const usePipelineRuns = (limit = 20) => {
+  return useQuery({
+    queryKey: ['pipeline-runs', limit],
+    queryFn: async () => {
+      const response = await client.get('/reports/pipeline-runs', {
+        params: { limit },
+      });
+      return response.data;
+    },
+  });
+};
+
+/**
  * Export analyses as CSV
  * This returns the download URL, not using React Query
  */
