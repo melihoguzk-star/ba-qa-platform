@@ -31,6 +31,9 @@ class Settings(BaseSettings):
     default_claude_model: str = "claude-sonnet-4-20250514"
     default_gemini_model: str = "gemini-2.5-flash"
 
+    # Mock Mode (for testing without API calls)
+    mock_mode: bool = False
+
     # Jira Integration
     jira_base_url: str = "https://loodos.atlassian.net"
     jira_email: str = ""

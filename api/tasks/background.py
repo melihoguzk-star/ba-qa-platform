@@ -9,16 +9,20 @@ logger = logging.getLogger(__name__)
 
 async def execute_pipeline_task(
     run_id: int,
-    brd_content: Dict[str, Any],
-    stages: List[str]
+    project_name: str,
+    brd_content: str,
+    stages: List[str],
+    figma_url: str = None
 ):
     """
     Background task for pipeline execution.
 
     Args:
         run_id: Pipeline run ID
-        brd_content: BRD content
+        project_name: Project name
+        brd_content: BRD content (plain text)
         stages: Stages to execute
+        figma_url: Optional Figma design URL
     """
     from api.services import pipeline_service
 
@@ -27,8 +31,10 @@ async def execute_pipeline_task(
     try:
         await pipeline_service.execute_pipeline(
             run_id=run_id,
+            project_name=project_name,
             brd_content=brd_content,
-            stages=stages
+            stages=stages,
+            figma_url=figma_url
         )
         logger.info(f"Background task completed: Pipeline run {run_id}")
 

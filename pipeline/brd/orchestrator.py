@@ -167,7 +167,7 @@ def generate_tc(ba_content, ta_content, project_name, jira_key, anthropic_key, g
     ba_json = json.dumps(ba_content, ensure_ascii=False, indent=2)[:50000]
     ta_json = json.dumps(ta_content, ensure_ascii=False, indent=2)[:50000]
 
-    system1 = TC_CHUNK1_SYSTEM.format(today_date=today)
+    system1 = TC_CHUNK1_SYSTEM.replace("{today_date}", today)
     user1 = f"İŞ ANALİZİ:\n{ba_json}\n\nTEKNİK ANALİZ:\n{ta_json}"
     
     # ADD SCREEN ANALYSIS IF PROVIDED
@@ -182,7 +182,7 @@ def generate_tc(ba_content, ta_content, project_name, jira_key, anthropic_key, g
 
     tc_count = len(chunk1.get("test_cases", []))
     start_id = str(tc_count + 1).zfill(4)
-    system2 = TC_CHUNK2_SYSTEM.format(start_id=start_id, today_date=today)
+    system2 = TC_CHUNK2_SYSTEM.replace("{start_id}", start_id).replace("{today_date}", today)
     user2 = f"İŞ ANALİZİ:\n{ba_json}\n\nTEKNİK ANALİZ:\n{ta_json}"
     
     # ADD SCREEN ANALYSIS TO CHUNK2 AS WELL
@@ -224,7 +224,7 @@ def evaluate_ta_qa(ta_content, anthropic_key, gemini_key, log=None, model=None):
 def evaluate_tc_qa(tc_content, anthropic_key, gemini_key, log=None, model=None):
     """TC QA Hakem değerlendirmesi."""
     tc_count = len(tc_content.get("test_cases", []))
-    qa_system = TC_QA_SYSTEM.format(tc_count=tc_count)
+    qa_system = TC_QA_SYSTEM.replace("{tc_count}", str(tc_count))
     return _evaluate_qa(
         qa_system,
         f"TEST CASES ({tc_count} adet):\n" + json.dumps(tc_content, ensure_ascii=False, indent=2)[:80000],

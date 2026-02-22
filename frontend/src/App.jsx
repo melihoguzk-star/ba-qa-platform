@@ -16,6 +16,10 @@ import BRDPipeline from './pages/BRDPipeline';
 import SmartMatching from './pages/SmartMatch/SmartMatching';
 import Reports from './pages/Reports';
 import Settings from './pages/Settings';
+import Architecture from './pages/Architecture';
+import NotFound from './pages/NotFound';
+import ErrorBoundary from './components/ErrorBoundary';
+import OfflineIndicator from './components/OfflineIndicator';
 import { ROUTES } from './utils/constants';
 
 // Create TanStack Query client
@@ -25,6 +29,7 @@ const queryClient = new QueryClient({
       staleTime: 5 * 60 * 1000, // 5 minutes
       retry: 1,
       refetchOnWindowFocus: false,
+      refetchOnReconnect: true, // Refetch when network reconnects
     },
     mutations: {
       retry: 0,
@@ -34,34 +39,38 @@ const queryClient = new QueryClient({
 
 export default function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <ConfigProvider
-        locale={trTR}
-        theme={{
-          token: {
-            colorPrimary: '#1890ff',
-            borderRadius: 8,
-          },
-        }}
-      >
-        <BrowserRouter>
-          <Routes>
-            <Route element={<MainLayout />}>
-              <Route index element={<Dashboard />} />
-              <Route path={ROUTES.DOCUMENTS} element={<Documents />} />
-              <Route path={ROUTES.IMPORT} element={<Import />} />
-              <Route path={ROUTES.BA_EVALUATION} element={<BAEvaluation />} />
-              <Route path={ROUTES.TC_EVALUATION} element={<TCEvaluation />} />
-              <Route path={ROUTES.DESIGN_COMPLIANCE} element={<DesignCompliance />} />
-              <Route path={ROUTES.BRD_PIPELINE} element={<BRDPipeline />} />
-              <Route path={ROUTES.SMART_MATCHING} element={<SmartMatching />} />
-              <Route path={ROUTES.REPORTS} element={<Reports />} />
-              <Route path={ROUTES.SETTINGS} element={<Settings />} />
-              {/* More routes will be added in Phase 3 */}
-            </Route>
-          </Routes>
-        </BrowserRouter>
-      </ConfigProvider>
-    </QueryClientProvider>
+    <ErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <ConfigProvider
+          locale={trTR}
+          theme={{
+            token: {
+              colorPrimary: '#1890ff',
+              borderRadius: 8,
+            },
+          }}
+        >
+          <OfflineIndicator />
+          <BrowserRouter>
+            <Routes>
+              <Route element={<MainLayout />}>
+                <Route index element={<Dashboard />} />
+                <Route path={ROUTES.DOCUMENTS} element={<Documents />} />
+                <Route path={ROUTES.IMPORT} element={<Import />} />
+                <Route path={ROUTES.BA_EVALUATION} element={<BAEvaluation />} />
+                <Route path={ROUTES.TC_EVALUATION} element={<TCEvaluation />} />
+                <Route path={ROUTES.DESIGN_COMPLIANCE} element={<DesignCompliance />} />
+                <Route path={ROUTES.BRD_PIPELINE} element={<BRDPipeline />} />
+                <Route path={ROUTES.SMART_MATCHING} element={<SmartMatching />} />
+                <Route path={ROUTES.REPORTS} element={<Reports />} />
+                <Route path={ROUTES.SETTINGS} element={<Settings />} />
+                <Route path={ROUTES.ARCHITECTURE} element={<Architecture />} />
+                <Route path="*" element={<NotFound />} />
+              </Route>
+            </Routes>
+          </BrowserRouter>
+        </ConfigProvider>
+      </QueryClientProvider>
+    </ErrorBoundary>
   );
 }

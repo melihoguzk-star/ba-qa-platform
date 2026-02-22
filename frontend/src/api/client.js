@@ -2,6 +2,7 @@
  * API Client — Axios instance with interceptors
  */
 import axios from 'axios';
+import { handleNetworkError } from '../utils/errorHandler';
 
 const client = axios.create({
   baseURL: '/api/v1',
@@ -23,10 +24,19 @@ client.interceptors.request.use(
 client.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response) {
-      const { status } = error.response;
-      if (status === 401) console.error('Unauthorized');
-      else if (status === 500) console.error('Server error');
+    // Handle network errors globally (offline, timeout, connection refused)
+    if (!error.response) {
+      handleNetworkError(error);
+    } else {
+      // Log API errors in development
+      if (process.env.NODE_ENV === 'development') {
+        console.error('API Error:', {
+          url: error.config?.url,
+          method: error.config?.method,
+          status: error.response?.status,
+          data: error.response?.data,
+        });
+      }
     }
     return Promise.reject(error);
   }

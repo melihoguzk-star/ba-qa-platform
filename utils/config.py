@@ -177,11 +177,15 @@ ALL_MODELS = {
 
 def is_anthropic_model(model_id: str) -> bool:
     """Check if a model ID belongs to Anthropic."""
+    if model_id is None:
+        return False
     return model_id.startswith("claude-")
 
 
 def is_gemini_model(model_id: str) -> bool:
     """Check if a model ID belongs to Google Gemini."""
+    if model_id is None:
+        return False
     return model_id.startswith("gemini-")
 
 

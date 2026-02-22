@@ -2,9 +2,19 @@
 Pipeline Router — BRD pipeline orchestration endpoints
 """
 from fastapi import APIRouter, HTTPException, BackgroundTasks
-from api.schemas.pipeline import PipelineStartRequest, PipelineStartResponse, PipelineStatus
-from api.services import pipeline_service, database_service
+from fastapi.responses import FileResponse
+from api.schemas.pipeline import (
+    PipelineStartRequest,
+    PipelineStartResponse,
+    PipelineStatus,
+    PipelineStageApproval,
+    PipelineCheckpoint
+)
+from api.services import pipeline_service
+import api.db as database_service
 from api.tasks.background import execute_pipeline_task
+from pathlib import Path
+import tempfile
 
 router = APIRouter()
 
@@ -49,17 +59,23 @@ async def start_pipeline(
         # Create pipeline run and get ID
         run_id = await pipeline_service.start_pipeline(
             project_id=request.project_id,
+            project_name=request.project_name,
             brd_content=request.brd_content,
-            stages=request.stages
+            stages=request.stages,
+            figma_url=request.figma_url
         )
 
-        # Schedule background task for pipeline execution
-        background_tasks.add_task(
-            execute_pipeline_task,
-            run_id=run_id,
-            brd_content=request.brd_content,
-            stages=request.stages
-        )
+        # Step-by-step workflow: Do NOT auto-execute
+        # User will manually trigger each stage via /execute-stage endpoint
+        # Commented out automatic execution:
+        # background_tasks.add_task(
+        #     execute_pipeline_task,
+        #     run_id=run_id,
+        #     project_name=request.project_name,
+        #     brd_content=request.brd_content,
+        #     stages=request.stages,
+        #     figma_url=request.figma_url
+        # )
 
         return PipelineStartResponse(
             pipeline_run_id=run_id,
@@ -107,4 +123,187 @@ async def get_pipeline_status(run_id: int):
         raise HTTPException(
             status_code=500,
             detail=f"Failed to get pipeline status: {str(e)}"
+        )
+
+
+@router.get("/{run_id}/results")
+async def get_pipeline_results(run_id: int):
+    """
+    Get pipeline results (generated documents).
+
+    Returns the generated BA, TA, TC documents if pipeline completed successfully.
+    """
+    try:
+        results = pipeline_service.get_pipeline_results(run_id)
+
+        if not results:
+            raise HTTPException(
+                status_code=404,
+                detail=f"No results found for pipeline run {run_id}"
+            )
+
+        return results
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to get pipeline results: {str(e)}"
+        )
+
+
+@router.post("/{run_id}/execute-stage")
+async def execute_stage(
+    run_id: int,
+    stage: str,
+    background_tasks: BackgroundTasks,
+    feedback: str = ""
+):
+    """
+    Execute a single pipeline stage (ba_gen, ta_gen, tc_gen).
+
+    This enables step-by-step execution with user approval between stages.
+    Optionally accepts feedback from QA evaluation for regeneration.
+    """
+    try:
+        # Validate stage
+        valid_stages = ['ba_gen', 'ta_gen', 'tc_gen']
+        if stage not in valid_stages:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid stage. Must be one of: {valid_stages}"
+            )
+
+        # Execute stage in background using threading
+        import threading
+        thread = threading.Thread(
+            target=pipeline_service.execute_single_stage,
+            args=(run_id, stage, feedback),
+            daemon=True
+        )
+        thread.start()
+
+        return {"status": "started", "stage": stage, "has_feedback": bool(feedback)}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to execute stage: {str(e)}"
+        )
+
+
+@router.post("/{run_id}/evaluate-qa")
+async def evaluate_qa(
+    run_id: int,
+    stage: str,
+    content: dict,
+    force_pass: bool = False
+):
+    """
+    Evaluate QA for a stage (ba_qa, ta_qa, tc_qa).
+
+    User can edit content before QA or force pass.
+    """
+    try:
+        # Validate stage
+        valid_stages = ['ba_qa', 'ta_qa', 'tc_qa']
+        if stage not in valid_stages:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid stage. Must be one of: {valid_stages}"
+            )
+
+        result = await pipeline_service.evaluate_stage_qa(
+            run_id=run_id,
+            stage=stage,
+            content=content,
+            force_pass=force_pass
+        )
+
+        return result
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to evaluate QA: {str(e)}"
+        )
+
+
+@router.get("/{run_id}/checkpoint/{stage}")
+async def get_checkpoint(run_id: int, stage: str):
+    """
+    Get checkpoint data for a stage.
+
+    Returns generated content for user review/editing.
+    """
+    try:
+        # Get pipeline run to get project name
+        runs = database_service.get_recent_pipeline_runs(limit=1000)
+        run = next((r for r in runs if r['id'] == run_id), None)
+
+        if not run:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Pipeline run {run_id} not found"
+            )
+
+        checkpoint = pipeline_service.get_checkpoint(
+            project_name=run['project_name'],
+            stage=stage
+        )
+
+        if not checkpoint:
+            raise HTTPException(
+                status_code=404,
+                detail=f"No checkpoint found for stage {stage}"
+            )
+
+        return checkpoint
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to get checkpoint: {str(e)}"
+        )
+
+
+@router.post("/{run_id}/checkpoint/{stage}")
+async def save_checkpoint(run_id: int, stage: str, data: dict):
+    """
+    Save user-edited checkpoint data.
+
+    Allows user to edit generated content before QA.
+    """
+    try:
+        # Get pipeline run to get project name
+        runs = database_service.get_recent_pipeline_runs(limit=1000)
+        run = next((r for r in runs if r['id'] == run_id), None)
+
+        if not run:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Pipeline run {run_id} not found"
+            )
+
+        pipeline_service.save_checkpoint(
+            project_name=run['project_name'],
+            stage=stage,
+            data=data
+        )
+
+        return {"status": "saved"}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to save checkpoint: {str(e)}"
         )

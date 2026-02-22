@@ -3,13 +3,17 @@ BA&QA Intelligence Platform — FastAPI Main Application
 """
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from contextlib import asynccontextmanager
+from pathlib import Path
 import logging
 
 from api.config import get_settings
 from api.routers import (
     projects,
     documents,
+    documents_export,
     evaluation,
     pipeline,
     search,
@@ -82,6 +86,7 @@ app.add_middleware(
 # Include routers
 app.include_router(projects.router, prefix=f"{settings.api_prefix}/projects", tags=["Projects"])
 app.include_router(documents.router, prefix=f"{settings.api_prefix}/documents", tags=["Documents"])
+app.include_router(documents_export.router, prefix=f"{settings.api_prefix}/documents-export", tags=["Document Export"])
 app.include_router(evaluation.router, prefix=f"{settings.api_prefix}/evaluate", tags=["Evaluation"])
 app.include_router(pipeline.router, prefix=f"{settings.api_prefix}/pipeline", tags=["Pipeline"])
 app.include_router(search.router, prefix=f"{settings.api_prefix}/search", tags=["Search"])
@@ -111,6 +116,37 @@ async def health():
         "status": "healthy",
         "embedding_model_loaded": embedding_model is not None
     }
+
+
+# ============================================================================
+# Static Files (Production React App)
+# ============================================================================
+
+# Serve React build in production
+frontend_dist = Path(__file__).parent.parent / "frontend" / "dist"
+
+if frontend_dist.exists():
+    # Mount static assets
+    app.mount("/assets", StaticFiles(directory=frontend_dist / "assets"), name="static")
+
+    # Serve index.html for all non-API routes (SPA routing)
+    @app.get("/{full_path:path}")
+    async def serve_spa(full_path: str):
+        """Serve React SPA for all non-API routes"""
+        # Skip API routes
+        if full_path.startswith("api/") or full_path.startswith("docs") or full_path.startswith("redoc") or full_path.startswith("openapi.json"):
+            return {"error": "Not found"}
+
+        # Serve static files
+        file_path = frontend_dist / full_path
+        if file_path.is_file():
+            return FileResponse(file_path)
+
+        # Default to index.html for SPA routing
+        return FileResponse(frontend_dist / "index.html")
+else:
+    logger.warning(f"Frontend dist directory not found: {frontend_dist}")
+    logger.warning("Run 'cd frontend && npm run build' to build the React app")
 
 
 if __name__ == "__main__":

@@ -1,0 +1,61 @@
+# Git
+.git
+.gitignore
+
+# Python
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+*.egg
+*.egg-info
+dist
+build
+.eggs
+.pytest_cache
+.coverage
+htmlcov
+
+# Node
+node_modules
+npm-debug.log
+yarn-error.log
+
+# Frontend dev
+frontend/dist
+frontend/node_modules
+
+# IDEs
+.vscode
+.idea
+*.swp
+*.swo
+.DS_Store
+
+# Environment
+.env
+.env.local
+.env.development
+
+# Testing
+.claude
+.agents
+.cursor
+.windsurf
+test_*.py
+tests/
+
+# Documentation
+*.md
+docs/
+
+# Streamlit (legacy)
+pages/
+.streamlit/
+
+# Temporary
+*.log
+*.tmp
+tmp/
