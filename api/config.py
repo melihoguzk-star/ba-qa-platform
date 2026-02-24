@@ -40,8 +40,12 @@ class Settings(BaseSettings):
     jira_api_token: str = ""
 
     # N8N Webhooks
-    n8n_docs_proxy: str = "https://sh0tdie.app.n8n.cloud/webhook/google-docs-proxy"
-    n8n_sheets_proxy: str = "https://sh0tdie.app.n8n.cloud/webhook/google-sheets-proxy"
+    n8n_docs_proxy: str = "https://sh0tdie1.app.n8n.cloud/webhook/google-docs-proxy"
+    n8n_sheets_proxy: str = "https://sh0tdie1.app.n8n.cloud/webhook/google-sheets-proxy"
+    n8n_drive_search_proxy: str = "https://sh0tdie1.app.n8n.cloud/webhook/drive-search-proxy"
+
+    # Drive Configuration
+    drive_folder_id: str = ""
 
     # Pipeline Configuration
     max_revisions: int = 3

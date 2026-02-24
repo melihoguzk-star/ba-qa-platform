@@ -11,6 +11,7 @@ class MatchSearchRequest(BaseModel):
     jira_key: Optional[str] = Field(None, description="Optional JIRA key for context")
     doc_type: Optional[str] = Field(None, description="Document type filter (ba/ta/tc)")
     top_k: int = Field(5, ge=1, le=20, description="Number of top matches to return")
+    source: str = Field("platform", pattern="^(platform|drive|both)$", description="Search source")
 
 
 class TaskFeatures(BaseModel):
@@ -48,9 +49,20 @@ class MatchResult(BaseModel):
     suggestion_reasoning: str = Field(default="")
 
 
+class DriveMatchResult(BaseModel):
+    """Drive file match result"""
+    name: str = ""
+    file_id: str = ""
+    webViewLink: str = ""
+    mimeType: str = ""
+    modifiedTime: str = ""
+    relevance_tag: str = "GENEL"
+
+
 class MatchSearchResponse(BaseModel):
     """Response schema for smart matching search"""
     matches: List[MatchResult]
+    drive_matches: List[DriveMatchResult] = Field(default_factory=list)
     task_features: TaskFeatures
     response_time: float = Field(..., description="Search time in seconds")
     total_found: int = Field(..., description="Total number of matches found")

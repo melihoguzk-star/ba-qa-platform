@@ -11,6 +11,7 @@ from api.schemas.matching import (
     MatchAnalyticsResponse,
     RecordMatchRequest,
     MatchResult as TaskMatchResult,
+    DriveMatchResult,
     TaskFeatures,
     MatchBreakdown
 )
@@ -120,7 +121,8 @@ async def search_task_matches(request: MatchSearchRequest):
             task_description=request.task_description,
             jira_key=request.jira_key,
             doc_type=request.doc_type,
-            top_k=request.top_k
+            top_k=request.top_k,
+            source=request.source,
         )
 
         # Convert matches to Pydantic models
@@ -141,11 +143,17 @@ async def search_task_matches(request: MatchSearchRequest):
             )
             match_results.append(match_result)
 
+        # Convert drive matches
+        drive_match_results = [
+            DriveMatchResult(**dm) for dm in result.get("drive_matches", [])
+        ]
+
         return MatchSearchResponse(
             matches=match_results,
+            drive_matches=drive_match_results,
             task_features=TaskFeatures(**result["task_features"]) if result["task_features"] else TaskFeatures(),
             response_time=result["response_time"],
-            total_found=result["total_found"]
+            total_found=result["total_found"],
         )
 
     except Exception as e:

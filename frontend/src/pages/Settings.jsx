@@ -1,7 +1,7 @@
 /**
  * Settings Page — API keys, rotation, vector store, analytics
  */
-import { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Card,
   Tabs,
@@ -52,6 +52,11 @@ import {
   useTestVectorSearch,
   useSmartMatchingAnalytics,
 } from '../api/settings';
+import {
+  useReindexTrigger,
+  useReindexStatus,
+  useSearchStats,
+} from '../api/search';
 
 const { Title, Text, Paragraph } = Typography;
 
@@ -611,9 +616,42 @@ function VectorStoreTab() {
   const { data: config, isLoading: configLoading } = useVectorStoreConfig();
   const { data: stats, isLoading: statsLoading } = useVectorStoreStats();
   const searchMutation = useTestVectorSearch();
+  const reindexMutation = useReindexTrigger();
+  const { data: searchStats } = useSearchStats();
+  const [reindexPolling, setReindexPolling] = useState(false);
+  const { data: reindexStatus } = useReindexStatus(reindexPolling);
 
   const [searchForm] = Form.useForm();
   const [searchResults, setSearchResults] = useState(null);
+  const [driveFolderId, setDriveFolderId] = useState('');
+
+  // Handle reindex
+  const handleReindex = async () => {
+    try {
+      await reindexMutation.mutateAsync();
+      setReindexPolling(true);
+      message.info('Platform reindex başlatıldı...');
+    } catch (err) {
+      if (err?.response?.status === 409) {
+        message.warning('Reindex zaten çalışıyor');
+        setReindexPolling(true);
+      } else {
+        message.error('Reindex başlatılamadı');
+      }
+    }
+  };
+
+  // Stop polling when reindex completes
+  useEffect(() => {
+    if (reindexStatus && reindexStatus.status !== 'running' && reindexPolling) {
+      setReindexPolling(false);
+      if (reindexStatus.status === 'completed') {
+        message.success(`Reindex tamamlandı: ${reindexStatus.processed} doküman`);
+      } else if (reindexStatus.status === 'failed') {
+        message.error(`Reindex başarısız: ${reindexStatus.error_message}`);
+      }
+    }
+  }, [reindexStatus, reindexPolling]);
 
   const handleSearch = async (values) => {
     try {
@@ -715,6 +753,74 @@ function VectorStoreTab() {
         <Text code>{config?.embedding_model}</Text>
         <br />
         <Text type="secondary">Multilingual support: Turkish + English</Text>
+      </Card>
+
+      {/* Reindex & Drive Config */}
+      <Card title="🔄 Platform Reindex">
+        <Row gutter={16} align="middle">
+          <Col span={12}>
+            <Button
+              type="primary"
+              icon={<ReloadOutlined />}
+              onClick={handleReindex}
+              loading={reindexMutation.isPending}
+              disabled={reindexPolling}
+            >
+              Tüm Dokümanları Reindex Et
+            </Button>
+          </Col>
+          <Col span={12}>
+            {reindexPolling && reindexStatus?.status === 'running' && (
+              <Space>
+                <Spin size="small" />
+                <Text>
+                  {reindexStatus.processed}/{reindexStatus.total} doküman
+                </Text>
+                <Progress
+                  percent={reindexStatus.total > 0 ? Math.round((reindexStatus.processed / reindexStatus.total) * 100) : 0}
+                  size="small"
+                  style={{ width: 180 }}
+                />
+              </Space>
+            )}
+            {!reindexPolling && reindexStatus?.status === 'completed' && (
+              <Tag color="success">Son reindex: {reindexStatus.processed} doküman tamamlandı</Tag>
+            )}
+          </Col>
+        </Row>
+
+        <Divider />
+
+        <Row gutter={16}>
+          <Col span={8}>
+            <Statistic title="BA Chunks" value={searchStats?.ba?.chunk_count || 0} />
+          </Col>
+          <Col span={8}>
+            <Statistic title="TA Chunks" value={searchStats?.ta?.chunk_count || 0} />
+          </Col>
+          <Col span={8}>
+            <Statistic title="TC Chunks" value={searchStats?.tc?.chunk_count || 0} />
+          </Col>
+        </Row>
+        <Paragraph type="secondary" style={{ marginTop: 12 }}>
+          Toplam indexed chunks: <strong>{searchStats?.total_chunks || 0}</strong>
+        </Paragraph>
+      </Card>
+
+      {/* Drive Configuration */}
+      <Card title="☁️ Google Drive Yapılandırması">
+        <Space direction="vertical" style={{ width: '100%' }}>
+          <Text strong>Drive Folder ID (opsiyonel)</Text>
+          <Input
+            placeholder="Shared Drive veya Folder ID girin"
+            value={driveFolderId}
+            onChange={(e) => setDriveFolderId(e.target.value)}
+            style={{ maxWidth: 400 }}
+          />
+          <Paragraph type="secondary">
+            Drive araması n8n webhook proxy üzerinden çalışır. Folder ID belirtilmezse tüm erişilebilir dosyalarda aranır.
+          </Paragraph>
+        </Space>
       </Card>
 
       {/* Test Semantic Search */}

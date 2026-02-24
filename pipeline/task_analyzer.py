@@ -192,6 +192,19 @@ Be concise and focus on information that would help find relevant existing docum
 
         return validated
 
+    # Turkish + English stopwords for fallback analysis
+    _STOPWORDS = {
+        # Turkish
+        'bir', 'bu', 'şu', 've', 'veya', 'ile', 'için', 'da', 'de', 'mi', 'mu',
+        'mı', 'mü', 'olan', 'olarak', 'gibi', 'daha', 'çok', 'hem', 'ama',
+        'ancak', 'fakat', 'ise', 'kadar', 'sonra', 'önce', 'üzere', 'göre',
+        'dolayı', 'bunu', 'buna', 'bunun', 'şekilde', 'olup',
+        # English
+        'the', 'and', 'for', 'this', 'that', 'with', 'from', 'are', 'was',
+        'were', 'been', 'have', 'has', 'had', 'will', 'would', 'could',
+        'should', 'can', 'not', 'but', 'also', 'which', 'when', 'where',
+    }
+
     def _fallback_analysis(self, task_description: str) -> Dict:
         """
         Fallback analysis when AI parsing fails.
@@ -203,9 +216,9 @@ Be concise and focus on information that would help find relevant existing docum
         Returns:
             Basic analysis result
         """
-        # Extract simple keywords (words longer than 4 chars)
+        # Extract keywords: filter stopwords and short words
         words = task_description.lower().split()
-        keywords = [w for w in words if len(w) > 4][:10]
+        keywords = [w for w in words if len(w) >= 3 and w not in self._STOPWORDS][:10]
 
         # Detect intent from keywords
         intent = "ADD_FEATURE"

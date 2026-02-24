@@ -21,6 +21,8 @@ import {
   Descriptions,
   message,
   Spin,
+  Segmented,
+  List,
 } from 'antd';
 import {
   SearchOutlined,
@@ -29,6 +31,8 @@ import {
   CheckOutlined,
   CloseOutlined,
   ThunderboltOutlined,
+  LinkOutlined,
+  GoogleOutlined,
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { useSearchMatches, useMatchAnalytics, useRecordMatch } from '../../api/matching';
@@ -46,6 +50,8 @@ export default function SmartMatching() {
   const [docTypeFilter, setDocTypeFilter] = useState('all');
   const [taskDescription, setTaskDescription] = useState('');
   const [searchResults, setSearchResults] = useState(null);
+  const [source, setSource] = useState('Platform');
+  const sourceMap = { Platform: 'platform', Drive: 'drive', 'Tümü': 'both' };
 
   // API hooks
   const { data: analytics } = useMatchAnalytics(timeRange);
@@ -65,6 +71,7 @@ export default function SmartMatching() {
         jira_key: jiraKey || undefined,
         doc_type: docTypeFilter === 'all' ? undefined : docTypeFilter,
         top_k: 5,
+        source: sourceMap[source],
       });
 
       setSearchResults(result);
@@ -237,7 +244,7 @@ export default function SmartMatching() {
       {/* Input Section */}
       <Card title="1️⃣ Görevinizi Tanımlayın" style={{ marginBottom: 24 }}>
         <Row gutter={16} style={{ marginBottom: 16 }}>
-          <Col xs={24} md={18}>
+          <Col xs={24} md={12}>
             <Text strong>JIRA Anahtarı (Opsiyonel)</Text>
             <Input
               placeholder="örn: PROJ-123"
@@ -259,6 +266,17 @@ export default function SmartMatching() {
                 { value: 'tc', label: 'Test Senaryoları' },
               ]}
             />
+          </Col>
+          <Col xs={24} md={6}>
+            <Text strong>Kaynak</Text>
+            <div style={{ marginTop: 8 }}>
+              <Segmented
+                options={['Platform', 'Drive', 'Tümü']}
+                value={source}
+                onChange={setSource}
+                block
+              />
+            </div>
           </Col>
         </Row>
 
@@ -377,6 +395,62 @@ export default function SmartMatching() {
               </Space>
             )}
           </Card>
+
+          {/* Drive Results */}
+          {searchResults.drive_matches && searchResults.drive_matches.length > 0 && (
+            <Card
+              title={
+                <span>
+                  <GoogleOutlined /> Drive Sonuçları ({searchResults.drive_matches.length})
+                </span>
+              }
+              style={{ marginTop: 24 }}
+            >
+              <List
+                dataSource={searchResults.drive_matches}
+                renderItem={(item) => {
+                  const mimeIcon = item.mimeType?.includes('document') ? '📄'
+                    : item.mimeType?.includes('spreadsheet') ? '📊'
+                    : item.mimeType?.includes('presentation') ? '📽️'
+                    : item.mimeType?.includes('pdf') ? '📕'
+                    : '📎';
+                  return (
+                    <List.Item
+                      key={item.file_id}
+                      extra={
+                        <Button
+                          type="link"
+                          icon={<LinkOutlined />}
+                          href={item.webViewLink}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          Drive'da Aç
+                        </Button>
+                      }
+                    >
+                      <List.Item.Meta
+                        title={
+                          <Space>
+                            <span>{mimeIcon}</span>
+                            <Text strong>{item.name}</Text>
+                            <Tag>{item.relevance_tag}</Tag>
+                          </Space>
+                        }
+                        description={
+                          item.modifiedTime && (
+                            <Text type="secondary" style={{ fontSize: 12 }}>
+                              {new Date(item.modifiedTime).toLocaleDateString('tr-TR')}
+                            </Text>
+                          )
+                        }
+                      />
+                    </List.Item>
+                  );
+                }}
+              />
+            </Card>
+          )}
         </>
       )}
     </div>

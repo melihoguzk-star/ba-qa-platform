@@ -1,16 +1,37 @@
 """
 Matching Service — Smart document matching business logic
 """
+import asyncio
+import logging
 import time
 from typing import List, Dict, Optional, Any
 from api.services import database_service
+
+logger = logging.getLogger(__name__)
+
+# BA/TA/TC relevance patterns for Drive file names
+_RELEVANCE_PATTERNS = {
+    "BA": ["ba", "brd", "business", "requirement", "gereksinim", "analiz"],
+    "TA": ["ta", "technical", "teknik", "architecture", "mimari", "api", "endpoint"],
+    "TC": ["tc", "test", "senaryo", "scenario", "case"],
+}
+
+
+def _tag_drive_relevance(file_name: str) -> str:
+    """Assign a relevance tag to a Drive file based on filename patterns."""
+    name_lower = file_name.lower()
+    for tag, keywords in _RELEVANCE_PATTERNS.items():
+        if any(kw in name_lower for kw in keywords):
+            return tag
+    return "GENEL"
 
 
 def search_matches(
     task_description: str,
     jira_key: Optional[str] = None,
     doc_type: Optional[str] = None,
-    top_k: int = 5
+    top_k: int = 5,
+    source: str = "platform",
 ) -> Dict:
     """
     Search for matching documents using smart matcher.
@@ -20,34 +41,65 @@ def search_matches(
         jira_key: Optional JIRA key
         doc_type: Optional document type filter (ba/ta/tc)
         top_k: Number of results to return
+        source: "platform" | "drive" | "both"
 
     Returns:
-        Dict with matches, task_features, response_time, total_found
+        Dict with matches, task_features, response_time, total_found, drive_matches
     """
-    from pipeline.smart_matcher import SmartMatcher
-
-    matcher = SmartMatcher()
-
-    # Perform search with timing
     start_time = time.time()
-    matches = matcher.find_matches_for_task(
-        task_description=task_description,
-        jira_key=jira_key,
-        doc_type=doc_type,
-        top_k=top_k
-    )
+    platform_matches: List[Dict] = []
+    task_features: Dict = {}
+    drive_matches: List[Dict] = []
+
+    # ── Platform search ──────────────────────────────────────────────
+    if source in ("platform", "both"):
+        try:
+            from pipeline.smart_matcher import SmartMatcher
+            matcher = SmartMatcher()
+            platform_matches = matcher.find_matches_for_task(
+                task_description=task_description,
+                jira_key=jira_key,
+                doc_type=doc_type,
+                top_k=top_k,
+            )
+            if platform_matches:
+                task_features = platform_matches[0].get("task_features", {})
+        except Exception as e:
+            logger.error(f"Platform smart match failed: {e}")
+
+    # ── Drive search ─────────────────────────────────────────────────
+    if source in ("drive", "both"):
+        try:
+            from pipeline.task_analyzer import TaskAnalyzer
+            from api.services.search_service import drive_search
+
+            analyzer = TaskAnalyzer()
+            analysis = analyzer.analyze_task(task_description, jira_key)
+            if not task_features:
+                task_features = analysis
+            search_query = analysis.get("search_query", task_description[:200])
+
+            drive_results = asyncio.run(drive_search(search_query))
+            for item in drive_results:
+                drive_matches.append({
+                    "name": item.get("name", ""),
+                    "file_id": item.get("id", item.get("file_id", "")),
+                    "webViewLink": item.get("webViewLink", ""),
+                    "mimeType": item.get("mimeType", ""),
+                    "modifiedTime": item.get("modifiedTime", ""),
+                    "relevance_tag": _tag_drive_relevance(item.get("name", "")),
+                })
+        except Exception as e:
+            logger.error(f"Drive match search failed: {e}")
+
     response_time = time.time() - start_time
 
-    # Extract task features from first match (or empty if no matches)
-    task_features = {}
-    if matches:
-        task_features = matches[0].get("task_features", {})
-
     return {
-        "matches": matches,
+        "matches": platform_matches,
         "task_features": task_features,
         "response_time": response_time,
-        "total_found": len(matches)
+        "total_found": len(platform_matches),
+        "drive_matches": drive_matches,
     }
 
 
@@ -121,19 +173,24 @@ def smart_match_document(
         List of matched documents with scores and explanations
     """
     try:
-        from pipeline.smart_matcher import find_matches
+        from pipeline.smart_matcher import SmartMatcher
 
         # Get source document
         source_doc = database_service.get_document_by_id(document_id)
         if not source_doc:
             return []
 
-        # Find matches using existing smart matcher
-        matches = find_matches(
-            source_document=source_doc,
-            target_type=target_doc_type,
-            top_k=limit
+        # Find matches using smart matcher
+        matcher = SmartMatcher()
+        title = source_doc.get("title", "")
+        description = source_doc.get("description", "")
+        task_text = f"{title} {description}".strip()
+        raw_matches = matcher.find_matches_for_task(
+            task_description=task_text,
+            doc_type=target_doc_type,
+            top_k=limit,
         )
+        matches = raw_matches
 
         # Format results
         results = []
