@@ -18,9 +18,10 @@ export const usePipelineRuns = (limit = 100) => {
   return useQuery({
     queryKey: [...pipelineKeys.runs(), limit],
     queryFn: async () => {
-      // Return mock data for now since backend endpoint doesn't exist yet
-      // TODO: Implement /api/v1/pipeline/runs endpoint
-      return [];
+      const { data } = await client.get('/reports/pipeline-runs', {
+        params: { limit },
+      });
+      return data;
     },
   });
 };

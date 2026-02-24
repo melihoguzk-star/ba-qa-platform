@@ -1,7 +1,7 @@
 /**
  * Dashboard — Home page with live stats
  */
-import { Card, Row, Col, Statistic, Spin, Alert, Timeline, Button, Space, Tag } from 'antd';
+import { Card, Row, Col, Statistic, Spin, Alert, Timeline, Button, Space } from 'antd';
 import {
   FileTextOutlined,
   ProjectOutlined,
@@ -13,10 +13,12 @@ import {
   FileSearchOutlined,
   ClockCircleOutlined
 } from '@ant-design/icons';
+import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { useNavigate } from 'react-router-dom';
 import { useProjects } from '../api/projects';
 import { useDocuments } from '../api/documents';
 import { usePipelineRuns } from '../api/pipeline';
+import { useReportStats } from '../api/reports';
 import { ROUTES } from '../utils/constants';
 
 export default function Dashboard() {
@@ -24,19 +26,44 @@ export default function Dashboard() {
   const { data: projects, isLoading: projectsLoading, error: projectsError } = useProjects();
   const { data: documents, isLoading: documentsLoading } = useDocuments();
   const { data: pipelineRuns, isLoading: pipelineLoading } = usePipelineRuns();
+  const { data: reportStats, isLoading: statsLoading } = useReportStats('all');
 
   const totalProjects = projects?.length || 0;
   const totalDocuments = documents?.length || 0;
   const totalPipelineRuns = pipelineRuns?.length || 0;
 
-  // Calculate average score from recent evaluations
-  const avgScore = 0; // TODO: implement when evaluation results endpoint is ready
+  // Calculate average score from BA and TC evaluations (exclude 0-scored entries)
+  const avgScore = (() => {
+    if (!reportStats?.by_type) return 0;
+    const scoredTypes = reportStats.by_type.filter(
+      (t) => (t.analysis_type === 'ba' || t.analysis_type === 'tc') && t.avg_puan > 0
+    );
+    if (scoredTypes.length === 0) return 0;
+    const totalWeighted = scoredTypes.reduce((sum, t) => sum + (t.avg_puan * t.c), 0);
+    const totalCount = scoredTypes.reduce((sum, t) => sum + t.c, 0);
+    return totalCount > 0 ? Math.round(totalWeighted / totalCount) : 0;
+  })();
 
   // Group documents by type
   const docsByType = documents?.reduce((acc, doc) => {
     acc[doc.doc_type] = (acc[doc.doc_type] || 0) + 1;
     return acc;
   }, {}) || {};
+
+  // Donut chart config
+  const DOC_TYPE_CONFIG = {
+    ba: { label: 'BA', color: '#52c41a' },
+    tc: { label: 'TC', color: '#722ed1' },
+    ta: { label: 'TA', color: '#fa8c16' },
+    brd: { label: 'BRD', color: '#1890ff' },
+  };
+
+  const chartData = Object.entries(docsByType).map(([type, count]) => ({
+    name: (DOC_TYPE_CONFIG[type]?.label || type.toUpperCase()),
+    value: count,
+    color: DOC_TYPE_CONFIG[type]?.color || '#8c8c8c',
+    pct: totalDocuments > 0 ? ((count / totalDocuments) * 100).toFixed(1) : '0',
+  }));
 
   // Recent activities (combine projects, documents, pipeline runs)
   const recentActivities = [
@@ -48,7 +75,7 @@ export default function Dashboard() {
     })) || []),
     ...(documents?.slice(0, 3).map(d => ({
       type: 'document',
-      title: `Doküman eklendi: ${d.name}`,
+      title: `Doküman eklendi: ${d.title}`,
       time: d.created_at,
       color: 'blue'
     })) || []),
@@ -119,13 +146,15 @@ export default function Dashboard() {
         </Col>
         <Col xs={24} sm={12} lg={6}>
           <Card>
-            <Statistic
-              title="Ortalama Skor"
-              value={avgScore}
-              suffix="/ 100"
-              prefix={<CheckCircleOutlined />}
-              valueStyle={{ color: avgScore >= 60 ? '#3f8600' : '#cf1322' }}
-            />
+            <Spin spinning={statsLoading}>
+              <Statistic
+                title="Ortalama Skor"
+                value={avgScore}
+                suffix="/ 100"
+                prefix={<CheckCircleOutlined />}
+                valueStyle={{ color: avgScore >= 60 ? '#3f8600' : '#cf1322' }}
+              />
+            </Spin>
           </Card>
         </Col>
       </Row>
@@ -166,40 +195,48 @@ export default function Dashboard() {
       </Card>
 
       <Row gutter={[16, 16]} style={{ marginTop: 24 }}>
-        {/* Document Distribution */}
+        {/* Document Distribution — Donut Chart */}
         <Col xs={24} lg={12}>
           <Card
             title="Doküman Dağılımı"
             loading={documentsLoading}
           >
-            {Object.keys(docsByType).length > 0 ? (
-              <Space direction="vertical" style={{ width: '100%' }} size="middle">
-                {Object.entries(docsByType).map(([type, count]) => (
-                  <div key={type} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <Space>
-                      <Tag color={
-                        type === 'brd' ? 'blue' :
-                        type === 'ba' ? 'green' :
-                        type === 'ta' ? 'orange' :
-                        'purple'
-                      }>
-                        {type.toUpperCase()}
-                      </Tag>
-                      <span style={{ fontSize: 16 }}>{count} doküman</span>
-                    </Space>
-                    <div style={{
-                      width: `${(count / totalDocuments) * 100}%`,
-                      minWidth: 30,
-                      height: 8,
-                      background: type === 'brd' ? '#1890ff' :
-                                 type === 'ba' ? '#52c41a' :
-                                 type === 'ta' ? '#fa8c16' :
-                                 '#722ed1',
-                      borderRadius: 4
-                    }} />
-                  </div>
-                ))}
-              </Space>
+            {chartData.length > 0 ? (
+              <ResponsiveContainer width="100%" height={280}>
+                <PieChart>
+                  <Pie
+                    data={chartData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={60}
+                    outerRadius={100}
+                    paddingAngle={3}
+                    dataKey="value"
+                  >
+                    {chartData.map((entry, idx) => (
+                      <Cell key={idx} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  {/* Center label */}
+                  <text x="50%" y="46%" textAnchor="middle" dominantBaseline="middle"
+                    style={{ fontSize: 28, fontWeight: 700, fill: '#262626' }}>
+                    {totalDocuments}
+                  </text>
+                  <text x="50%" y="56%" textAnchor="middle" dominantBaseline="middle"
+                    style={{ fontSize: 12, fill: '#8c8c8c' }}>
+                    toplam
+                  </text>
+                  <Tooltip
+                    formatter={(value, name) => [`${value} doküman`, name]}
+                  />
+                  <Legend
+                    formatter={(value, entry) => {
+                      const item = chartData.find((d) => d.name === value);
+                      return `${value} - ${item?.value || 0} doküman (%${item?.pct || 0})`;
+                    }}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
             ) : (
               <p style={{ color: '#8c8c8c', textAlign: 'center', padding: '40px 0' }}>
                 Henüz doküman bulunmuyor

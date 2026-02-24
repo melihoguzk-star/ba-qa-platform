@@ -24,6 +24,12 @@ import { ROUTES } from '../utils/constants';
 
 const { Header, Sider, Content } = Layout;
 
+const groupLabel = (text) => (
+  <span style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase' }}>
+    {text}
+  </span>
+);
+
 const menuItems = [
   {
     key: ROUTES.HOME,
@@ -31,56 +37,55 @@ const menuItems = [
     label: 'Dashboard',
   },
   {
-    key: ROUTES.DOCUMENTS,
-    icon: <FileTextOutlined />,
-    label: 'Dokümanlar',
+    type: 'group',
+    label: groupLabel('Doküman Yönetimi'),
+    children: [
+      { key: ROUTES.DOCUMENTS, icon: <FileTextOutlined />, label: 'Dokümanlar' },
+      { key: ROUTES.IMPORT, icon: <ImportOutlined />, label: 'Import' },
+      { key: ROUTES.BRD_PIPELINE, icon: <RocketOutlined />, label: 'BRD Pipeline' },
+    ],
   },
   {
-    key: ROUTES.IMPORT,
-    icon: <ImportOutlined />,
-    label: 'Import',
+    type: 'group',
+    label: groupLabel('Değerlendirme'),
+    children: [
+      { key: ROUTES.BA_EVALUATION, icon: <CheckCircleOutlined />, label: 'BA Değerlendirme' },
+      { key: ROUTES.TC_EVALUATION, icon: <ExperimentOutlined />, label: 'TC Değerlendirme' },
+      { key: ROUTES.DESIGN_COMPLIANCE, icon: <FormatPainterOutlined />, label: 'Design Compliance' },
+    ],
   },
   {
-    key: ROUTES.BA_EVALUATION,
-    icon: <CheckCircleOutlined />,
-    label: 'BA Değerlendirme',
+    type: 'group',
+    label: groupLabel('Araçlar'),
+    children: [
+      { key: ROUTES.SMART_MATCHING, icon: <SearchOutlined />, label: 'Smart Matching' },
+      { key: ROUTES.ARCHITECTURE, icon: <ApartmentOutlined />, label: 'Mimari' },
+    ],
   },
   {
-    key: ROUTES.TC_EVALUATION,
-    icon: <ExperimentOutlined />,
-    label: 'TC Değerlendirme',
+    type: 'divider',
   },
   {
-    key: ROUTES.DESIGN_COMPLIANCE,
-    icon: <FormatPainterOutlined />,
-    label: 'Design Compliance',
-  },
-  {
-    key: ROUTES.BRD_PIPELINE,
-    icon: <RocketOutlined />,
-    label: 'BRD Pipeline',
-  },
-  {
-    key: ROUTES.SMART_MATCHING,
-    icon: <SearchOutlined />,
-    label: 'Smart Matching',
-  },
-  {
-    key: ROUTES.REPORTS,
-    icon: <BarChartOutlined />,
-    label: 'Raporlar',
-  },
-  {
-    key: ROUTES.ARCHITECTURE,
-    icon: <ApartmentOutlined />,
-    label: 'Mimari',
-  },
-  {
-    key: ROUTES.SETTINGS,
-    icon: <SettingOutlined />,
-    label: 'Ayarlar',
+    type: 'group',
+    label: groupLabel('Yönetim'),
+    children: [
+      { key: ROUTES.REPORTS, icon: <BarChartOutlined />, label: 'Raporlar' },
+      { key: ROUTES.SETTINGS, icon: <SettingOutlined />, label: 'Ayarlar' },
+    ],
   },
 ];
+
+// Flat lookup for breadcrumb and other key-based searches
+const findMenuItem = (key) => {
+  for (const item of menuItems) {
+    if (item.key === key) return item;
+    if (item.children) {
+      const child = item.children.find((c) => c.key === key);
+      if (child) return child;
+    }
+  }
+  return null;
+};
 
 export default function MainLayout() {
   const navigate = useNavigate();
@@ -149,7 +154,7 @@ export default function MainLayout() {
     },
     ...pathSnippets.map((snippet, index) => {
       const url = `/${pathSnippets.slice(0, index + 1).join('/')}`;
-      const menuItem = menuItems.find((item) => item.key === url);
+      const menuItem = findMenuItem(url);
       return {
         title: menuItem?.label || snippet,
       };

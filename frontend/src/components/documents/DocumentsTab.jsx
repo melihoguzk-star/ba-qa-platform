@@ -53,7 +53,7 @@ export default function DocumentsTab() {
     ? documents
     : documents.filter(
         (doc) =>
-          doc.name.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+          (doc.title || '').toLowerCase().includes(debouncedSearch.toLowerCase()) ||
           doc.doc_type.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
           (doc.project_name && doc.project_name.toLowerCase().includes(debouncedSearch.toLowerCase()))
       );
@@ -68,9 +68,9 @@ export default function DocumentsTab() {
     },
     {
       title: 'Doküman Adı',
-      dataIndex: 'name',
-      key: 'name',
-      sorter: (a, b) => a.name.localeCompare(b.name),
+      dataIndex: 'title',
+      key: 'title',
+      sorter: (a, b) => (a.title || '').localeCompare(b.title || ''),
       render: (text, record) => (
         <Button
           type="link"
@@ -225,7 +225,7 @@ export default function DocumentsTab() {
         {selectedDocument && (
           <Descriptions column={1} bordered>
             <Descriptions.Item label="ID">{selectedDocument.id}</Descriptions.Item>
-            <Descriptions.Item label="Doküman Adı">{selectedDocument.name}</Descriptions.Item>
+            <Descriptions.Item label="Doküman Adı">{selectedDocument.title}</Descriptions.Item>
             <Descriptions.Item label="Tip">
               <Tag color={
                 selectedDocument.doc_type === 'brd' ? 'blue' :
