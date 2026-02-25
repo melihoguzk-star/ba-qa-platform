@@ -168,6 +168,6 @@ API calls remain unchanged (same FastAPI backend).
 ## 📞 Support
 
 If you encounter any issues during migration:
-- Check `DEPLOYMENT.md` for setup instructions
-- Review `MIGRATION_ROADMAP.md` for technical details
+- Check `docs/DEPLOYMENT.md` for setup instructions
+- Review `docs/MIGRATION_ROADMAP.md` for technical details
 - File issues at GitHub repository

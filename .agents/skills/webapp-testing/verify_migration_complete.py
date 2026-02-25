@@ -82,8 +82,8 @@ def verify_migration():
         'Dockerfile': 'Dockerfile',
         'Docker Compose': 'docker-compose.yml',
         'Docker Ignore': '.dockerignore',
-        'Deployment Guide': 'DEPLOYMENT.md',
-        'Migration Guide': 'STREAMLIT_TO_REACT_MIGRATION.md',
+        'Deployment Guide': 'docs/DEPLOYMENT.md',
+        'Migration Guide': 'docs/STREAMLIT_TO_REACT_MIGRATION.md',
     }
 
     all_deployment_exist = True

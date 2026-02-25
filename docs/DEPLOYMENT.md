@@ -236,4 +236,4 @@ server {
 ## 📞 Support
 
 - GitHub Issues: https://github.com/your-org/ba-qa-platform/issues
-- Documentation: See MIGRATION_ROADMAP.md
+- Documentation: See docs/MIGRATION_ROADMAP.md

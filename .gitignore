@@ -18,8 +18,7 @@ __pycache__/
 .Python
 
 # Data & Databases
-data/baqa.db
-data/pipeline.db
+data/*.db
 data/custom_models.json
 data/chroma_db/  # ChromaDB vector store (Phase 2A)
 data/chroma_db.backup_*/  # ChromaDB backups
@@ -45,7 +44,7 @@ coverage.xml
 *.cover
 .hypothesis/
 junit.xml
-test_*.py  # Test scripts (not unit tests)
+# Test scripts artık tests/ klasöründe
 
 # Build & Distribution
 build/

@@ -174,20 +174,20 @@ uvicorn api.main:app --host 0.0.0.0 --port 8000
 
 ### Available Guides
 
-1. **DEPLOYMENT.md** - Production deployment guide
+1. **docs/DEPLOYMENT.md** - Production deployment guide
    - Docker deployment
    - Manual deployment
    - Cloud platforms (Railway, Fly.io, GCP)
    - Health checks & monitoring
    - Backup & restore
 
-2. **STREAMLIT_TO_REACT_MIGRATION.md** - Migration guide
+2. **docs/STREAMLIT_TO_REACT_MIGRATION.md** - Migration guide
    - Feature parity checklist
    - Comparison table
    - Migration path
    - User guide
 
-3. **MIGRATION_ROADMAP.md** - Technical roadmap
+3. **docs/MIGRATION_ROADMAP.md** - Technical roadmap
    - Phase-by-phase breakdown
    - Task lists
    - Architecture decisions
@@ -254,7 +254,7 @@ uvicorn api.main:app --host 0.0.0.0 --port 8000
 
 - **Issues:** GitHub Issues
 - **Documentation:** See guides above
-- **Questions:** Check DEPLOYMENT.md and MIGRATION_ROADMAP.md
+- **Questions:** Check docs/DEPLOYMENT.md and docs/MIGRATION_ROADMAP.md
 
 ---
 

@@ -3,6 +3,7 @@ FastAPI Configuration — Pydantic Settings
 """
 from pydantic_settings import BaseSettings
 from functools import lru_cache
+import logging
 import os
 
 
@@ -74,4 +75,10 @@ class Settings(BaseSettings):
 @lru_cache()
 def get_settings() -> Settings:
     """Cached settings instance"""
-    return Settings()
+    settings = Settings()
+    if settings.mock_mode:
+        logging.getLogger(__name__).warning(
+            "MOCK_MODE aktif! Pipeline gerçek AI çağrıları yerine sahte veri döndürecek. "
+            "Production ortamında MOCK_MODE=false olduğundan emin olun."
+        )
+    return settings
