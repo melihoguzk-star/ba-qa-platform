@@ -212,3 +212,22 @@ body {
   color: var(--md-text-secondary);
   font-style: italic;
 }
+
+/* ── Pipeline Kanban Card Animations ── */
+@keyframes pipeline-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(24, 144, 255, 0.4); }
+  50% { box-shadow: 0 0 0 8px rgba(24, 144, 255, 0); }
+}
+
+@keyframes pipeline-attention {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(250, 173, 20, 0.4); }
+  50% { box-shadow: 0 0 0 6px rgba(250, 173, 20, 0); }
+}
+
+.pipeline-card-running {
+  animation: pipeline-pulse 2s infinite;
+}
+
+.pipeline-card-attention {
+  animation: pipeline-attention 2s infinite;
+}
