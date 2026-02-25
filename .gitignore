@@ -20,11 +20,11 @@ __pycache__/
 # Data & Databases
 data/*.db
 data/custom_models.json
-data/chroma_db/  # ChromaDB vector store (Phase 2A)
-data/chroma_db.backup_*/  # ChromaDB backups
-data/*.db-shm  # SQLite shared memory files
-data/*.db-wal  # SQLite write-ahead log files
-data/reindex_checkpoint.json  # Reindexing progress checkpoint
+data/chroma_db/
+data/chroma_db.backup_*/
+data/*.db-shm
+data/*.db-wal
+data/reindex_checkpoint.json
 
 # IDE
 .idea/
