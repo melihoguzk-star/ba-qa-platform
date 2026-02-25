@@ -14,7 +14,8 @@ import {
   Space,
   message,
   Descriptions,
-  Tree
+  Tree,
+  theme
 } from 'antd';
 import {
   InboxOutlined,
@@ -40,6 +41,7 @@ export default function Import() {
   const { data: documents } = useDocuments();
   const createMutation = useCreateDocument();
   const updateMutation = useUpdateDocument();
+  const { token } = theme.useToken();
 
   const handleUpload = async (file) => {
     const formData = new FormData();
@@ -146,7 +148,7 @@ export default function Import() {
             accept=".docx,.pdf,.txt"
           >
             <p className="ant-upload-drag-icon">
-              <InboxOutlined style={{ fontSize: 64, color: '#1890ff' }} />
+              <InboxOutlined style={{ fontSize: 64, color: token.colorPrimary }} />
             </p>
             <p className="ant-upload-text" style={{ fontSize: 18 }}>
               Dosyayı buraya sürükleyin veya tıklayarak seçin
@@ -204,7 +206,7 @@ export default function Import() {
 
           <p style={{ marginBottom: 8 }}><strong>İçerik Yapısı:</strong></p>
           <div style={{
-            background: '#f5f5f5',
+            background: token.colorBgLayout,
             padding: 16,
             borderRadius: 8,
             maxHeight: 400,

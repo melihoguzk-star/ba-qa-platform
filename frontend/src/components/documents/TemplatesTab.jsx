@@ -2,7 +2,7 @@
  * TemplatesTab — Create document from template
  */
 import { useState } from 'react';
-import { Card, Form, Select, Input, Button, Space, message, Row, Col } from 'antd';
+import { Card, Form, Select, Input, Button, Space, message, Row, Col, theme } from 'antd';
 import { FileAddOutlined, InfoCircleOutlined } from '@ant-design/icons';
 import { useProjects } from '../../api/projects';
 import { useCreateDocument } from '../../api/documents';
@@ -55,6 +55,7 @@ export default function TemplatesTab() {
 
   const { data: projects } = useProjects();
   const createMutation = useCreateDocument();
+  const { token } = theme.useToken();
 
   const handleTemplateSelect = (value) => {
     setSelectedTemplate(value);
@@ -89,7 +90,7 @@ export default function TemplatesTab() {
             <Card
               hoverable
               style={{
-                border: selectedTemplate === key ? '2px solid #1890ff' : '1px solid #d9d9d9',
+                border: selectedTemplate === key ? `2px solid ${token.colorPrimary}` : `1px solid ${token.colorBorder}`,
                 cursor: 'pointer'
               }}
               onClick={() => handleTemplateSelect(key)}
@@ -97,7 +98,7 @@ export default function TemplatesTab() {
               <div style={{ textAlign: 'center' }}>
                 <FileAddOutlined style={{ fontSize: 48, color: '#1890ff', marginBottom: 16 }} />
                 <h3>{template.name}</h3>
-                <p style={{ color: '#8c8c8c', fontSize: 12 }}>
+                <p style={{ color: token.colorTextTertiary, fontSize: 12 }}>
                   {template.description}
                 </p>
               </div>
@@ -168,8 +169,8 @@ export default function TemplatesTab() {
 
       {!selectedTemplate && (
         <Card style={{ textAlign: 'center', padding: 40 }}>
-          <InfoCircleOutlined style={{ fontSize: 48, color: '#8c8c8c', marginBottom: 16 }} />
-          <p style={{ color: '#8c8c8c' }}>
+          <InfoCircleOutlined style={{ fontSize: 48, color: token.colorTextTertiary, marginBottom: 16 }} />
+          <p style={{ color: token.colorTextTertiary }}>
             Yukarıdan bir şablon seçerek başlayın
           </p>
         </Card>

@@ -1,7 +1,7 @@
 /**
  * Architecture Page — Platform architecture documentation
  */
-import { Card, Row, Col, Statistic, Tabs, Descriptions, Tag, Typography, Space, Divider } from 'antd';
+import { Card, Row, Col, Statistic, Tabs, Descriptions, Tag, Typography, Space, Divider, theme } from 'antd';
 import {
   RocketOutlined,
   ApiOutlined,
@@ -941,6 +941,7 @@ function TechStackTab() {
 // ============================================================================
 
 function AgentCard({ color, name, role, description, tasks, extra }) {
+  const { token } = theme.useToken();
   const borderColors = {
     blue: '#3b82f6',
     green: '#10b981',
@@ -969,7 +970,7 @@ function AgentCard({ color, name, role, description, tasks, extra }) {
         </Text>
         <ul style={{ paddingLeft: 20, marginTop: 8, marginBottom: 0 }}>
           {tasks.map((task, idx) => (
-            <li key={idx} style={{ fontSize: 12, color: '#94a3b8', marginBottom: 4 }}>
+            <li key={idx} style={{ fontSize: 12, color: token.colorTextTertiary, marginBottom: 4 }}>
               {task}
             </li>
           ))}
@@ -977,7 +978,7 @@ function AgentCard({ color, name, role, description, tasks, extra }) {
       </Card>
 
       {extra && (
-        <div style={{ marginTop: 12, padding: 8, background: 'rgba(59,130,246,0.1)', borderRadius: 6 }}>
+        <div style={{ marginTop: 12, padding: 8, background: token.colorPrimaryBg, borderRadius: 6 }}>
           {extra}
         </div>
       )}

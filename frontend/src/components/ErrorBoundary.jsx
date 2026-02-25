@@ -45,7 +45,7 @@ class ErrorBoundary extends Component {
           {process.env.NODE_ENV === 'development' && this.state.error && (
             <details style={{ marginTop: 20, textAlign: 'left', maxWidth: 600, margin: '20px auto' }}>
               <summary>Error Details (Development Only)</summary>
-              <pre style={{ background: '#f5f5f5', padding: 10, borderRadius: 4, overflow: 'auto' }}>
+              <pre style={{ background: 'var(--md-bg-code)', padding: 10, borderRadius: 4, overflow: 'auto' }}>
                 {this.state.error.toString()}
                 {this.state.error.stack}
               </pre>

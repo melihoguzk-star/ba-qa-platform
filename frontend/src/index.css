@@ -3,6 +3,36 @@
  * Minimal CSS - Ant Design handles most styling
  */
 
+/* ── Theme CSS Variables ── */
+:root,
+[data-theme='light'] {
+  --md-text-color: #262626;
+  --md-text-secondary: #595959;
+  --md-border-color: #e8e8e8;
+  --md-border-subtle: #f0f0f0;
+  --md-bg-code: #f5f5f5;
+  --md-bg-table-header: #fafafa;
+  --md-bg-table-even: #fafafa;
+  --md-bg-table-hover: #f5f5f5;
+  --md-blockquote-border: #1890ff;
+  --md-table-shadow: rgba(0, 0, 0, 0.1);
+  --body-bg: #f0f2f5;
+}
+
+[data-theme='dark'] {
+  --md-text-color: rgba(255, 255, 255, 0.85);
+  --md-text-secondary: rgba(255, 255, 255, 0.65);
+  --md-border-color: #424242;
+  --md-border-subtle: #303030;
+  --md-bg-code: #1f1f1f;
+  --md-bg-table-header: #1f1f1f;
+  --md-bg-table-even: #1a1a1a;
+  --md-bg-table-hover: #262626;
+  --md-blockquote-border: #177ddc;
+  --md-table-shadow: rgba(0, 0, 0, 0.3);
+  --body-bg: #141414;
+}
+
 * {
   margin: 0;
   padding: 0;
@@ -16,16 +46,43 @@ body {
     'Noto Color Emoji';
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  background-color: var(--body-bg);
+  transition: background-color 0.3s;
 }
 
 #root {
   min-height: 100vh;
 }
 
-/* Markdown Content Styling */
+/* ── Scrollbar dark mode ── */
+[data-theme='dark'] ::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+[data-theme='dark'] ::-webkit-scrollbar-track {
+  background: #1f1f1f;
+}
+
+[data-theme='dark'] ::-webkit-scrollbar-thumb {
+  background: #424242;
+  border-radius: 4px;
+}
+
+[data-theme='dark'] ::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
+/* ── Selection dark mode ── */
+[data-theme='dark'] ::selection {
+  background: rgba(24, 144, 255, 0.4);
+  color: #fff;
+}
+
+/* ── Markdown Content Styling ── */
 .markdown-content {
   line-height: 1.8;
-  color: #262626;
+  color: var(--md-text-color);
 }
 
 .markdown-content h1,
@@ -42,13 +99,13 @@ body {
 
 .markdown-content h1 {
   font-size: 2em;
-  border-bottom: 2px solid #e8e8e8;
+  border-bottom: 2px solid var(--md-border-color);
   padding-bottom: 8px;
 }
 
 .markdown-content h2 {
   font-size: 1.5em;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid var(--md-border-subtle);
   padding-bottom: 6px;
 }
 
@@ -71,8 +128,8 @@ body {
 }
 
 .markdown-content code {
-  background-color: #f5f5f5;
-  border: 1px solid #e8e8e8;
+  background-color: var(--md-bg-code);
+  border: 1px solid var(--md-border-color);
   border-radius: 3px;
   padding: 2px 6px;
   font-family: 'Courier New', Courier, monospace;
@@ -80,8 +137,8 @@ body {
 }
 
 .markdown-content pre {
-  background-color: #f5f5f5;
-  border: 1px solid #e8e8e8;
+  background-color: var(--md-bg-code);
+  border: 1px solid var(--md-border-color);
   border-radius: 6px;
   padding: 16px;
   overflow-x: auto;
@@ -100,19 +157,19 @@ body {
   border-collapse: collapse;
   margin: 16px 0;
   font-size: 14px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 1px 3px var(--md-table-shadow);
 }
 
 .markdown-content table thead {
-  background-color: #fafafa;
+  background-color: var(--md-bg-table-header);
 }
 
 .markdown-content table thead th {
   font-weight: 600;
   text-align: left;
   padding: 12px 16px;
-  border: 1px solid #e8e8e8;
-  color: #262626;
+  border: 1px solid var(--md-border-color);
+  color: var(--md-text-color);
 }
 
 .markdown-content table tbody tr {
@@ -120,17 +177,17 @@ body {
 }
 
 .markdown-content table tbody tr:hover {
-  background-color: #f5f5f5;
+  background-color: var(--md-bg-table-hover);
 }
 
 .markdown-content table tbody tr:nth-child(even) {
-  background-color: #fafafa;
+  background-color: var(--md-bg-table-even);
 }
 
 .markdown-content table tbody td {
   padding: 12px 16px;
-  border: 1px solid #e8e8e8;
-  color: #595959;
+  border: 1px solid var(--md-border-color);
+  color: var(--md-text-secondary);
 }
 
 .markdown-content table tbody td:first-child {
@@ -144,14 +201,14 @@ body {
 
 .markdown-content hr {
   border: none;
-  border-top: 2px solid #e8e8e8;
+  border-top: 2px solid var(--md-border-color);
   margin: 24px 0;
 }
 
 .markdown-content blockquote {
-  border-left: 4px solid #1890ff;
+  border-left: 4px solid var(--md-blockquote-border);
   padding-left: 16px;
   margin: 16px 0;
-  color: #595959;
+  color: var(--md-text-secondary);
   font-style: italic;
 }

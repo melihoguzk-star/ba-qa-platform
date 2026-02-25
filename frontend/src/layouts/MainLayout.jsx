@@ -2,7 +2,7 @@
  * Main Layout — Sidebar + Header + Content
  */
 import { useEffect } from 'react';
-import { Layout, Menu, Breadcrumb, Button, Drawer, Grid } from 'antd';
+import { Layout, Menu, Breadcrumb, Button, Drawer, Grid, theme, Tooltip } from 'antd';
 import {
   HomeOutlined,
   FileTextOutlined,
@@ -17,9 +17,12 @@ import {
   ApartmentOutlined,
   MenuFoldOutlined,
   MenuUnfoldOutlined,
+  SunOutlined,
+  MoonOutlined,
 } from '@ant-design/icons';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useAppStore } from '../stores/appStore';
+import { useTheme } from '../contexts/ThemeContext';
 import { ROUTES } from '../utils/constants';
 
 const { Header, Sider, Content } = Layout;
@@ -91,6 +94,8 @@ export default function MainLayout() {
   const navigate = useNavigate();
   const location = useLocation();
   const { sidebarCollapsed, setSidebarCollapsed } = useAppStore();
+  const { isDark, toggleTheme: handleToggleTheme } = useTheme();
+  const { token } = theme.useToken();
   const screens = Grid.useBreakpoint();
 
   // Auto-collapse sidebar on mobile/tablet
@@ -127,8 +132,8 @@ export default function MainLayout() {
         justifyContent: 'center',
         fontSize: sidebarCollapsed && !isMobile ? 18 : 20,
         fontWeight: 'bold',
-        color: '#1890ff',
-        borderBottom: '1px solid #f0f0f0',
+        color: token.colorPrimary,
+        borderBottom: `1px solid ${token.colorBorderSecondary}`,
       }}
     >
       {sidebarCollapsed && !isMobile ? 'BA' : 'BA&QA Platform'}
@@ -169,7 +174,7 @@ export default function MainLayout() {
           collapsible
           collapsed={sidebarCollapsed}
           onCollapse={toggleSidebar}
-          theme="light"
+          theme={isDark ? 'dark' : 'light'}
           width={250}
           style={{
             overflow: 'auto',
@@ -191,7 +196,7 @@ export default function MainLayout() {
           placement="left"
           open={!sidebarCollapsed}
           onClose={toggleSidebar}
-          bodyStyle={{ padding: 0 }}
+          styles={{ body: { padding: 0 } }}
           width={250}
         >
           <SidebarLogo />
@@ -203,11 +208,11 @@ export default function MainLayout() {
         <Header
           style={{
             padding: isMobile ? '0 12px' : '0 24px',
-            background: '#fff',
+            background: token.colorBgContainer,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            borderBottom: '1px solid #f0f0f0',
+            borderBottom: `1px solid ${token.colorBorderSecondary}`,
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? 8 : 16 }}>
@@ -220,7 +225,14 @@ export default function MainLayout() {
           </div>
 
           <div>
-            {/* Future: Search, notifications, user menu */}
+            <Tooltip title={isDark ? 'Açık Tema' : 'Koyu Tema'}>
+              <Button
+                type="text"
+                icon={isDark ? <SunOutlined /> : <MoonOutlined />}
+                onClick={handleToggleTheme}
+                style={{ fontSize: 18 }}
+              />
+            </Tooltip>
           </div>
         </Header>
 
@@ -229,7 +241,7 @@ export default function MainLayout() {
             margin: isMobile ? '12px' : '24px',
             padding: isMobile ? 16 : 24,
             minHeight: 280,
-            background: '#fff',
+            background: token.colorBgContainer,
             borderRadius: 8,
           }}
         >

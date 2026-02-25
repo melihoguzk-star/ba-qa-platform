@@ -1,7 +1,7 @@
 /**
  * Dashboard — Home page with live stats
  */
-import { Card, Row, Col, Statistic, Spin, Alert, Timeline, Button, Space } from 'antd';
+import { Card, Row, Col, Statistic, Spin, Alert, Timeline, Button, Space, theme } from 'antd';
 import {
   FileTextOutlined,
   ProjectOutlined,
@@ -23,6 +23,7 @@ import { ROUTES } from '../utils/constants';
 
 export default function Dashboard() {
   const navigate = useNavigate();
+  const { token } = theme.useToken();
   const { data: projects, isLoading: projectsLoading, error: projectsError } = useProjects();
   const { data: documents, isLoading: documentsLoading } = useDocuments();
   const { data: pipelineRuns, isLoading: pipelineLoading } = usePipelineRuns();
@@ -91,7 +92,7 @@ export default function Dashboard() {
     <div>
       <div style={{ marginBottom: 24 }}>
         <h1 style={{ marginBottom: 8 }}>Dashboard</h1>
-        <p style={{ color: '#8c8c8c', marginBottom: 0 }}>
+        <p style={{ color: token.colorTextTertiary, marginBottom: 0 }}>
           BA&QA Intelligence Platform'a hoş geldiniz
         </p>
       </div>
@@ -219,15 +220,16 @@ export default function Dashboard() {
                   </Pie>
                   {/* Center label */}
                   <text x="50%" y="46%" textAnchor="middle" dominantBaseline="middle"
-                    style={{ fontSize: 28, fontWeight: 700, fill: '#262626' }}>
+                    style={{ fontSize: 28, fontWeight: 700, fill: token.colorText }}>
                     {totalDocuments}
                   </text>
                   <text x="50%" y="56%" textAnchor="middle" dominantBaseline="middle"
-                    style={{ fontSize: 12, fill: '#8c8c8c' }}>
+                    style={{ fontSize: 12, fill: token.colorTextTertiary }}>
                     toplam
                   </text>
                   <Tooltip
                     formatter={(value, name) => [`${value} doküman`, name]}
+                    contentStyle={{ backgroundColor: token.colorBgElevated, borderColor: token.colorBorderSecondary }}
                   />
                   <Legend
                     formatter={(value, entry) => {
@@ -238,7 +240,7 @@ export default function Dashboard() {
                 </PieChart>
               </ResponsiveContainer>
             ) : (
-              <p style={{ color: '#8c8c8c', textAlign: 'center', padding: '40px 0' }}>
+              <p style={{ color: token.colorTextTertiary, textAlign: 'center', padding: '40px 0' }}>
                 Henüz doküman bulunmuyor
               </p>
             )}
@@ -258,7 +260,7 @@ export default function Dashboard() {
                   children: (
                     <div>
                       <div>{activity.title}</div>
-                      <div style={{ fontSize: 12, color: '#8c8c8c', marginTop: 4 }}>
+                      <div style={{ fontSize: 12, color: token.colorTextTertiary, marginTop: 4 }}>
                         {new Date(activity.time).toLocaleString('tr-TR')}
                       </div>
                     </div>
@@ -266,7 +268,7 @@ export default function Dashboard() {
                 }))}
               />
             ) : (
-              <p style={{ color: '#8c8c8c', textAlign: 'center', padding: '40px 0' }}>
+              <p style={{ color: token.colorTextTertiary, textAlign: 'center', padding: '40px 0' }}>
                 Henüz aktivite bulunmuyor
               </p>
             )}

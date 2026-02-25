@@ -21,6 +21,7 @@ import {
   Tabs,
   message,
   Spin,
+  theme,
 } from 'antd';
 import {
   LineChartOutlined,
@@ -58,6 +59,7 @@ export default function Reports() {
   });
 
   const analyses = analysesData?.analyses || [];
+  const { token } = theme.useToken();
 
   // Get stats by type
   const baStats = stats?.by_type?.find((s) => s.analysis_type === 'ba') || {};
@@ -411,7 +413,7 @@ export default function Reports() {
                     <>
                       <Divider />
                       <Text strong>{'Detayl\u0131 Rapor:'}</Text>
-                      <Card size="small" style={{ backgroundColor: '#fafafa' }}>
+                      <Card size="small" style={{ backgroundColor: token.colorBgLayout }}>
                         <div
                           className="markdown-content"
                           style={{ maxHeight: 400, overflowY: 'auto' }}

@@ -23,6 +23,7 @@ import {
   Tabs,
   Tag,
   message,
+  theme,
 } from 'antd';
 import {
   UploadOutlined,
@@ -60,6 +61,7 @@ export default function DesignCompliance() {
   const { data: checkTypes = [] } = useCheckTypes();
   const { data: visionModels = [] } = useVisionModels();
   const analyzeMutation = useAnalyzeDesign();
+  const { token } = theme.useToken();
 
   // Default checks
   const defaultChecks = checkTypes
@@ -200,16 +202,16 @@ export default function DesignCompliance() {
                     textAlign: 'center',
                     backgroundColor:
                       status === 'completed'
-                        ? '#f6ffed'
+                        ? token.colorSuccessBg
                         : status === 'active'
-                        ? '#e6f7ff'
-                        : '#fafafa',
+                        ? token.colorPrimaryBg
+                        : token.colorFillQuaternary,
                     borderColor:
                       status === 'completed'
                         ? '#52c41a'
                         : status === 'active'
                         ? '#1890ff'
-                        : '#d9d9d9',
+                        : token.colorBorder,
                   }}
                 >
                   <Space direction="vertical" size={4}>
@@ -218,7 +220,7 @@ export default function DesignCompliance() {
                     ) : status === 'completed' ? (
                       <CheckCircleOutlined style={{ color: '#52c41a' }} />
                     ) : (
-                      <span style={{ color: '#d9d9d9' }}>{step.icon}</span>
+                      <span style={{ color: token.colorTextQuaternary }}>{step.icon}</span>
                     )}
                     <Text
                       style={{
@@ -229,7 +231,7 @@ export default function DesignCompliance() {
                             ? '#52c41a'
                             : status === 'active'
                             ? '#1890ff'
-                            : '#8c8c8c',
+                            : token.colorTextTertiary,
                       }}
                     >
                       {step.label}
@@ -413,7 +415,7 @@ export default function DesignCompliance() {
             {analysisResult && (
               <Space direction="vertical" style={{ width: '100%' }} size="large">
                 {/* Summary */}
-                <Card size="small" style={{ backgroundColor: '#f0f5ff' }}>
+                <Card size="small" style={{ backgroundColor: token.colorPrimaryBg }}>
                   <Space direction="vertical" style={{ width: '100%' }}>
                     <Row gutter={16}>
                       <Col span={12}>
@@ -453,7 +455,7 @@ export default function DesignCompliance() {
                               maxHeight: 500,
                               overflowY: 'auto',
                               padding: 16,
-                              backgroundColor: '#fafafa',
+                              backgroundColor: token.colorFillQuaternary,
                             }}
                           >
                             <ReactMarkdown remarkPlugins={[remarkGfm]}>{analysisResult.report_output}</ReactMarkdown>
@@ -472,7 +474,7 @@ export default function DesignCompliance() {
                               maxHeight: 500,
                               overflowY: 'auto',
                               padding: 16,
-                              backgroundColor: '#fafafa',
+                              backgroundColor: token.colorFillQuaternary,
                             }}
                           >
                             <ReactMarkdown remarkPlugins={[remarkGfm]}>{analysisResult.compliance_output}</ReactMarkdown>
@@ -491,7 +493,7 @@ export default function DesignCompliance() {
                               maxHeight: 500,
                               overflowY: 'auto',
                               padding: 16,
-                              backgroundColor: '#fafafa',
+                              backgroundColor: token.colorFillQuaternary,
                             }}
                           >
                             <ReactMarkdown remarkPlugins={[remarkGfm]}>
@@ -512,7 +514,7 @@ export default function DesignCompliance() {
                               maxHeight: 500,
                               overflowY: 'auto',
                               padding: 16,
-                              backgroundColor: '#fafafa',
+                              backgroundColor: token.colorFillQuaternary,
                             }}
                           >
                             <ReactMarkdown remarkPlugins={[remarkGfm]}>{analysisResult.screen_output}</ReactMarkdown>
@@ -531,7 +533,7 @@ export default function DesignCompliance() {
                               maxHeight: 500,
                               overflowY: 'auto',
                               padding: 16,
-                              backgroundColor: '#fafafa',
+                              backgroundColor: token.colorFillQuaternary,
                             }}
                           >
                             <ReactMarkdown remarkPlugins={[remarkGfm]}>{analysisResult.full_report}</ReactMarkdown>

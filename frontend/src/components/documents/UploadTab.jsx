@@ -2,7 +2,7 @@
  * UploadTab — File upload with drag & drop and parse preview
  */
 import { useState } from 'react';
-import { Upload, Card, Steps, Button, Select, Form, message, Alert } from 'antd';
+import { Upload, Card, Steps, Button, Select, Form, message, Alert, theme } from 'antd';
 import { InboxOutlined, FileTextOutlined } from '@ant-design/icons';
 import { useUploadFile } from '../../api/upload';
 import { useProjects } from '../../api/projects';
@@ -19,6 +19,7 @@ export default function UploadTab() {
   const uploadMutation = useUploadFile();
   const { data: projects } = useProjects();
   const createDocMutation = useCreateDocument();
+  const { token } = theme.useToken();
 
   const handleUpload = async (file) => {
     const formData = new FormData();
@@ -84,7 +85,7 @@ export default function UploadTab() {
             accept=".docx,.pdf,.txt"
           >
             <p className="ant-upload-drag-icon">
-              <InboxOutlined style={{ fontSize: 48, color: '#1890ff' }} />
+              <InboxOutlined style={{ fontSize: 48, color: token.colorPrimary }} />
             </p>
             <p className="ant-upload-text">
               Dosyayı buraya sürükleyin veya tıklayarak seçin
@@ -134,7 +135,7 @@ export default function UploadTab() {
           </div>
 
           <div style={{
-            background: '#f5f5f5',
+            background: token.colorBgLayout,
             padding: 16,
             borderRadius: 8,
             maxHeight: 400,

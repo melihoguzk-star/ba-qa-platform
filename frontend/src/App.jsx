@@ -20,6 +20,7 @@ import Architecture from './pages/Architecture';
 import NotFound from './pages/NotFound';
 import ErrorBoundary from './components/ErrorBoundary';
 import OfflineIndicator from './components/OfflineIndicator';
+import { ThemeProvider, useTheme } from './contexts/ThemeContext';
 import { ROUTES } from './utils/constants';
 
 // Create TanStack Query client
@@ -37,39 +38,41 @@ const queryClient = new QueryClient({
   },
 });
 
+function AppContent() {
+  const { antdTheme } = useTheme();
+
+  return (
+    <ConfigProvider locale={trTR} theme={antdTheme}>
+      <OfflineIndicator />
+      <BrowserRouter>
+        <Routes>
+          <Route element={<MainLayout />}>
+            <Route index element={<Dashboard />} />
+            <Route path={ROUTES.DOCUMENTS} element={<Documents />} />
+            <Route path={ROUTES.IMPORT} element={<Import />} />
+            <Route path={ROUTES.BA_EVALUATION} element={<BAEvaluation />} />
+            <Route path={ROUTES.TC_EVALUATION} element={<TCEvaluation />} />
+            <Route path={ROUTES.DESIGN_COMPLIANCE} element={<DesignCompliance />} />
+            <Route path={ROUTES.BRD_PIPELINE} element={<BRDPipeline />} />
+            <Route path={ROUTES.SMART_MATCHING} element={<SmartMatching />} />
+            <Route path={ROUTES.REPORTS} element={<Reports />} />
+            <Route path={ROUTES.SETTINGS} element={<Settings />} />
+            <Route path={ROUTES.ARCHITECTURE} element={<Architecture />} />
+            <Route path="*" element={<NotFound />} />
+          </Route>
+        </Routes>
+      </BrowserRouter>
+    </ConfigProvider>
+  );
+}
+
 export default function App() {
   return (
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
-        <ConfigProvider
-          locale={trTR}
-          theme={{
-            token: {
-              colorPrimary: '#1890ff',
-              borderRadius: 8,
-            },
-          }}
-        >
-          <OfflineIndicator />
-          <BrowserRouter>
-            <Routes>
-              <Route element={<MainLayout />}>
-                <Route index element={<Dashboard />} />
-                <Route path={ROUTES.DOCUMENTS} element={<Documents />} />
-                <Route path={ROUTES.IMPORT} element={<Import />} />
-                <Route path={ROUTES.BA_EVALUATION} element={<BAEvaluation />} />
-                <Route path={ROUTES.TC_EVALUATION} element={<TCEvaluation />} />
-                <Route path={ROUTES.DESIGN_COMPLIANCE} element={<DesignCompliance />} />
-                <Route path={ROUTES.BRD_PIPELINE} element={<BRDPipeline />} />
-                <Route path={ROUTES.SMART_MATCHING} element={<SmartMatching />} />
-                <Route path={ROUTES.REPORTS} element={<Reports />} />
-                <Route path={ROUTES.SETTINGS} element={<Settings />} />
-                <Route path={ROUTES.ARCHITECTURE} element={<Architecture />} />
-                <Route path="*" element={<NotFound />} />
-              </Route>
-            </Routes>
-          </BrowserRouter>
-        </ConfigProvider>
+        <ThemeProvider>
+          <AppContent />
+        </ThemeProvider>
       </QueryClientProvider>
     </ErrorBoundary>
   );

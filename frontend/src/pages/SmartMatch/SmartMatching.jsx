@@ -23,6 +23,7 @@ import {
   Spin,
   Segmented,
   List,
+  theme,
 } from 'antd';
 import {
   SearchOutlined,
@@ -57,6 +58,7 @@ export default function SmartMatching() {
   const { data: analytics } = useMatchAnalytics(timeRange);
   const searchMutation = useSearchMatches();
   const recordMutation = useRecordMatch();
+  const { token } = theme.useToken();
 
   // Handle search
   const handleSearch = async () => {
@@ -461,6 +463,7 @@ export default function SmartMatching() {
  * Match Card Component
  */
 function MatchCard({ match, rank, onView, onUse, onReject, getConfidenceStyle, getSuggestionBadge }) {
+  const { token } = theme.useToken();
   const confidenceStyle = getConfidenceStyle(match.confidence);
   const suggestionBadge = getSuggestionBadge(match.suggestion);
 
@@ -506,7 +509,7 @@ function MatchCard({ match, rank, onView, onUse, onReject, getConfidenceStyle, g
           <Paragraph
             ellipsis={{ rows: 3 }}
             style={{
-              backgroundColor: '#f5f5f5',
+              backgroundColor: token.colorBgLayout,
               padding: '12px',
               borderRadius: '4px',
               marginTop: 8,

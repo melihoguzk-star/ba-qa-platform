@@ -1,7 +1,7 @@
 /**
  * EmptyState — Reusable empty state component
  */
-import { Empty, Button } from 'antd';
+import { Empty, Button, theme } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
 
 export default function EmptyState({
@@ -12,6 +12,7 @@ export default function EmptyState({
   onAction,
   actionIcon = <PlusOutlined />,
 }) {
+  const { token } = theme.useToken();
   return (
     <div style={{ padding: '60px 20px', textAlign: 'center' }}>
       <Empty
@@ -19,7 +20,7 @@ export default function EmptyState({
         description={
           <div>
             <div style={{ fontSize: 16, fontWeight: 500, marginBottom: 8 }}>{title}</div>
-            {description && <div style={{ color: '#8c8c8c' }}>{description}</div>}
+            {description && <div style={{ color: token.colorTextTertiary }}>{description}</div>}
           </div>
         }
       >

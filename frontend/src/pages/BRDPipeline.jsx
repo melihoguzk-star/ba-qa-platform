@@ -20,7 +20,8 @@ import {
   Divider,
   Table,
   Tag,
-  Collapse
+  Collapse,
+  theme
 } from 'antd';
 import {
   RocketOutlined,
@@ -84,6 +85,7 @@ export default function BRDPipeline() {
   const evaluateQAMutation = useEvaluateQA();
   const saveCheckpointMutation = useSaveCheckpoint();
   const createDocMutation = useCreateDocument();
+  const { token } = theme.useToken();
 
   const { data: pipelineStatus } = usePipelineStatus(pipelineRunId, {
     enabled: !!pipelineRunId,
@@ -440,7 +442,7 @@ export default function BRDPipeline() {
             <h3 style={{ borderBottom: '2px solid #1890ff', paddingBottom: 8 }}>
               {idx + 1}. {ekran.ekran_adi}
             </h3>
-            {ekran.aciklama && <p style={{ color: '#555' }}>{ekran.aciklama}</p>}
+            {ekran.aciklama && <p style={{ color: token.colorTextSecondary }}>{ekran.aciklama}</p>}
 
             {ekran.is_akisi_diyagrami?.length > 0 && (
               <div style={{ marginBottom: 16 }}>
@@ -549,7 +551,7 @@ export default function BRDPipeline() {
                 <div>
                   <p>{ep.aciklama}</p>
                   {ep.request_body && (
-                    <div><strong>Request:</strong><pre style={{ background: '#f5f5f5', padding: 8, fontSize: 12 }}>{JSON.stringify(ep.request_body, null, 2)}</pre></div>
+                    <div><strong>Request:</strong><pre style={{ background: token.colorBgLayout, padding: 8, fontSize: 12 }}>{JSON.stringify(ep.request_body, null, 2)}</pre></div>
                   )}
                   {ep.response_success && (
                     <div><strong>Response:</strong><pre style={{ background: '#f0fff0', padding: 8, fontSize: 12 }}>{JSON.stringify(ep.response_success, null, 2)}</pre></div>
@@ -570,7 +572,7 @@ export default function BRDPipeline() {
                 <div>
                   <p>{ep.aciklama || ep.description}</p>
                   {ep.request_body && (
-                    <div><strong>Request:</strong><pre style={{ background: '#f5f5f5', padding: 8, fontSize: 12 }}>{JSON.stringify(ep.request_body, null, 2)}</pre></div>
+                    <div><strong>Request:</strong><pre style={{ background: token.colorBgLayout, padding: 8, fontSize: 12 }}>{JSON.stringify(ep.request_body, null, 2)}</pre></div>
                   )}
                   {(ep.response_success || ep.response) && (
                     <div><strong>Response:</strong><pre style={{ background: '#f0fff0', padding: 8, fontSize: 12 }}>{JSON.stringify(ep.response_success || ep.response, null, 2)}</pre></div>
@@ -587,7 +589,7 @@ export default function BRDPipeline() {
             {dtos.map((dto, idx) => (
               <div key={idx} style={{ marginBottom: 16 }}>
                 <h4>{dto.dto_adi || dto.dto_name || dto.name}</h4>
-                <p style={{ color: '#555' }}>{dto.aciklama || dto.description}</p>
+                <p style={{ color: token.colorTextSecondary }}>{dto.aciklama || dto.description}</p>
                 <Table
                   dataSource={(dto.fields || []).map((f, i) => ({ ...f, key: i }))}
                   columns={[
@@ -622,7 +624,7 @@ export default function BRDPipeline() {
             {curls.map((c, i) => (
               <div key={i} style={{ marginBottom: 12 }}>
                 <strong>{c.endpoint_adi || c.endpoint_name}</strong>
-                <pre style={{ background: '#f5f5f5', padding: 8, fontSize: 12 }}>{c.curl}</pre>
+                <pre style={{ background: token.colorBgLayout, padding: 8, fontSize: 12 }}>{c.curl}</pre>
               </div>
             ))}
           </div>
@@ -860,12 +862,12 @@ export default function BRDPipeline() {
           />
 
           <div style={{
-            border: '1px solid #d9d9d9',
+            border: `1px solid ${token.colorBorder}`,
             borderRadius: 8,
             padding: 16,
             maxHeight: 500,
             overflow: 'auto',
-            background: '#fff'
+            background: token.colorBgContainer
           }}>
             {renderDocContent(docType, editedContent || checkpointData)}
           </div>
@@ -964,7 +966,7 @@ export default function BRDPipeline() {
                         showInfo={false}
                         size="small"
                       />
-                      <div style={{ fontSize: '12px', color: '#666', marginTop: 4 }}>
+                      <div style={{ fontSize: '12px', color: token.colorTextSecondary, marginTop: 4 }}>
                         {typeof kriter.aciklama === 'string' ? kriter.aciklama : JSON.stringify(kriter.aciklama)}
                       </div>
                     </div>

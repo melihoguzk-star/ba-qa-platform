@@ -1,7 +1,7 @@
 /**
  * SearchTab — Semantic + Drive search across documents
  */
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Input,
   Select,
@@ -29,6 +29,7 @@ import {
 } from '@ant-design/icons';
 import { useSearch, useReindexTrigger, useReindexStatus } from '../../api/search';
 import { useProjects } from '../../api/projects';
+import { useTheme } from '../../contexts/ThemeContext';
 
 const { Text, Paragraph } = Typography;
 
@@ -45,14 +46,54 @@ function useDebounce(value, delay) {
 // Doc type colors
 const DOC_TYPE_COLOR = { BA: 'blue', TA: 'green', TC: 'orange', BRD: 'purple' };
 
-// Drive mime type icons
-function driveMimeIcon(mimeType = '') {
-  if (mimeType.includes('document')) return '📄';
-  if (mimeType.includes('spreadsheet')) return '📊';
-  if (mimeType.includes('presentation')) return '📽️';
-  if (mimeType.includes('pdf')) return '📕';
-  if (mimeType.includes('folder')) return '📁';
-  return '📎';
+// Drive mime type display
+const MIME_INFO = {
+  'application/vnd.google-apps.document': { icon: '📄', label: 'Google Docs' },
+  'application/vnd.google-apps.spreadsheet': { icon: '📊', label: 'Google Sheets' },
+  'application/vnd.google-apps.presentation': { icon: '📽️', label: 'Google Slides' },
+  'application/pdf': { icon: '📕', label: 'PDF' },
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document': { icon: '📝', label: 'Word' },
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': { icon: '📊', label: 'Excel' },
+  'application/vnd.openxmlformats-officedocument.presentationml.presentation': { icon: '📽️', label: 'PowerPoint' },
+  'application/msword': { icon: '📝', label: 'Word' },
+  'text/plain': { icon: '📃', label: 'Metin' },
+};
+
+function getMimeInfo(mimeType = '') {
+  if (MIME_INFO[mimeType]) return MIME_INFO[mimeType];
+  if (mimeType.includes('document')) return { icon: '📄', label: 'Doküman' };
+  if (mimeType.includes('spreadsheet')) return { icon: '📊', label: 'Tablo' };
+  if (mimeType.includes('presentation')) return { icon: '📽️', label: 'Sunum' };
+  if (mimeType.includes('pdf')) return { icon: '📕', label: 'PDF' };
+  return { icon: '📎', label: 'Dosya' };
+}
+
+// Highlight query words in text
+function highlightQuery(text, query, highlightBg = '#fff3b0') {
+  if (!query || !text) return text;
+  const words = query.trim().split(/\s+/).filter((w) => w.length >= 2);
+  if (words.length === 0) return text;
+  const escaped = words.map((w) => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|');
+  const pattern = new RegExp(`(${escaped})`, 'gi');
+  const parts = text.split(pattern);
+  // Use a fresh regex per test to avoid lastIndex issues with `g` flag
+  const testPattern = new RegExp(`^(?:${escaped})$`, 'i');
+  return parts.map((part, i) =>
+    testPattern.test(part) ? (
+      <span key={i} style={{ backgroundColor: highlightBg, fontWeight: 600 }}>
+        {part}
+      </span>
+    ) : (
+      part
+    ),
+  );
+}
+
+// Relevance score color
+function relevanceColor(score) {
+  if (score >= 0.6) return '#52c41a';
+  if (score >= 0.3) return '#faad14';
+  return '#d9d9d9';
 }
 
 export default function SearchTab() {
@@ -69,6 +110,8 @@ export default function SearchTab() {
   const reindexMutation = useReindexTrigger();
   const { data: reindexStatus } = useReindexStatus(reindexPolling);
   const { data: projects } = useProjects();
+  const { isDark } = useTheme();
+  const highlightBg = isDark ? 'rgba(250,173,20,0.3)' : '#fff3b0';
 
   // Map Segmented label → API source value
   const sourceMap = { Platform: 'platform', Drive: 'drive', 'Tümü': 'both' };
@@ -268,43 +311,51 @@ export default function SearchTab() {
               ) : (
                 <List
                   dataSource={driveResults}
-                  renderItem={(item) => (
-                    <List.Item
-                      key={item.file_id}
-                      extra={
-                        <Button
-                          type="link"
-                          icon={<LinkOutlined />}
-                          href={item.webViewLink}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                        >
-                          Drive'da Aç
-                        </Button>
-                      }
-                    >
-                      <List.Item.Meta
-                        title={
+                  renderItem={(item) => {
+                    const mime = getMimeInfo(item.mimeType);
+                    return (
+                      <List.Item
+                        key={item.file_id}
+                        extra={
                           <Space>
-                            <span>{driveMimeIcon(item.mimeType)}</span>
-                            <Text strong>{item.name}</Text>
-                          </Space>
-                        }
-                        description={
-                          <Space>
-                            <Text type="secondary" style={{ fontSize: 12 }}>
-                              {item.mimeType?.split('.').pop()}
-                            </Text>
-                            {item.modifiedTime && (
-                              <Text type="secondary" style={{ fontSize: 12 }}>
-                                {new Date(item.modifiedTime).toLocaleDateString('tr-TR')}
-                              </Text>
+                            {item.relevance_score > 0 && (
+                              <Tag color={relevanceColor(item.relevance_score)}>
+                                {Math.round(item.relevance_score * 100)}%
+                              </Tag>
                             )}
+                            <Button
+                              type="link"
+                              icon={<LinkOutlined />}
+                              href={item.webViewLink}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                            >
+                              Drive'da Aç
+                            </Button>
                           </Space>
                         }
-                      />
-                    </List.Item>
-                  )}
+                      >
+                        <List.Item.Meta
+                          title={
+                            <Space>
+                              <span>{mime.icon}</span>
+                              <Text strong>{highlightQuery(item.name, debouncedQuery, highlightBg)}</Text>
+                            </Space>
+                          }
+                          description={
+                            <Space>
+                              <Tag>{mime.label}</Tag>
+                              {item.modifiedTime && (
+                                <Text type="secondary" style={{ fontSize: 12 }}>
+                                  {new Date(item.modifiedTime).toLocaleDateString('tr-TR')}
+                                </Text>
+                              )}
+                            </Space>
+                          }
+                        />
+                      </List.Item>
+                    );
+                  }}
                 />
               )}
             </Card>

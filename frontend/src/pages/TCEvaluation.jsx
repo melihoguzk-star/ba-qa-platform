@@ -26,7 +26,8 @@ import {
   Statistic,
   Row,
   Col,
-  Divider
+  Divider,
+  theme
 } from 'antd';
 import {
   FileSearchOutlined,
@@ -91,6 +92,7 @@ export default function TCEvaluation() {
   const { data: projects, refetch: refetchProjects } = useJIRAProjects();
   const { data: tasks, refetch: refetchTasks } = useJIRATasks(selectedProject, 'tc');
   const evaluateMutation = useEvaluateTC();
+  const { token } = theme.useToken();
 
   const taskColumns = [
     {
@@ -204,7 +206,7 @@ export default function TCEvaluation() {
   return (
     <div>
       <h1 style={{ marginBottom: 8 }}>🧪 Test Case Doküman Değerlendirme</h1>
-      <p style={{ color: '#8c8c8c', marginBottom: 24 }}>
+      <p style={{ color: token.colorTextTertiary, marginBottom: 24 }}>
         Test Case dokümanlarını BA ile karşılaştırarak kalite analizi yapar
       </p>
 

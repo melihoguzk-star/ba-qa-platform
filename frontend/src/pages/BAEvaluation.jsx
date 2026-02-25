@@ -26,7 +26,8 @@ import {
   Statistic,
   Row,
   Col,
-  Divider
+  Divider,
+  theme
 } from 'antd';
 import {
   FileSearchOutlined,
@@ -91,6 +92,7 @@ export default function BAEvaluation() {
   const { data: projects, refetch: refetchProjects } = useJIRAProjects();
   const { data: tasks, refetch: refetchTasks } = useJIRATasks(selectedProject, 'ba');
   const evaluateMutation = useEvaluateBA();
+  const { token } = theme.useToken();
 
   const taskColumns = [
     {
@@ -203,7 +205,7 @@ export default function BAEvaluation() {
   return (
     <div>
       <h1 style={{ marginBottom: 8 }}>📋 BA Doküman Değerlendirme</h1>
-      <p style={{ color: '#8c8c8c', marginBottom: 24 }}>
+      <p style={{ color: token.colorTextTertiary, marginBottom: 24 }}>
         JIRA görevlerinden BA dokümanlarını otomatik analiz eder ve kalite puanı hesaplar
       </p>
 
