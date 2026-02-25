@@ -22,6 +22,7 @@ from api.routers import (
     jira,
     design,
     reports,
+    drive,
     settings as settings_router
 )
 
@@ -95,6 +96,7 @@ app.include_router(matching.router, prefix=f"{settings.api_prefix}/match", tags=
 app.include_router(design.router, prefix=f"{settings.api_prefix}", tags=["Design"])
 app.include_router(reports.router, prefix=f"{settings.api_prefix}", tags=["Reports"])
 app.include_router(jira.router, prefix=f"{settings.api_prefix}", tags=["JIRA"])
+app.include_router(drive.router, prefix=f"{settings.api_prefix}/drive", tags=["Drive"])
 app.include_router(settings_router.router, prefix=f"{settings.api_prefix}/settings", tags=["Settings"])
 
 

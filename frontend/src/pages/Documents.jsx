@@ -8,13 +8,15 @@ import {
   FileTextOutlined,
   UploadOutlined,
   FileAddOutlined,
-  SearchOutlined
+  SearchOutlined,
+  CloudOutlined
 } from '@ant-design/icons';
 import ProjectsTab from '../components/documents/ProjectsTab';
 import DocumentsTab from '../components/documents/DocumentsTab';
 import UploadTab from '../components/documents/UploadTab';
 import TemplatesTab from '../components/documents/TemplatesTab';
 import SearchTab from '../components/documents/SearchTab';
+import DriveSearchTab from '../components/documents/DriveSearchTab';
 
 export default function Documents() {
   const [activeTab, setActiveTab] = useState('projects');
@@ -69,6 +71,16 @@ export default function Documents() {
         </span>
       ),
       children: <SearchTab />
+    },
+    {
+      key: 'drive',
+      label: (
+        <span>
+          <CloudOutlined />
+          Drive Arama
+        </span>
+      ),
+      children: <DriveSearchTab />
     }
   ];
 

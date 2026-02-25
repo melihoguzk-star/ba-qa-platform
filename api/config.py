@@ -45,6 +45,7 @@ class Settings(BaseSettings):
     n8n_drive_search_proxy: str = "https://sh0tdie1.app.n8n.cloud/webhook/drive-search-proxy"
 
     # Drive Configuration
+    shared_drive_id: str = "0AA3Y0qA7mw0TUk9PVA"
     drive_folder_id: str = ""
 
     # Pipeline Configuration
