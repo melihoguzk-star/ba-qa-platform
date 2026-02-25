@@ -53,12 +53,13 @@ async def search_drive(
     payload = {
         "query": query,
         "drive_id": resolved_drive_id,
-        "mime_type": mime_type,
     }
+    if mime_type:
+        payload["mime_type"] = mime_type
 
     try:
         async with httpx.AsyncClient(timeout=30) as client:
-            logger.info(f"Drive search: query={query!r} drive_id={resolved_drive_id} mime={mime_type!r}")
+            logger.info(f"Drive search: PAYLOAD={payload!r}")
             resp = await client.post(webhook_url, json=payload)
             resp.raise_for_status()
             data = resp.json()

@@ -214,7 +214,10 @@ async def drive_search(
         logger.warning("n8n_drive_search_proxy URL not configured")
         return []
 
-    payload: Dict[str, Any] = {"query": query}
+    payload: Dict[str, Any] = {
+        "query": query,
+        "drive_id": settings.shared_drive_id,
+    }
     if folder_id:
         payload["folder_id"] = folder_id
     if mime_type:

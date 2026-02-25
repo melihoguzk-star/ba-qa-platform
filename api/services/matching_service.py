@@ -32,6 +32,7 @@ def search_matches(
     doc_type: Optional[str] = None,
     top_k: int = 5,
     source: str = "platform",
+    mime_type_filter: str = "",
 ) -> Dict:
     """
     Search for matching documents using smart matcher.
@@ -79,7 +80,11 @@ def search_matches(
                 task_features = analysis
             search_query = analysis.get("search_query", task_description[:200])
 
-            drive_results = asyncio.run(drive_search(search_query))
+            from api.services.drive_service import MIME_TYPE_MAP
+            resolved_mime = MIME_TYPE_MAP.get(mime_type_filter or "", "")
+            drive_results = asyncio.run(
+                drive_search(search_query, mime_type=resolved_mime or None)
+            )
             for item in drive_results:
                 drive_matches.append({
                     "name": item.get("name", ""),
@@ -88,6 +93,10 @@ def search_matches(
                     "mimeType": item.get("mimeType", ""),
                     "modifiedTime": item.get("modifiedTime", ""),
                     "relevance_tag": _tag_drive_relevance(item.get("name", "")),
+                    "size": item.get("size"),
+                    "lastModifiedBy": item.get("lastModifiedBy", ""),
+                    "createdTime": item.get("createdTime", ""),
+                    "relevance_score": item.get("_relevance_score", 0),
                 })
         except Exception as e:
             logger.error(f"Drive match search failed: {e}")

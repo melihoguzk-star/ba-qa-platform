@@ -123,6 +123,7 @@ async def search_task_matches(request: MatchSearchRequest):
             doc_type=request.doc_type,
             top_k=request.top_k,
             source=request.source,
+            mime_type_filter=request.mime_type_filter,
         )
 
         # Convert matches to Pydantic models

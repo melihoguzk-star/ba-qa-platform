@@ -12,6 +12,7 @@ class MatchSearchRequest(BaseModel):
     doc_type: Optional[str] = Field(None, description="Document type filter (ba/ta/tc)")
     top_k: int = Field(5, ge=1, le=20, description="Number of top matches to return")
     source: str = Field("platform", pattern="^(platform|drive|both)$", description="Search source")
+    mime_type_filter: str = Field("", description="Drive MIME filter: docs/sheets/docx/pdf/all or empty")
 
 
 class TaskFeatures(BaseModel):
@@ -57,6 +58,10 @@ class DriveMatchResult(BaseModel):
     mimeType: str = ""
     modifiedTime: str = ""
     relevance_tag: str = "GENEL"
+    size: Optional[str] = None
+    lastModifiedBy: str = ""
+    createdTime: str = ""
+    relevance_score: float = 0.0
 
 
 class MatchSearchResponse(BaseModel):

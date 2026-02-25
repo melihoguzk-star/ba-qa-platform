@@ -22,7 +22,9 @@ import {
   message,
   Spin,
   Segmented,
-  List,
+  Tabs,
+  Tooltip,
+  Alert,
   theme,
 } from 'antd';
 import {
@@ -34,6 +36,14 @@ import {
   ThunderboltOutlined,
   LinkOutlined,
   GoogleOutlined,
+  FileTextOutlined,
+  FileExcelOutlined,
+  FilePdfOutlined,
+  FileWordOutlined,
+  FileOutlined,
+  ClockCircleOutlined,
+  UserOutlined,
+  DatabaseOutlined,
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { useSearchMatches, useMatchAnalytics, useRecordMatch } from '../../api/matching';
@@ -41,6 +51,57 @@ import { useSearchMatches, useMatchAnalytics, useRecordMatch } from '../../api/m
 const { Title, Text, Paragraph } = Typography;
 const { TextArea } = Input;
 const { Panel } = Collapse;
+
+// ── MIME filter options ────────────────────────────────────────
+const MIME_FILTERS = [
+  { label: 'Tümü', value: '' },
+  { label: 'Docs', value: 'docs' },
+  { label: 'Sheets', value: 'sheets' },
+  { label: 'Word', value: 'docx' },
+  { label: 'PDF', value: 'pdf' },
+];
+
+// ── MIME type → icon/label/color mapping ──────────────────────
+const MIME_INFO = {
+  'application/vnd.google-apps.document': { icon: <FileTextOutlined style={{ color: '#4285f4' }} />, label: 'Google Docs', color: 'blue' },
+  'application/vnd.google-apps.spreadsheet': { icon: <FileExcelOutlined style={{ color: '#0f9d58' }} />, label: 'Google Sheets', color: 'green' },
+  'application/vnd.google-apps.presentation': { icon: <FileOutlined style={{ color: '#f4b400' }} />, label: 'Slides', color: 'orange' },
+  'application/pdf': { icon: <FilePdfOutlined style={{ color: '#ea4335' }} />, label: 'PDF', color: 'red' },
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document': { icon: <FileWordOutlined style={{ color: '#2b579a' }} />, label: 'Word', color: 'blue' },
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': { icon: <FileExcelOutlined style={{ color: '#217346' }} />, label: 'Excel', color: 'green' },
+  'application/msword': { icon: <FileWordOutlined style={{ color: '#2b579a' }} />, label: 'Word', color: 'blue' },
+  'text/plain': { icon: <FileTextOutlined />, label: 'Metin', color: 'default' },
+};
+
+function getMimeInfo(mimeType = '') {
+  if (MIME_INFO[mimeType]) return MIME_INFO[mimeType];
+  if (mimeType.includes('document')) return { icon: <FileTextOutlined />, label: 'Doküman', color: 'default' };
+  if (mimeType.includes('spreadsheet')) return { icon: <FileExcelOutlined />, label: 'Tablo', color: 'green' };
+  if (mimeType.includes('pdf')) return { icon: <FilePdfOutlined />, label: 'PDF', color: 'red' };
+  return { icon: <FileOutlined />, label: 'Dosya', color: 'default' };
+}
+
+function formatRelativeDate(dateStr) {
+  if (!dateStr) return '';
+  const date = new Date(dateStr);
+  const now = new Date();
+  const diffMs = now - date;
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+  if (diffDays === 0) return 'Bugün';
+  if (diffDays === 1) return 'Dün';
+  if (diffDays < 7) return `${diffDays} gün önce`;
+  if (diffDays < 30) return `${Math.floor(diffDays / 7)} hafta önce`;
+  return date.toLocaleDateString('tr-TR');
+}
+
+function formatSize(bytes) {
+  if (!bytes) return '';
+  const num = Number(bytes);
+  if (isNaN(num)) return '';
+  if (num < 1024) return `${num} B`;
+  if (num < 1024 * 1024) return `${(num / 1024).toFixed(1)} KB`;
+  return `${(num / (1024 * 1024)).toFixed(1)} MB`;
+}
 
 export default function SmartMatching() {
   const navigate = useNavigate();
@@ -52,6 +113,8 @@ export default function SmartMatching() {
   const [taskDescription, setTaskDescription] = useState('');
   const [searchResults, setSearchResults] = useState(null);
   const [source, setSource] = useState('Platform');
+  const [mimeFilter, setMimeFilter] = useState('');
+  const [resultTab, setResultTab] = useState('all');
   const sourceMap = { Platform: 'platform', Drive: 'drive', 'Tümü': 'both' };
 
   // API hooks
@@ -74,6 +137,7 @@ export default function SmartMatching() {
         doc_type: docTypeFilter === 'all' ? undefined : docTypeFilter,
         top_k: 5,
         source: sourceMap[source],
+        mime_type_filter: mimeFilter,
       });
 
       setSearchResults(result);
@@ -176,6 +240,120 @@ export default function SmartMatching() {
     return badges[suggestion] || badges.EVALUATE;
   };
 
+  // Result counts
+  const platformCount = searchResults?.matches?.length || 0;
+  const driveCount = searchResults?.drive_matches?.length || 0;
+  const totalCount = platformCount + driveCount;
+
+  // ── Render helpers for tab contents ────────────────────────
+
+  const renderPlatformResults = () => {
+    if (platformCount === 0) {
+      return (
+        <Empty description={
+          <div>
+            <Paragraph>Platformda ilgili doküman bulunamadı.</Paragraph>
+            <Paragraph type="secondary">Yeni doküman oluşturmayı düşünün.</Paragraph>
+          </div>
+        } />
+      );
+    }
+    return (
+      <Space direction="vertical" size="large" style={{ width: '100%' }}>
+        {searchResults.matches.map((match, index) => (
+          <MatchCard
+            key={match.document_id}
+            match={match}
+            rank={index + 1}
+            onView={handleView}
+            onUse={handleUse}
+            onReject={handleReject}
+            getConfidenceStyle={getConfidenceStyle}
+            getSuggestionBadge={getSuggestionBadge}
+          />
+        ))}
+      </Space>
+    );
+  };
+
+  const renderDriveResults = () => {
+    if (driveCount === 0) {
+      return (
+        <Empty description={
+          <div>
+            <Paragraph>Drive'da sonuç bulunamadı.</Paragraph>
+            <Paragraph type="secondary">Dosya türü filtresini değiştirmeyi deneyin.</Paragraph>
+          </div>
+        } />
+      );
+    }
+    return (
+      <Space direction="vertical" size="middle" style={{ width: '100%' }}>
+        {searchResults.drive_matches.map((item) => (
+          <DriveMatchCard key={item.file_id} item={item} token={token} />
+        ))}
+      </Space>
+    );
+  };
+
+  const renderAllResults = () => {
+    if (totalCount === 0) {
+      return (
+        <Empty description={
+          <div>
+            <Paragraph>Hiçbir kaynakta sonuç bulunamadı.</Paragraph>
+            <Paragraph type="secondary">Farklı anahtar kelimeler deneyin.</Paragraph>
+          </div>
+        } />
+      );
+    }
+    return (
+      <Space direction="vertical" size="large" style={{ width: '100%' }}>
+        {/* Platform section */}
+        {platformCount > 0 ? (
+          <>
+            <Text strong style={{ fontSize: 14 }}>
+              <DatabaseOutlined /> Platform Sonuçları ({platformCount})
+            </Text>
+            {searchResults.matches.map((match, index) => (
+              <MatchCard
+                key={match.document_id}
+                match={match}
+                rank={index + 1}
+                onView={handleView}
+                onUse={handleUse}
+                onReject={handleReject}
+                getConfidenceStyle={getConfidenceStyle}
+                getSuggestionBadge={getSuggestionBadge}
+              />
+            ))}
+          </>
+        ) : driveCount > 0 && (
+          <Alert type="info" showIcon message="Platformda ilgili doküman bulunamadı. Yeni doküman oluşturmayı düşünün." />
+        )}
+
+        {/* Drive section */}
+        {driveCount > 0 ? (
+          <>
+            <Text strong style={{ fontSize: 14 }}>
+              <GoogleOutlined /> Drive Sonuçları ({driveCount})
+            </Text>
+            {searchResults.drive_matches.map((item) => (
+              <DriveMatchCard key={item.file_id} item={item} token={token} />
+            ))}
+          </>
+        ) : platformCount > 0 && (
+          <Alert type="info" showIcon message="Drive'da sonuç bulunamadı. Dosya türü filtresini değiştirmeyi deneyin." />
+        )}
+
+        <Paragraph type="secondary" style={{ textAlign: 'center', marginTop: 16 }}>
+          💡 <strong>İpucu:</strong> Daha yüksek güven skorları (yeşil) daha güçlü eşleşmeleri gösterir.
+          Sonuçlardan herhangi bir dokümanı görüntüleyebilir veya kullanabilirsiniz.
+        </Paragraph>
+      </Space>
+    );
+  };
+
   return (
     <div style={{ padding: '24px' }}>
       {/* Header */}
@@ -246,7 +424,7 @@ export default function SmartMatching() {
       {/* Input Section */}
       <Card title="1️⃣ Görevinizi Tanımlayın" style={{ marginBottom: 24 }}>
         <Row gutter={16} style={{ marginBottom: 16 }}>
-          <Col xs={24} md={12}>
+          <Col xs={24} md={source !== 'Platform' ? 8 : 12}>
             <Text strong>JIRA Anahtarı (Opsiyonel)</Text>
             <Input
               placeholder="örn: PROJ-123"
@@ -269,17 +447,30 @@ export default function SmartMatching() {
               ]}
             />
           </Col>
-          <Col xs={24} md={6}>
+          <Col xs={24} md={source !== 'Platform' ? 4 : 6}>
             <Text strong>Kaynak</Text>
             <div style={{ marginTop: 8 }}>
               <Segmented
                 options={['Platform', 'Drive', 'Tümü']}
                 value={source}
-                onChange={setSource}
+                onChange={(val) => { setSource(val); setResultTab('all'); }}
                 block
               />
             </div>
           </Col>
+          {source !== 'Platform' && (
+            <Col xs={24} md={6}>
+              <Text strong>Dosya Türü</Text>
+              <div style={{ marginTop: 8 }}>
+                <Segmented
+                  options={MIME_FILTERS}
+                  value={mimeFilter}
+                  onChange={setMimeFilter}
+                  block
+                />
+              </div>
+            </Col>
+          )}
         </Row>
 
         <Text strong>Görev Açıklaması</Text>
@@ -324,7 +515,7 @@ export default function SmartMatching() {
       {searchResults && !searchMutation.isPending && (
         <>
           {/* Task Analysis */}
-          {searchResults.matches.length > 0 && searchResults.task_features && (
+          {(platformCount > 0 || driveCount > 0) && searchResults.task_features && (
             <Card style={{ marginBottom: 24 }}>
               <Collapse>
                 <Panel header="📋 Görev Analizi" key="1">
@@ -356,106 +547,98 @@ export default function SmartMatching() {
             </Card>
           )}
 
-          {/* Match Results */}
+          {/* Tabbed Results */}
           <Card
             title={
               <div>
-                2️⃣ Eşleşme Sonuçları ({searchResults.total_found} bulundu, {searchResults.response_time.toFixed(2)}s)
+                2️⃣ Eşleşme Sonuçları ({totalCount} bulundu, {searchResults.response_time.toFixed(2)}s)
               </div>
             }
           >
-            {searchResults.matches.length === 0 ? (
-              <Empty
-                description={
-                  <div>
-                    <Paragraph>🔍 İlgili doküman bulunamadı. Yeni bir doküman oluşturmayı düşünün.</Paragraph>
-                    <Paragraph type="secondary">
-                      <strong>Öneri:</strong> Bu görev için yeni bir doküman oluşturmak üzere Doküman Kütüphanesi'ni kullanın.
-                    </Paragraph>
-                  </div>
-                }
-              />
-            ) : (
-              <Space direction="vertical" size="large" style={{ width: '100%' }}>
-                {searchResults.matches.map((match, index) => (
-                  <MatchCard
-                    key={match.document_id}
-                    match={match}
-                    rank={index + 1}
-                    onView={handleView}
-                    onUse={handleUse}
-                    onReject={handleReject}
-                    getConfidenceStyle={getConfidenceStyle}
-                    getSuggestionBadge={getSuggestionBadge}
-                  />
-                ))}
-
-                <Paragraph type="secondary" style={{ textAlign: 'center', marginTop: 16 }}>
-                  💡 <strong>İpucu:</strong> Daha yüksek güven skorları (yeşil) daha güçlü eşleşmeleri gösterir.
-                  Sonuçlardan herhangi bir dokümanı görüntüleyebilir veya kullanabilirsiniz.
-                </Paragraph>
-              </Space>
-            )}
+            <Tabs
+              activeKey={resultTab}
+              onChange={setResultTab}
+              items={[
+                {
+                  key: 'all',
+                  label: `Tümü (${totalCount})`,
+                  children: renderAllResults(),
+                },
+                {
+                  key: 'platform',
+                  label: `Platform (${platformCount})`,
+                  children: renderPlatformResults(),
+                },
+                {
+                  key: 'drive',
+                  label: `Drive (${driveCount})`,
+                  children: renderDriveResults(),
+                },
+              ]}
+            />
           </Card>
-
-          {/* Drive Results */}
-          {searchResults.drive_matches && searchResults.drive_matches.length > 0 && (
-            <Card
-              title={
-                <span>
-                  <GoogleOutlined /> Drive Sonuçları ({searchResults.drive_matches.length})
-                </span>
-              }
-              style={{ marginTop: 24 }}
-            >
-              <List
-                dataSource={searchResults.drive_matches}
-                renderItem={(item) => {
-                  const mimeIcon = item.mimeType?.includes('document') ? '📄'
-                    : item.mimeType?.includes('spreadsheet') ? '📊'
-                    : item.mimeType?.includes('presentation') ? '📽️'
-                    : item.mimeType?.includes('pdf') ? '📕'
-                    : '📎';
-                  return (
-                    <List.Item
-                      key={item.file_id}
-                      extra={
-                        <Button
-                          type="link"
-                          icon={<LinkOutlined />}
-                          href={item.webViewLink}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                        >
-                          Drive'da Aç
-                        </Button>
-                      }
-                    >
-                      <List.Item.Meta
-                        title={
-                          <Space>
-                            <span>{mimeIcon}</span>
-                            <Text strong>{item.name}</Text>
-                            <Tag>{item.relevance_tag}</Tag>
-                          </Space>
-                        }
-                        description={
-                          item.modifiedTime && (
-                            <Text type="secondary" style={{ fontSize: 12 }}>
-                              {new Date(item.modifiedTime).toLocaleDateString('tr-TR')}
-                            </Text>
-                          )
-                        }
-                      />
-                    </List.Item>
-                  );
-                }}
-              />
-            </Card>
-          )}
         </>
       )}
     </div>
+  );
+}
+
+/**
+ * Drive Match Card Component — enriched Drive result card
+ */
+function DriveMatchCard({ item, token }) {
+  const mime = getMimeInfo(item.mimeType);
+  return (
+    <Card size="small" style={{ borderLeft: `4px solid ${token.colorSuccess}` }}>
+      <Row gutter={16} align="middle">
+        <Col flex="auto">
+          <Space wrap>
+            {mime.icon}
+            <a href={item.webViewLink} target="_blank" rel="noopener noreferrer">
+              <Text strong>{item.name}</Text>
+            </a>
+            <Tag color={mime.color}>{mime.label}</Tag>
+            <Tag color="success">Drive</Tag>
+            <Tag>{item.relevance_tag}</Tag>
+          </Space>
+          <div style={{ marginTop: 4 }}>
+            <Space size="large" wrap>
+              {item.modifiedTime && (
+                <Tooltip title={new Date(item.modifiedTime).toLocaleString('tr-TR')}>
+                  <Text type="secondary" style={{ fontSize: 12 }}>
+                    <ClockCircleOutlined /> {formatRelativeDate(item.modifiedTime)}
+                  </Text>
+                </Tooltip>
+              )}
+              {item.lastModifiedBy && (
+                <Text type="secondary" style={{ fontSize: 12 }}>
+                  <UserOutlined /> {item.lastModifiedBy}
+                </Text>
+              )}
+              {item.size && (
+                <Text type="secondary" style={{ fontSize: 12 }}>
+                  {formatSize(item.size)}
+                </Text>
+              )}
+              {item.relevance_score > 0 && (
+                <Tag color="blue">%{Math.round(item.relevance_score * 100)}</Tag>
+              )}
+            </Space>
+          </div>
+        </Col>
+        <Col>
+          <Button
+            type="primary"
+            ghost
+            icon={<LinkOutlined />}
+            href={item.webViewLink}
+            target="_blank"
+          >
+            Drive'da Aç
+          </Button>
+        </Col>
+      </Row>
+    </Card>
   );
 }
 

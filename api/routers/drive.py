@@ -5,7 +5,8 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 from typing import Optional
 
-from api.services import drive_service
+from api.services import search_service
+from api.services.drive_service import MIME_TYPE_MAP
 
 router = APIRouter()
 
@@ -29,6 +30,7 @@ class DriveFileResult(BaseModel):
     size: Optional[str] = None
     lastModifiedBy: str = ""
     fileType: str = ""
+    relevance_score: float = 0.0
 
 
 class DriveSearchResponse(BaseModel):
@@ -41,13 +43,17 @@ class DriveSearchResponse(BaseModel):
 async def search_drive(request: DriveSearchRequest):
     """
     Search Google Shared Drive via n8n webhook proxy.
+    Uses search_service for document filtering, dedup, and relevance scoring.
     """
     if not request.query.strip():
         raise HTTPException(status_code=400, detail="Query cannot be empty")
 
-    raw_results = await drive_service.search_drive(
+    # Resolve user-friendly mime filter to actual MIME type
+    resolved_mime = MIME_TYPE_MAP.get(request.mime_type_filter or "", "")
+
+    raw_results = await search_service.drive_search(
         query=request.query.strip(),
-        mime_type_filter=request.mime_type_filter or "",
+        mime_type=resolved_mime or None,
     )
 
     # Map raw dicts to response model
@@ -69,6 +75,7 @@ async def search_drive(request: DriveSearchRequest):
             size=item.get("size"),
             lastModifiedBy=item.get("lastModifiedBy", ""),
             fileType=item.get("fileType", ""),
+            relevance_score=item.get("_relevance_score", 0.0),
         ))
 
     return DriveSearchResponse(
