@@ -117,7 +117,7 @@ async def search_task_matches(request: MatchSearchRequest):
     a task and get suggestions for existing documents that might be relevant.
     """
     try:
-        result = matching_service.search_matches(
+        result = await matching_service.search_matches(
             task_description=request.task_description,
             jira_key=request.jira_key,
             doc_type=request.doc_type,

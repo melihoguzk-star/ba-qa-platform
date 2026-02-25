@@ -1,7 +1,6 @@
 """
 Matching Service — Smart document matching business logic
 """
-import asyncio
 import logging
 import time
 from typing import List, Dict, Optional, Any
@@ -26,7 +25,7 @@ def _tag_drive_relevance(file_name: str) -> str:
     return "GENEL"
 
 
-def search_matches(
+async def search_matches(
     task_description: str,
     jira_key: Optional[str] = None,
     doc_type: Optional[str] = None,
@@ -70,20 +69,25 @@ def search_matches(
 
     # ── Drive search ─────────────────────────────────────────────────
     if source in ("drive", "both"):
+        # Build search query — try TaskAnalyzer, fallback to task_description
+        search_query = task_description[:200]
         try:
             from pipeline.task_analyzer import TaskAnalyzer
-            from api.services.search_service import drive_search
-
             analyzer = TaskAnalyzer()
             analysis = analyzer.analyze_task(task_description, jira_key)
             if not task_features:
                 task_features = analysis
-            search_query = analysis.get("search_query", task_description[:200])
+            search_query = analysis.get("search_query", "") or task_description[:200]
+        except Exception as e:
+            logger.warning(f"TaskAnalyzer failed, using raw query: {e}")
 
+        try:
+            from api.services.search_service import drive_search
             from api.services.drive_service import MIME_TYPE_MAP
+
             resolved_mime = MIME_TYPE_MAP.get(mime_type_filter or "", "")
-            drive_results = asyncio.run(
-                drive_search(search_query, mime_type=resolved_mime or None)
+            drive_results = await drive_search(
+                search_query, mime_type=resolved_mime or None
             )
             for item in drive_results:
                 drive_matches.append({
