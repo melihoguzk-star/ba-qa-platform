@@ -3,6 +3,7 @@ Search Service — Hybrid search logic + Drive proxy
 """
 import asyncio
 import logging
+import re
 import time
 from typing import Optional, Dict, Any, List
 
@@ -11,6 +12,9 @@ import httpx
 from api.schemas.search import SearchResult
 
 logger = logging.getLogger(__name__)
+
+# ── Drive relevance helpers ──────────────────────────────────────────────
+_DRIVE_MAX_RESULTS = 10
 
 # ── Reindex state (in-memory) ────────────────────────────────────────────
 _reindex_state: Dict[str, Any] = {
@@ -126,14 +130,81 @@ def _is_document_file(item: Dict[str, Any]) -> bool:
     return True
 
 
+def _score_drive_result(item: Dict[str, Any], query: str) -> float:
+    """
+    Score a Drive result for relevance to the query.
+    Higher score = more relevant. Range roughly 0.0 – 1.0.
+    """
+    score = 0.0
+    name = item.get("name", "")
+    name_lower = name.lower()
+    query_lower = query.lower().strip()
+    query_words = [w for w in re.split(r'\s+', query_lower) if len(w) >= 2]
+
+    if not query_words:
+        return 0.1
+
+    # Exact query in name (strongest signal)
+    if query_lower in name_lower:
+        score += 0.50
+
+    # Individual query words in name
+    words_in_name = sum(1 for w in query_words if w in name_lower)
+    if query_words:
+        score += 0.30 * (words_in_name / len(query_words))
+
+    # Google Workspace doc types (preferred over random files)
+    mime = item.get("mimeType", "")
+    if mime in _DOCUMENT_MIMETYPES:
+        score += 0.10
+
+    # Recency bonus (modified in last 90 days)
+    modified = item.get("modifiedTime", "")
+    if modified:
+        try:
+            from datetime import datetime, timezone
+            mod_dt = datetime.fromisoformat(modified.replace("Z", "+00:00"))
+            days_ago = (datetime.now(timezone.utc) - mod_dt).days
+            if days_ago <= 30:
+                score += 0.10
+            elif days_ago <= 90:
+                score += 0.05
+        except (ValueError, TypeError):
+            pass
+
+    return round(min(score, 1.0), 4)
+
+
+def _dedup_drive_results(results: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """
+    Remove duplicate Drive results by file name — keep the newest.
+    """
+    seen: Dict[str, Dict[str, Any]] = {}
+    for item in results:
+        name = item.get("name", "").strip()
+        if not name:
+            continue
+        existing = seen.get(name)
+        if existing is None:
+            seen[name] = item
+        else:
+            # Keep the one with the newer modifiedTime
+            new_time = item.get("modifiedTime", "")
+            old_time = existing.get("modifiedTime", "")
+            if new_time > old_time:
+                seen[name] = item
+    return list(seen.values())
+
+
 async def drive_search(
     query: str,
     folder_id: Optional[str] = None,
     mime_type: Optional[str] = None,
+    max_results: int = _DRIVE_MAX_RESULTS,
 ) -> List[Dict[str, Any]]:
     """
     Search Google Drive via n8n webhook proxy.
-    Filters out non-document files (svg, css, html, js, etc.)
+    Applies: document filter → folder exclusion → dedup → relevance scoring → limit.
     """
     from api.config import get_settings
     settings = get_settings()
@@ -151,21 +222,48 @@ async def drive_search(
 
     try:
         async with httpx.AsyncClient(timeout=30) as client:
+            logger.info(f"Drive search: POST {webhook_url} query={query!r}")
             resp = await client.post(webhook_url, json=payload)
+            logger.info(f"Drive search: status={resp.status_code} len={len(resp.content)}")
             resp.raise_for_status()
             data = resp.json()
+
             # n8n may return a list or wrapped in a key
             if isinstance(data, list):
-                results = data
+                raw = data
             elif isinstance(data, dict) and "results" in data:
-                results = data["results"]
+                raw = data["results"]
             else:
-                results = [data] if data else []
+                raw = [data] if data else []
 
-            # Filter: only document files
-            return [r for r in results if _is_document_file(r)]
+            logger.info(f"Drive search: raw_count={len(raw)}")
+            if raw:
+                logger.info(f"Drive search: first_item_keys={list(raw[0].keys()) if isinstance(raw[0], dict) else type(raw[0])}")
+
+            # 1. Exclude folders
+            filtered = [r for r in raw if r.get("mimeType") != "application/vnd.google-apps.folder"]
+            logger.info(f"Drive search: after_folder_filter={len(filtered)}")
+
+            # 2. Only document files (no code/media/archives)
+            filtered = [r for r in filtered if _is_document_file(r)]
+            logger.info(f"Drive search: after_doc_filter={len(filtered)}")
+
+            # 3. Dedup by name
+            filtered = _dedup_drive_results(filtered)
+            logger.info(f"Drive search: after_dedup={len(filtered)}")
+
+            # 4. Score and sort by relevance
+            for item in filtered:
+                item["_relevance_score"] = _score_drive_result(item, query)
+            filtered.sort(key=lambda x: x["_relevance_score"], reverse=True)
+
+            # 5. Limit results
+            result = filtered[:max_results]
+            logger.info(f"Drive search: returning {len(result)} results")
+            return result
+
     except Exception as e:
-        logger.error(f"Drive search failed: {e}")
+        logger.error(f"Drive search failed: {e}", exc_info=True)
         return []
 
 

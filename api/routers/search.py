@@ -19,6 +19,26 @@ from api.services import search_service
 router = APIRouter()
 
 
+def _raw_to_drive_results(raw: list[dict]) -> list[DriveResult]:
+    """Convert raw Drive dicts to DriveResult models."""
+    results = []
+    for item in raw:
+        file_id = item.get("id", item.get("file_id", ""))
+        web_link = item.get("webViewLink", "") or item.get("alternateLink", "")
+        if not web_link and file_id:
+            web_link = f"https://drive.google.com/file/d/{file_id}/view"
+        results.append(DriveResult(
+            name=item.get("name", ""),
+            file_id=file_id,
+            webViewLink=web_link,
+            mimeType=item.get("mimeType", ""),
+            modifiedTime=item.get("modifiedTime", item.get("modifiedDate", "")),
+            size=item.get("size"),
+            relevance_score=item.get("_relevance_score", 0.0),
+        ))
+    return results
+
+
 @router.post("", response_model=SearchResponse)
 async def search_documents(request: SearchRequest):
     """
@@ -42,19 +62,7 @@ async def search_documents(request: SearchRequest):
 
         if request.source in ("drive", "both"):
             raw_drive = await search_service.drive_search(query=request.query)
-            for item in raw_drive:
-                file_id = item.get("id", item.get("file_id", ""))
-                web_link = item.get("webViewLink", "") or item.get("alternateLink", "")
-                if not web_link and file_id:
-                    web_link = f"https://drive.google.com/file/d/{file_id}/view"
-                drive_results.append(DriveResult(
-                    name=item.get("name", ""),
-                    file_id=file_id,
-                    webViewLink=web_link,
-                    mimeType=item.get("mimeType", ""),
-                    modifiedTime=item.get("modifiedTime", item.get("modifiedDate", "")),
-                    size=item.get("size"),
-                ))
+            drive_results = _raw_to_drive_results(raw_drive)
 
         execution_time = (time.time() - start_time) * 1000
 
@@ -114,20 +122,6 @@ async def drive_search_endpoint(request: DriveSearchRequest):
             folder_id=request.folder_id,
             mime_type=request.mime_type,
         )
-        results = []
-        for item in raw:
-            file_id = item.get("id", item.get("file_id", ""))
-            web_link = item.get("webViewLink", "") or item.get("alternateLink", "")
-            if not web_link and file_id:
-                web_link = f"https://drive.google.com/file/d/{file_id}/view"
-            results.append(DriveResult(
-                name=item.get("name", ""),
-                file_id=file_id,
-                webViewLink=web_link,
-                mimeType=item.get("mimeType", ""),
-                modifiedTime=item.get("modifiedTime", item.get("modifiedDate", "")),
-                size=item.get("size"),
-            ))
-        return results
+        return _raw_to_drive_results(raw)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Drive search failed: {str(e)}")

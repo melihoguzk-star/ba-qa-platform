@@ -32,6 +32,7 @@ class DriveResult(BaseModel):
     mimeType: str = ""
     modifiedTime: str = ""
     size: Optional[str] = None
+    relevance_score: float = 0.0
 
 
 class SearchResponse(BaseModel):

@@ -18,9 +18,11 @@
       "parameters": {
         "resource": "fileFolder",
         "operation": "search",
-        "queryString": "={{ $json.query }}",
-        "limit": 20,
-        "options": {}
+        "queryString": "=fullText contains '{{ $json.query }}' and mimeType != 'application/vnd.google-apps.folder' and trashed = false",
+        "limit": 50,
+        "options": {
+          "fields": "id, name, mimeType, webViewLink, modifiedTime, size"
+        }
       },
       "id": "google-drive-search",
       "name": "Google Drive Search",
